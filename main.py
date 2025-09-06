@@ -163,6 +163,8 @@ class Flag:
                                          (self.x + self.width + self.flag_width, self.y + self.flag_height)])
 
 class Bird:
+    _id_counter = 0  # Contador de ID para pássaros
+    
     def __init__(self, x, y):
         self.x = x
         self.y = y
@@ -170,6 +172,9 @@ class Bird:
         self.height = 20
         self.speed = 3
         self.rect = pygame.Rect(x, y, self.width, self.height)
+        # Atribuir ID único
+        Bird._id_counter += 1
+        self.id = Bird._id_counter
         
     def update(self):
         # Mover pássaro da direita para a esquerda
@@ -204,6 +209,7 @@ class Game:
         # Sistema de pontuação
         self.score = 0
         self.platforms_jumped = set()  # Para rastrear plataformas já pontuadas
+        self.birds_dodged = set()  # Para rastrear pássaros já esquivados
         
         # Sistema de vidas
         self.lives = 3
@@ -470,6 +476,7 @@ class Game:
                     self.current_level = 1
                     self.score = 0  # Resetar pontuação
                     self.platforms_jumped.clear()  # Resetar plataformas pontuadas
+                    self.birds_dodged.clear()  # Resetar pássaros esquivados
                     self.lives = self.max_lives  # Resetar vidas
                     self.state = GameState.PLAYING
                     self.init_level()
@@ -486,6 +493,7 @@ class Game:
                     # Ainda tem vidas, reiniciar fase atual
                     # Limpar plataformas pontuadas para permitir pontuação novamente
                     self.platforms_jumped.clear()
+                    self.birds_dodged.clear()  # Limpar pássaros esquivados
                     self.init_level()
                 else:
                     # Sem vidas, game over
@@ -519,8 +527,19 @@ class Game:
             # Atualizar pássaros
             self.birds = [bird for bird in self.birds if bird.update()]
             
-            # Verificar colisão com pássaros
+            # Verificar colisão e esquiva com pássaros
             for bird in self.birds[:]:
+                # Verificar se pássaro passou perto do jogador (esquiva)
+                distance_x = abs(bird.x - self.player.x)
+                distance_y = abs(bird.y - self.player.y)
+                
+                # Se pássaro passou perto (dentro de 80 pixels) e já passou do jogador
+                if (distance_x < 80 and distance_y < 100 and 
+                    bird.x < self.player.x and bird.id not in self.birds_dodged):
+                    self.birds_dodged.add(bird.id)
+                    self.score += 10  # Pontos por esquivar
+                
+                # Verificar colisão direta
                 if self.player.rect.colliderect(bird.rect):
                     # Colidiu com pássaro, perder vida
                     self.birds.remove(bird)
@@ -529,6 +548,7 @@ class Game:
                         # Ainda tem vidas, reiniciar fase atual
                         # Limpar plataformas pontuadas para permitir pontuação novamente
                         self.platforms_jumped.clear()
+                        self.birds_dodged.clear()  # Limpar pássaros esquivados
                         self.init_level()
                     else:
                         # Sem vidas, game over
