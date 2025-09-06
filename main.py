@@ -484,6 +484,8 @@ class Game:
                 self.lives -= 1
                 if self.lives > 0:
                     # Ainda tem vidas, reiniciar fase atual
+                    # Limpar plataformas pontuadas para permitir pontuação novamente
+                    self.platforms_jumped.clear()
                     self.init_level()
                 else:
                     # Sem vidas, game over
@@ -525,6 +527,8 @@ class Game:
                     self.lives -= 1
                     if self.lives > 0:
                         # Ainda tem vidas, reiniciar fase atual
+                        # Limpar plataformas pontuadas para permitir pontuação novamente
+                        self.platforms_jumped.clear()
                         self.init_level()
                     else:
                         # Sem vidas, game over
