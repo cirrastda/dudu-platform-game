@@ -188,3 +188,5 @@ Temporary Items
 *.log
 screenshots/
 saves/
+
+.env
