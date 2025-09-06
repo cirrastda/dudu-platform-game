@@ -506,9 +506,9 @@ class Game:
                 
             # Sistema de pontuação - verificar se jogador pousou em nova plataforma
             for i, platform in enumerate(self.platforms):
-                if (self.player.rect.colliderect(platform.rect) and 
-                    self.player.vel_y >= 0 and  # Jogador descendo ou parado
-                    self.player.y + self.player.height <= platform.y + 10 and  # Jogador em cima da plataforma
+                if (self.player.on_ground and 
+                    self.player.rect.colliderect(platform.rect) and 
+                    abs(self.player.y + self.player.height - platform.y) <= 5 and  # Jogador em cima da plataforma
                     i not in self.platforms_jumped):
                     self.platforms_jumped.add(i)
                     self.score += 10
