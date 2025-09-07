@@ -104,7 +104,6 @@ class Player:
         # Verificar colisões com plataformas
         self.prev_vel_y = self.vel_y  # Salvar velocidade anterior
         self.on_ground = False
-        self.just_landed = False
         
         for platform in platforms:
             if self.rect.colliderect(platform.rect):
@@ -524,6 +523,8 @@ class Game:
                         self.platforms_jumped.add(platform.id)
                         self.score += 10
                         break  # Só uma plataforma por pouso
+                # Reset da flag após verificar pontuação
+                self.player.just_landed = False
                 
             # Sistema de pássaros
             # Spawn de novos pássaros
