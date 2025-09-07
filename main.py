@@ -113,6 +113,7 @@ class Player:
                     # Detectar se acabou de pousar (estava caindo e agora parou)
                     if self.prev_vel_y > 0:
                         self.just_landed = True
+                        self.landed_platform_id = platform.id
                     self.vel_y = 0
                     self.on_ground = True
                     self.rect.y = self.y
@@ -516,15 +517,13 @@ class Game:
                 self.camera_x = target_camera_x
                 
             # Sistema de pontuação - verificar se jogador pousou em nova plataforma
-            if self.player.just_landed:
-                for platform in self.platforms:
-                    if (self.player.rect.colliderect(platform.rect) and 
-                        platform.id not in self.platforms_jumped):
-                        self.platforms_jumped.add(platform.id)
-                        self.score += 10
-                        break  # Só uma plataforma por pouso
+            if self.player.just_landed and hasattr(self.player, 'landed_platform_id'):
+                if self.player.landed_platform_id not in self.platforms_jumped:
+                    self.platforms_jumped.add(self.player.landed_platform_id)
+                    self.score += 10
                 # Reset da flag após verificar pontuação
                 self.player.just_landed = False
+                delattr(self.player, 'landed_platform_id')
                 
             # Sistema de pássaros
             # Spawn de novos pássaros
