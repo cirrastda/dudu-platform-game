@@ -508,7 +508,7 @@ class Game:
             for i, platform in enumerate(self.platforms):
                 if (self.player.on_ground and 
                     self.player.rect.colliderect(platform.rect) and 
-                    abs(self.player.y + self.player.height - platform.y) <= 5 and  # Jogador em cima da plataforma
+                    self.player.vel_y == 0 and  # Jogador parou de cair (pousou)
                     i not in self.platforms_jumped):
                     self.platforms_jumped.add(i)
                     self.score += 10
@@ -533,8 +533,8 @@ class Game:
                 distance_x = abs(bird.x - self.player.x)
                 distance_y = abs(bird.y - self.player.y)
                 
-                # Se pássaro passou perto (dentro de 80 pixels) e já passou do jogador
-                if (distance_x < 80 and distance_y < 100 and 
+                # Se pássaro passou perto (dentro de 40 pixels) e já passou do jogador
+                if (distance_x < 40 and distance_y < 50 and 
                     bird.x < self.player.x and bird.id not in self.birds_dodged):
                     self.birds_dodged.add(bird.id)
                     self.score += 10  # Pontos por esquivar
