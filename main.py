@@ -45,6 +45,7 @@ class Player:
         self.height = self.original_height
         self.vel_x = 0
         self.vel_y = 0
+        self.prev_vel_y = 0  # Velocidade anterior para detectar mudança
         self.on_ground = False
         self.just_landed = False  # Flag para detectar pouso
         self.is_crouching = False
@@ -101,7 +102,7 @@ class Player:
         self.rect.y = self.y
         
         # Verificar colisões com plataformas
-        was_on_ground = self.on_ground
+        self.prev_vel_y = self.vel_y  # Salvar velocidade anterior
         self.on_ground = False
         self.just_landed = False
         
@@ -110,11 +111,11 @@ class Player:
                 # Colisão por cima (jogador pousando na plataforma)
                 if self.vel_y > 0 and self.y < platform.y:
                     self.y = platform.y - self.height
+                    # Detectar se acabou de pousar (estava caindo e agora parou)
+                    if self.prev_vel_y > 0:
+                        self.just_landed = True
                     self.vel_y = 0
                     self.on_ground = True
-                    # Detectar se acabou de pousar
-                    if not was_on_ground:
-                        self.just_landed = True
                     self.rect.y = self.y
                     
         return True
@@ -131,7 +132,11 @@ class Player:
             pygame.draw.circle(screen, WHITE, (int(self.x + self.width//2), int(self.y + 15)), 8)  # Cabeça
 
 class Platform:
+    _id_counter = 0  # Contador de ID para plataformas
+    
     def __init__(self, x, y, width, height, texture=None):
+        Platform._id_counter += 1
+        self.id = Platform._id_counter
         self.x = x
         self.y = y
         self.width = width
@@ -215,7 +220,7 @@ class Game:
         
         # Sistema de pontuação
         self.score = 0
-        self.platforms_jumped = set()  # Para rastrear plataformas já pontuadas
+        self.platforms_jumped = set()  # Conjunto para rastrear IDs de plataformas já pontuadas
         self.birds_dodged = set()  # Para rastrear pássaros já esquivados
         
         # Sistema de vidas
@@ -512,12 +517,13 @@ class Game:
                 self.camera_x = target_camera_x
                 
             # Sistema de pontuação - verificar se jogador pousou em nova plataforma
-            for i, platform in enumerate(self.platforms):
-                if (self.player.just_landed and 
-                    self.player.rect.colliderect(platform.rect) and 
-                    i not in self.platforms_jumped):
-                    self.platforms_jumped.add(i)
-                    self.score += 10
+            if self.player.just_landed:
+                for platform in self.platforms:
+                    if (self.player.rect.colliderect(platform.rect) and 
+                        platform.id not in self.platforms_jumped):
+                        self.platforms_jumped.add(platform.id)
+                        self.score += 10
+                        break  # Só uma plataforma por pouso
                 
             # Sistema de pássaros
             # Spawn de novos pássaros
