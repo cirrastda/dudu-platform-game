@@ -40,14 +40,15 @@ class Player:
         self.x = x
         self.y = y
         self.width = 40
-        self.height = 60
         self.original_height = 60
         self.crouched_height = 30
+        self.height = self.original_height
         self.vel_x = 0
         self.vel_y = 0
         self.on_ground = False
+        self.just_landed = False  # Flag para detectar pouso
         self.is_crouching = False
-        self.rect = pygame.Rect(x, y, self.width, self.height)
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
         
     def update(self, platforms):
         # Aplicar gravidade
@@ -100,7 +101,10 @@ class Player:
         self.rect.y = self.y
         
         # Verificar colisões com plataformas
+        was_on_ground = self.on_ground
         self.on_ground = False
+        self.just_landed = False
+        
         for platform in platforms:
             if self.rect.colliderect(platform.rect):
                 # Colisão por cima (jogador pousando na plataforma)
@@ -108,6 +112,9 @@ class Player:
                     self.y = platform.y - self.height
                     self.vel_y = 0
                     self.on_ground = True
+                    # Detectar se acabou de pousar
+                    if not was_on_ground:
+                        self.just_landed = True
                     self.rect.y = self.y
                     
         return True
@@ -506,9 +513,8 @@ class Game:
                 
             # Sistema de pontuação - verificar se jogador pousou em nova plataforma
             for i, platform in enumerate(self.platforms):
-                if (self.player.on_ground and 
+                if (self.player.just_landed and 
                     self.player.rect.colliderect(platform.rect) and 
-                    self.player.vel_y == 0 and  # Jogador parou de cair (pousou)
                     i not in self.platforms_jumped):
                     self.platforms_jumped.add(i)
                     self.score += 10
