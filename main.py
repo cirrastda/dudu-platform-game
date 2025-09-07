@@ -49,7 +49,120 @@ class Player:
         self.on_ground = False
         self.just_landed = False  # Flag para detectar pouso
         self.is_crouching = False
+        self.is_hit = False  # Flag para quando o personagem é atingido
+        self.hit_timer = 0  # Timer para controlar duração do estado de hit
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        
+        # Sistema de animação
+        self.sprites = {}
+        self.current_animation = 'idle'
+        self.animation_frame = 0
+        self.animation_timer = 0
+        self.animation_speed = 8  # Frames por segundo da animação
+        self.load_sprites()
+        
+    def load_sprites(self):
+        """Carregar todos os sprites do personagem"""
+        try:
+            # Sprite parado (idle)
+            self.sprites['idle'] = [pygame.image.load("imagens/personagem/1.png")]
+            
+            # Sprites de caminhada
+            self.sprites['walk'] = [
+                pygame.image.load("imagens/personagem/1.png"),
+                pygame.image.load("imagens/personagem/2.png"),
+                pygame.image.load("imagens/personagem/3.png"),
+                pygame.image.load("imagens/personagem/4.png")
+            ]
+            
+            # Sprites de pulo
+            self.sprites['jump'] = [
+                pygame.image.load("imagens/personagem/j1.png"),
+                pygame.image.load("imagens/personagem/j2.png"),
+                pygame.image.load("imagens/personagem/j3.png"),
+                pygame.image.load("imagens/personagem/j4.png"),
+                pygame.image.load("imagens/personagem/j5.png")  # Aterrissagem
+            ]
+            
+            # Sprite agachado
+            self.sprites['crouch'] = [pygame.image.load("imagens/personagem/dn1.png")]
+            
+            # Sprite quando atingido
+            self.sprites['hit'] = [pygame.image.load("imagens/personagem/d1.png")]
+            
+            # Redimensionar todos os sprites para o tamanho do personagem
+            for animation in self.sprites:
+                for i, sprite in enumerate(self.sprites[animation]):
+                    self.sprites[animation][i] = pygame.transform.scale(sprite, (self.width, self.original_height))
+                    
+        except pygame.error as e:
+            print(f"Erro ao carregar sprites do personagem: {e}")
+            # Fallback: criar sprites coloridos simples
+            self.sprites = {
+                'idle': [pygame.Surface((self.width, self.original_height))],
+                'walk': [pygame.Surface((self.width, self.original_height)) for _ in range(4)],
+                'jump': [pygame.Surface((self.width, self.original_height)) for _ in range(5)],
+                'crouch': [pygame.Surface((self.width, self.crouched_height))],
+                'hit': [pygame.Surface((self.width, self.original_height))]
+            }
+            # Preencher com cores para fallback
+            for animation in self.sprites:
+                for sprite in self.sprites[animation]:
+                    sprite.fill(BLUE)
+                    
+    def update_animation(self):
+        """Atualizar a animação do personagem baseada no estado atual"""
+        # Determinar qual animação usar
+        if self.is_hit and self.hit_timer > 0:
+            new_animation = 'hit'
+        elif self.is_crouching:
+            new_animation = 'crouch'
+        elif not self.on_ground:
+            new_animation = 'jump'
+        elif abs(self.vel_x) > 0:
+            new_animation = 'walk'
+        else:
+            new_animation = 'idle'
+            
+        # Se mudou de animação, resetar frame
+        if new_animation != self.current_animation:
+            self.current_animation = new_animation
+            self.animation_frame = 0
+            self.animation_timer = 0
+            
+        # Atualizar timer da animação
+        self.animation_timer += 1
+        
+        # Avançar frame da animação
+        if self.animation_timer >= 60 // self.animation_speed:  # 60 FPS / animation_speed
+            self.animation_timer = 0
+            
+            # Lógica especial para animação de pulo
+            if self.current_animation == 'jump':
+                if self.vel_y < -10:  # Subindo rápido
+                    self.animation_frame = 0
+                elif self.vel_y < -5:  # Subindo devagar
+                    self.animation_frame = 1
+                elif self.vel_y < 5:   # No ar
+                    self.animation_frame = 2
+                elif self.vel_y < 10:  # Descendo
+                    self.animation_frame = 3
+                else:  # Aterrissando
+                    self.animation_frame = 4
+            else:
+                # Para outras animações, ciclar normalmente
+                self.animation_frame = (self.animation_frame + 1) % len(self.sprites[self.current_animation])
+                
+        # Atualizar timer de hit
+        if self.hit_timer > 0:
+            self.hit_timer -= 1
+            if self.hit_timer <= 0:
+                self.is_hit = False
+                
+    def take_hit(self):
+        """Método para quando o personagem é atingido"""
+        self.is_hit = True
+        self.hit_timer = 30  # 30 frames = 0.5 segundos a 60 FPS
         
     def update(self, platforms):
         # Aplicar gravidade
@@ -118,18 +231,29 @@ class Player:
                     self.on_ground = True
                     self.rect.y = self.y
                     
+        # Atualizar animação
+        self.update_animation()
+                    
         return True
     
     def draw(self, screen):
-        # Desenhar jogador como um retângulo azul
-        pygame.draw.rect(screen, BLUE, self.rect)
-        # Adicionar detalhes simples
-        if self.is_crouching:
-            # Cabeça mais baixa quando agachado
-            pygame.draw.circle(screen, WHITE, (int(self.x + self.width//2), int(self.y + 8)), 6)  # Cabeça menor
+        # Desenhar o sprite atual do personagem
+        if self.current_animation in self.sprites and self.sprites[self.current_animation]:
+            current_sprite = self.sprites[self.current_animation][self.animation_frame]
+            
+            # Ajustar posição Y para sprites agachados
+            draw_y = self.y
+            if self.current_animation == 'crouch':
+                # Redimensionar sprite agachado se necessário
+                if current_sprite.get_height() != self.crouched_height:
+                    current_sprite = pygame.transform.scale(current_sprite, (self.width, self.crouched_height))
+                    self.sprites[self.current_animation][self.animation_frame] = current_sprite
+            
+            screen.blit(current_sprite, (self.x, draw_y))
         else:
-            # Cabeça normal
-            pygame.draw.circle(screen, WHITE, (int(self.x + self.width//2), int(self.y + 15)), 8)  # Cabeça
+            # Fallback: desenhar retângulo colorido
+            color = RED if self.is_hit else BLUE
+            pygame.draw.rect(screen, color, self.rect)
 
 class Platform:
     _id_counter = 0  # Contador de ID para plataformas
@@ -553,18 +677,15 @@ class Game:
                 
                 # Verificar colisão direta
                 if self.player.rect.colliderect(bird.rect):
-                    # Colidiu com pássaro, perder vida
-                    self.birds.remove(bird)
-                    self.lives -= 1
-                    if self.lives > 0:
-                        # Ainda tem vidas, reiniciar fase atual
-                        # Limpar plataformas pontuadas para permitir pontuação novamente
-                        self.platforms_jumped.clear()
-                        self.birds_dodged.clear()  # Limpar pássaros esquivados
-                        self.init_level()
-                    else:
-                        # Sem vidas, game over
-                        self.state = GameState.GAME_OVER
+                    # Colidiu com pássaro, ativar animação de hit
+                    if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
+                        self.player.take_hit()
+                        self.birds.remove(bird)
+                        self.lives -= 1
+                        if self.lives <= 0:
+                            # Sem vidas, game over
+                            self.state = GameState.GAME_OVER
+                        # Não reiniciar o nível imediatamente, deixar o jogador continuar
                     break
             
             # Verificar se tocou a bandeira
@@ -623,14 +744,14 @@ class Game:
                     pygame.draw.polygon(self.screen, YELLOW, [(bird_x, bird.y + 8), (bird_x - 5, bird.y + 10), (bird_x, bird.y + 12)])
             
             # Desenhar jogador com offset da câmera
-            player_x = self.player.x - self.camera_x
-            player_rect = pygame.Rect(player_x, self.player.y, self.player.width, self.player.height)
-            pygame.draw.rect(self.screen, BLUE, player_rect)
-            # Desenhar cabeça baseada no estado de agachamento
-            if self.player.is_crouching:
-                pygame.draw.circle(self.screen, WHITE, (int(player_x + self.player.width//2), int(self.player.y + 8)), 6)
-            else:
-                pygame.draw.circle(self.screen, WHITE, (int(player_x + self.player.width//2), int(self.player.y + 15)), 8)
+            # Salvar posição original do jogador
+            original_x = self.player.x
+            # Ajustar posição para câmera
+            self.player.x = self.player.x - self.camera_x
+            # Chamar método draw do jogador
+            self.player.draw(self.screen)
+            # Restaurar posição original
+            self.player.x = original_x
             
             # Desenhar UI (sem offset da câmera)
             level_text = self.font.render(f"Nível: {self.current_level}", True, WHITE)
