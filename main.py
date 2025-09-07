@@ -107,8 +107,8 @@ class Player:
         
         for platform in platforms:
             if self.rect.colliderect(platform.rect):
-                # Colisão por cima (jogador pousando na plataforma)
-                if self.vel_y > 0 and self.y < platform.y:
+                # Colisão por cima (jogador pousando na plataforma) - com tolerância de 3px
+                if self.vel_y > 0 and self.y <= platform.y + 3:
                     self.y = platform.y - self.height
                     # Detectar se acabou de pousar (estava caindo e agora parou)
                     if self.prev_vel_y > 0:
