@@ -125,6 +125,12 @@ class Player:
         self.animation_frame = 0
         self.animation_timer = 0
         self.animation_speed = 8  # Frames por segundo da animação
+        
+        # Sistema de tiro
+        self.bullets = []
+        self.shoot_cooldown = 0  # Cooldown entre tiros
+        self.max_shoot_cooldown = 15  # 15 frames = 0.25 segundos a 60 FPS
+        
         self.load_sprites()
         
     def load_sprites(self):
@@ -230,7 +236,24 @@ class Player:
         self.is_hit = True
         self.hit_timer = 30  # 30 frames = 0.5 segundos a 60 FPS
         
-    def update(self, platforms):
+    def shoot(self, bullet_image=None):
+        """Criar um novo tiro"""
+        if self.shoot_cooldown <= 0:
+            # Determinar direção do tiro baseado no movimento
+            direction = 1 if self.vel_x >= 0 else -1
+            
+            # Posição do tiro (centro do personagem)
+            bullet_x = self.x + self.width // 2
+            bullet_y = self.y + self.height // 2
+            
+            # Criar tiro
+            bullet = Bullet(bullet_x, bullet_y, direction, bullet_image)
+            self.bullets.append(bullet)
+            
+            # Resetar cooldown
+            self.shoot_cooldown = self.max_shoot_cooldown
+        
+    def update(self, platforms, bullet_image=None, camera_x=0):
         # Aplicar gravidade
         self.vel_y += GRAVITY
         
@@ -259,8 +282,12 @@ class Player:
                 self.y = old_y - (self.original_height - self.crouched_height)
                 self.is_crouching = False
             
-        # Pulo (não pode pular enquanto agachado)
-        if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_w]) and self.on_ground and not self.is_crouching:
+        # Tiro com barra de espaço
+        if keys[pygame.K_SPACE]:
+            self.shoot(bullet_image)
+            
+        # Pulo (apenas com setas e WASD, não mais com espaço)
+        if (keys[pygame.K_UP] or keys[pygame.K_w]) and self.on_ground and not self.is_crouching:
             self.vel_y = JUMP_STRENGTH
             self.on_ground = False
         
@@ -297,6 +324,17 @@ class Player:
                     self.on_ground = True
                     self.rect.y = self.y
                     
+        # Atualizar tiros e remover os que saíram da área visível
+        for bullet in self.bullets[:]:
+            bullet.update()
+            # Remover tiro se saiu muito da área visível da câmera
+            if bullet.x < camera_x - 300 or bullet.x > camera_x + WIDTH + 300:
+                self.bullets.remove(bullet)
+        
+        # Atualizar cooldown de tiro
+        if self.shoot_cooldown > 0:
+            self.shoot_cooldown -= 1
+                    
         # Atualizar animação
         self.update_animation()
                     
@@ -319,6 +357,8 @@ class Player:
             # Fallback: desenhar retângulo colorido
             color = RED if self.is_hit else BLUE
             pygame.draw.rect(screen, color, self.rect)
+            
+        # Tiros são desenhados no método draw da classe Game com offset da câmera
 
 class Platform:
     _id_counter = 0  # Contador de ID para plataformas
@@ -461,6 +501,57 @@ class Bird:
             # Bico
             pygame.draw.polygon(screen, YELLOW, [(self.x, self.y + 8), (self.x - 5, self.y + 10), (self.x, self.y + 12)])
 
+class Bullet:
+    def __init__(self, x, y, direction=1, image=None):
+        self.x = x
+        self.y = y
+        self.width = 15 if image else 10
+        self.height = 8 if image else 5
+        self.speed = 8
+        self.direction = direction  # 1 para direita, -1 para esquerda
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.image = image
+        
+    def update(self):
+        """Atualizar posição do tiro"""
+        self.x += self.speed * self.direction
+        self.rect.x = self.x
+        
+        # Manter tiro ativo (remoção será feita no método update do Player)
+        return True
+        
+    def draw(self, screen):
+        """Desenhar o tiro"""
+        if self.image:
+            screen.blit(self.image, (self.x, self.y))
+        else:
+            # Fallback: desenhar retângulo amarelo
+            pygame.draw.rect(screen, YELLOW, self.rect)
+
+class Explosion:
+    def __init__(self, x, y, image=None):
+        self.x = x
+        self.y = y
+        self.width = 40
+        self.height = 40
+        self.timer = 30  # Duração da explosão em frames (0.5 segundos a 60 FPS)
+        self.image = image
+        
+    def update(self):
+        """Atualizar explosão"""
+        self.timer -= 1
+        return self.timer > 0
+        
+    def draw(self, screen):
+        """Desenhar explosão"""
+        if self.timer > 0:
+            if self.image:
+                screen.blit(self.image, (self.x, self.y))
+            else:
+                # Fallback: desenhar círculo vermelho piscando
+                if self.timer % 6 < 3:  # Piscar
+                    pygame.draw.circle(screen, RED, (self.x + self.width//2, self.y + self.height//2), self.width//2)
+
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -489,6 +580,9 @@ class Game:
         
         # Sistema de pássaros
         self.birds = []
+        
+        # Sistema de explosões
+        self.explosions = []
         self.bird_spawn_timer = 0
         
         # Ajustar dificuldade baseada no nível
@@ -535,6 +629,16 @@ class Game:
             self.bird_img1 = pygame.transform.scale(self.bird_img1, (40, 30))
             self.bird_img2 = pygame.transform.scale(self.bird_img2, (40, 30))
             
+            # Carregar imagem do tiro
+            self.bullet_img = pygame.image.load("imagens/elementos/tiro.png")
+            self.bullet_img = pygame.transform.scale(self.bullet_img, (15, 8))
+            self.bullet_image = self.bullet_img  # Alias para compatibilidade
+            
+            # Carregar imagem da explosão
+            self.explosion_img = pygame.image.load("imagens/elementos/explosao.png")
+            self.explosion_img = pygame.transform.scale(self.explosion_img, (40, 40))
+            self.explosion_image = self.explosion_img  # Alias para compatibilidade
+            
         except pygame.error as e:
             print(f"Erro ao carregar imagens: {e}")
             # Fallback para cores sólidas se as imagens não carregarem
@@ -542,6 +646,10 @@ class Game:
             self.platform_texture = None
             self.bird_img1 = None
             self.bird_img2 = None
+            self.bullet_img = None
+            self.bullet_image = None
+            self.explosion_img = None
+            self.explosion_image = None
         
     def init_level(self):
         """Inicializar o nível atual"""
@@ -552,6 +660,8 @@ class Game:
         # Reinicializar sistema de pássaros
         self.birds = []
         self.bird_spawn_timer = 0
+        # Reinicializar explosões
+        self.explosions = []
         # Não resetar platforms_jumped aqui para manter pontuação entre níveis
         
         # Criar plataformas baseadas no nível
@@ -794,7 +904,7 @@ class Game:
     def update(self):
         if self.state == GameState.PLAYING:
             # Atualizar jogador
-            if not self.player.update(self.platforms):
+            if not self.player.update(self.platforms, self.bullet_image, self.camera_x):
                 self.lives -= 1
                 if self.lives > 0:
                     # Ainda tem vidas, reiniciar fase atual
@@ -838,6 +948,22 @@ class Game:
             
             # Atualizar pássaros
             self.birds = [bird for bird in self.birds if bird.update()]
+            
+            # Atualizar explosões
+            self.explosions = [explosion for explosion in self.explosions if explosion.update()]
+            
+            # Verificar colisão entre tiros e pássaros
+            for bullet in self.player.bullets[:]:
+                for bird in self.birds[:]:
+                    if bullet.rect.colliderect(bird.rect):
+                        # Tiro acertou pássaro
+                        self.player.bullets.remove(bullet)
+                        self.birds.remove(bird)
+                        # Criar explosão na posição do pássaro
+                        self.explosions.append(Explosion(bird.x, bird.y, self.explosion_image))
+                        # Adicionar pontos
+                        self.score += 50
+                        break
             
             # Verificar colisão e esquiva com pássaros
             for bird in self.birds[:]:
@@ -929,6 +1055,32 @@ class Game:
                     bird.draw(self.screen)
                     # Restaurar posição original
                     bird.x = original_bird_x
+            
+            # Desenhar explosões com offset da câmera
+            for explosion in self.explosions:
+                explosion_x = explosion.x - self.camera_x
+                if explosion_x > -50 and explosion_x < WIDTH:  # Só desenhar se visível
+                    # Salvar posição original da explosão
+                    original_explosion_x = explosion.x
+                    # Ajustar posição para câmera
+                    explosion.x = explosion_x
+                    # Chamar método draw da explosão
+                    explosion.draw(self.screen)
+                    # Restaurar posição original
+                    explosion.x = original_explosion_x
+            
+            # Desenhar tiros do jogador com offset da câmera
+            for bullet in self.player.bullets:
+                bullet_x = bullet.x - self.camera_x
+                if bullet_x > -20 and bullet_x < WIDTH + 20:  # Só desenhar se visível
+                    # Salvar posição original do tiro
+                    original_bullet_x = bullet.x
+                    # Ajustar posição para câmera
+                    bullet.x = bullet_x
+                    # Chamar método draw do tiro
+                    bullet.draw(self.screen)
+                    # Restaurar posição original
+                    bullet.x = original_bullet_x
             
             # Desenhar jogador com offset da câmera
             # Salvar posição original do jogador
