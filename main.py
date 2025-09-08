@@ -39,9 +39,9 @@ class Player:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.width = 50
-        self.original_height = 75
-        self.crouched_height = 37
+        self.width = 65
+        self.original_height = 95
+        self.crouched_height = 47
         self.height = self.original_height
         self.vel_x = 0
         self.vel_y = 0
@@ -338,34 +338,47 @@ class Flag:
 class Bird:
     _id_counter = 0  # Contador de ID para pássaros
     
-    def __init__(self, x, y):
+    def __init__(self, x, y, bird_images=None):
         self.x = x
         self.y = y
-        self.width = 30
-        self.height = 20
+        self.width = 40
+        self.height = 30
         self.speed = 3
         self.rect = pygame.Rect(x, y, self.width, self.height)
         # Atribuir ID único
         Bird._id_counter += 1
         self.id = Bird._id_counter
+        # Animação
+        self.bird_images = bird_images  # Tupla com (bird_img1, bird_img2)
+        self.animation_frame = 0
+        self.animation_speed = 10  # Frames para trocar de imagem
         
     def update(self):
         # Mover pássaro da direita para a esquerda
         self.x -= self.speed
         self.rect.x = self.x
         
+        # Atualizar animação
+        self.animation_frame += 1
+        
         # Retornar True se ainda está na tela, False se saiu
         return self.x + self.width > 0
         
     def draw(self, screen):
-        # Desenhar pássaro como um oval marrom
-        pygame.draw.ellipse(screen, BROWN, self.rect)
-        # Adicionar detalhes simples (asas)
-        wing_y = self.y + 5
-        pygame.draw.ellipse(screen, BLACK, (self.x + 5, wing_y, 8, 4))
-        pygame.draw.ellipse(screen, BLACK, (self.x + 17, wing_y, 8, 4))
-        # Bico
-        pygame.draw.polygon(screen, YELLOW, [(self.x, self.y + 8), (self.x - 5, self.y + 10), (self.x, self.y + 12)])
+        if self.bird_images and self.bird_images[0] and self.bird_images[1]:
+            # Usar animação com as imagens carregadas
+            current_image_index = (self.animation_frame // self.animation_speed) % 2
+            current_image = self.bird_images[current_image_index]
+            screen.blit(current_image, (self.x, self.y))
+        else:
+            # Fallback para o desenho original se as imagens não carregaram
+            pygame.draw.ellipse(screen, BROWN, self.rect)
+            # Adicionar detalhes simples (asas)
+            wing_y = self.y + 5
+            pygame.draw.ellipse(screen, BLACK, (self.x + 5, wing_y, 8, 4))
+            pygame.draw.ellipse(screen, BLACK, (self.x + 17, wing_y, 8, 4))
+            # Bico
+            pygame.draw.polygon(screen, YELLOW, [(self.x, self.y + 8), (self.x - 5, self.y + 10), (self.x, self.y + 12)])
 
 class Game:
     def __init__(self):
@@ -391,7 +404,23 @@ class Game:
         # Sistema de pássaros
         self.birds = []
         self.bird_spawn_timer = 0
-        self.bird_spawn_interval = 180  # Spawn a cada 3 segundos (60 FPS * 3)
+        
+        # Ajustar dificuldade baseada no nível
+        if self.current_level == 1:
+            self.birds_per_spawn = 1
+            self.bird_spawn_interval = 180  # 3 segundos
+        elif self.current_level == 2:
+            self.birds_per_spawn = 2
+            self.bird_spawn_interval = 150  # 2.5 segundos
+        elif self.current_level == 3:
+            self.birds_per_spawn = 2
+            self.bird_spawn_interval = 120  # 2 segundos
+        elif self.current_level == 4:
+            self.birds_per_spawn = 3
+            self.bird_spawn_interval = 100  # 1.67 segundos
+        elif self.current_level == 5:
+            self.birds_per_spawn = 3
+            self.bird_spawn_interval = 80   # 1.33 segundos
         
         # Fonte para texto
         self.font = pygame.font.Font(None, 36)
@@ -406,18 +435,27 @@ class Game:
         """Carregar todas as imagens do jogo"""
         try:
             # Carregar fundo
-            self.background_img = pygame.image.load("imagens/fundo2.jpg")
+            self.background_img = pygame.image.load("imagens/fundo5.png")
             self.background_img = pygame.transform.scale(self.background_img, (WIDTH, HEIGHT))
             
             # Carregar textura de plataforma 20x20px para ladrilhamento perfeito
             original_texture = pygame.image.load("imagens/texturas/platform2.png")
             self.platform_texture = pygame.transform.scale(original_texture, (20, 20))
             
+            # Carregar imagens dos pássaros para animação
+            self.bird_img1 = pygame.image.load("imagens/inimigos/bird1.png")
+            self.bird_img2 = pygame.image.load("imagens/inimigos/bird2.png")
+            # Redimensionar para manter o tamanho atual dos pássaros (30x20)
+            self.bird_img1 = pygame.transform.scale(self.bird_img1, (40, 30))
+            self.bird_img2 = pygame.transform.scale(self.bird_img2, (40, 30))
+            
         except pygame.error as e:
             print(f"Erro ao carregar imagens: {e}")
             # Fallback para cores sólidas se as imagens não carregarem
             self.background_img = None
             self.platform_texture = None
+            self.bird_img1 = None
+            self.bird_img2 = None
         
     def init_level(self):
         """Inicializar o nível atual"""
@@ -686,11 +724,13 @@ class Game:
             # Spawn de novos pássaros
             self.bird_spawn_timer += 1
             if self.bird_spawn_timer >= self.bird_spawn_interval:
-                # Spawnar pássaro na altura aleatória
+                # Spawnar múltiplos pássaros baseado no nível
                 import random
-                bird_y = random.randint(HEIGHT // 4, HEIGHT - 150)
-                bird_x = WIDTH + self.camera_x + 50  # Spawnar fora da tela à direita
-                self.birds.append(Bird(bird_x, bird_y))
+                for i in range(self.birds_per_spawn):
+                    bird_y = random.randint(HEIGHT // 4, HEIGHT - 150)
+                    bird_x = WIDTH + self.camera_x + 50 + (i * 100)  # Espaçar pássaros
+                    bird_images = (self.bird_img1, self.bird_img2) if hasattr(self, 'bird_img1') else None
+                    self.birds.append(Bird(bird_x, bird_y, bird_images))
                 self.bird_spawn_timer = 0
             
             # Atualizar pássaros
@@ -769,15 +809,14 @@ class Game:
             for bird in self.birds:
                 bird_x = bird.x - self.camera_x
                 if bird_x > -50 and bird_x < WIDTH:  # Só desenhar se visível
-                    bird_rect = pygame.Rect(bird_x, bird.y, bird.width, bird.height)
-                    # Desenhar pássaro
-                    pygame.draw.ellipse(self.screen, BROWN, bird_rect)
-                    # Adicionar detalhes (asas)
-                    wing_y = bird.y + 5
-                    pygame.draw.ellipse(self.screen, BLACK, (bird_x + 5, wing_y, 8, 4))
-                    pygame.draw.ellipse(self.screen, BLACK, (bird_x + 17, wing_y, 8, 4))
-                    # Bico
-                    pygame.draw.polygon(self.screen, YELLOW, [(bird_x, bird.y + 8), (bird_x - 5, bird.y + 10), (bird_x, bird.y + 12)])
+                    # Salvar posição original do pássaro
+                    original_bird_x = bird.x
+                    # Ajustar posição para câmera
+                    bird.x = bird_x
+                    # Chamar método draw do pássaro
+                    bird.draw(self.screen)
+                    # Restaurar posição original
+                    bird.x = original_bird_x
             
             # Desenhar jogador com offset da câmera
             # Salvar posição original do jogador
@@ -802,9 +841,14 @@ class Game:
             score_text = self.font.render(f"Pontuação Final: {self.score}", True, WHITE)
             restart_text = self.font.render("Pressione R para reiniciar", True, WHITE)
             
-            self.screen.blit(game_over_text, (WIDTH//2 - 200, HEIGHT//2 - 100))
-            self.screen.blit(score_text, (WIDTH//2 - 120, HEIGHT//2 - 30))
-            self.screen.blit(restart_text, (WIDTH//2 - 150, HEIGHT//2 + 20))
+            # Centralizar textos corretamente
+            game_over_rect = game_over_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
+            score_rect = score_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 30))
+            restart_rect = restart_text.get_rect(center=(WIDTH//2, HEIGHT//2 + 20))
+            
+            self.screen.blit(game_over_text, game_over_rect)
+            self.screen.blit(score_text, score_rect)
+            self.screen.blit(restart_text, restart_rect)
             
         elif self.state == GameState.VICTORY:
             # Desenhar troféu (usando formas geométricas)
