@@ -39,9 +39,9 @@ class Player:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.width = 40
-        self.original_height = 60
-        self.crouched_height = 30
+        self.width = 50
+        self.original_height = 75
+        self.crouched_height = 37
         self.height = self.original_height
         self.vel_x = 0
         self.vel_y = 0
@@ -269,9 +269,47 @@ class Platform:
         
     def draw(self, screen):
         if self.texture:
-            # Escalar a textura para o tamanho da plataforma
-            scaled_texture = pygame.transform.scale(self.texture, (self.width, self.height))
-            screen.blit(scaled_texture, (self.x, self.y))
+            # Obter dimensões da textura original
+            texture_width = self.texture.get_width()
+            texture_height = self.texture.get_height()
+            
+            # Calcular quantas repetições cabem na plataforma
+            tiles_x = self.width // texture_width
+            tiles_y = self.height // texture_height
+            
+            # Desenhar os azulejos completos
+            for row in range(tiles_y):
+                for col in range(tiles_x):
+                    x_pos = self.x + (col * texture_width)
+                    y_pos = self.y + (row * texture_height)
+                    screen.blit(self.texture, (x_pos, y_pos))
+            
+            # Desenhar azulejos parciais nas bordas direita e inferior
+            remainder_x = self.width % texture_width
+            remainder_y = self.height % texture_height
+            
+            # Borda direita
+            if remainder_x > 0:
+                for row in range(tiles_y):
+                    x_pos = self.x + (tiles_x * texture_width)
+                    y_pos = self.y + (row * texture_height)
+                    partial_texture = self.texture.subsurface(0, 0, remainder_x, texture_height)
+                    screen.blit(partial_texture, (x_pos, y_pos))
+            
+            # Borda inferior
+            if remainder_y > 0:
+                for col in range(tiles_x):
+                    x_pos = self.x + (col * texture_width)
+                    y_pos = self.y + (tiles_y * texture_height)
+                    partial_texture = self.texture.subsurface(0, 0, texture_width, remainder_y)
+                    screen.blit(partial_texture, (x_pos, y_pos))
+            
+            # Canto inferior direito
+            if remainder_x > 0 and remainder_y > 0:
+                x_pos = self.x + (tiles_x * texture_width)
+                y_pos = self.y + (tiles_y * texture_height)
+                corner_texture = self.texture.subsurface(0, 0, remainder_x, remainder_y)
+                screen.blit(corner_texture, (x_pos, y_pos))
         else:
             # Fallback para cor sólida
             pygame.draw.rect(screen, BROWN, self.rect)
@@ -371,13 +409,9 @@ class Game:
             self.background_img = pygame.image.load("imagens/fundo2.jpg")
             self.background_img = pygame.transform.scale(self.background_img, (WIDTH, HEIGHT))
             
-            # Carregar imagem de objetos
-            self.objects_img = pygame.image.load("imagens/objetos.jpg")
-            
-            # Extrair textura de plataforma (assumindo que está na parte superior esquerda)
-            # Você pode ajustar estas coordenadas conforme necessário
-            platform_rect = pygame.Rect(0, 0, 100, 30)  # Ajuste conforme a imagem
-            self.platform_texture = self.objects_img.subsurface(platform_rect).copy()
+            # Carregar textura de plataforma 20x20px para ladrilhamento perfeito
+            original_texture = pygame.image.load("imagens/texturas/platform2.png")
+            self.platform_texture = pygame.transform.scale(original_texture, (20, 20))
             
         except pygame.error as e:
             print(f"Erro ao carregar imagens: {e}")
@@ -712,11 +746,14 @@ class Game:
                     platform.rect.height
                 )
                 if adjusted_rect.right > 0 and adjusted_rect.left < WIDTH:  # Só desenhar se visível
-                    if platform.texture:
-                        scaled_texture = pygame.transform.scale(platform.texture, (platform.width, platform.height))
-                        self.screen.blit(scaled_texture, (adjusted_rect.x, adjusted_rect.y))
-                    else:
-                        pygame.draw.rect(self.screen, BROWN, adjusted_rect)
+                    # Salvar posição original da plataforma
+                    original_x = platform.x
+                    # Ajustar posição para câmera
+                    platform.x = adjusted_rect.x
+                    # Usar o método draw da plataforma que faz ladrilhamento correto
+                    platform.draw(self.screen)
+                    # Restaurar posição original
+                    platform.x = original_x
                 
             # Desenhar bandeira com offset da câmera
             flag_x = self.flag.x - self.camera_x
