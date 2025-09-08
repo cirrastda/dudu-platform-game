@@ -1,6 +1,8 @@
 import pygame
 import sys
 import math
+import os
+import json
 from enum import Enum
 
 # Inicializar pygame
@@ -27,6 +29,68 @@ GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BROWN = (139, 69, 19)
 YELLOW = (255, 255, 0)
+GRAY = (128, 128, 128)
+LIGHT_GRAY = (200, 200, 200)
+DARK_GRAY = (64, 64, 64)
+
+class RankingManager:
+    def __init__(self):
+        self.records_dir = "records"
+        self.ranking_file = os.path.join(self.records_dir, "top10.log")
+        self.rankings = []
+        self.ensure_records_dir()
+        self.load_rankings()
+    
+    def ensure_records_dir(self):
+        """Cria o diretório records se não existir"""
+        if not os.path.exists(self.records_dir):
+            os.makedirs(self.records_dir)
+    
+    def load_rankings(self):
+        """Carrega os rankings do arquivo"""
+        try:
+            if os.path.exists(self.ranking_file):
+                with open(self.ranking_file, 'r', encoding='utf-8') as f:
+                    self.rankings = json.load(f)
+            else:
+                self.rankings = []
+        except (json.JSONDecodeError, FileNotFoundError):
+            self.rankings = []
+    
+    def save_rankings(self):
+        """Salva os rankings no arquivo"""
+        try:
+            with open(self.ranking_file, 'w', encoding='utf-8') as f:
+                json.dump(self.rankings, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Erro ao salvar rankings: {e}")
+    
+    def is_high_score(self, score):
+        """Verifica se a pontuação entra no top 10"""
+        if len(self.rankings) < 10:
+            return True
+        return score > self.rankings[-1]['score']
+    
+    def add_score(self, name, score):
+        """Adiciona uma nova pontuação ao ranking"""
+        # Limitar nome a 25 caracteres
+        name = name[:25] if len(name) > 25 else name
+        
+        # Adicionar nova pontuação
+        self.rankings.append({'name': name, 'score': score})
+        
+        # Ordenar por pontuação (maior para menor)
+        self.rankings.sort(key=lambda x: x['score'], reverse=True)
+        
+        # Manter apenas top 10
+        self.rankings = self.rankings[:10]
+        
+        # Salvar no arquivo
+        self.save_rankings()
+    
+    def get_rankings(self):
+        """Retorna a lista de rankings"""
+        return self.rankings.copy()
 
 class GameState(Enum):
     MENU = 1
@@ -34,6 +98,8 @@ class GameState(Enum):
     LEVEL_COMPLETE = 3
     GAME_OVER = 4
     VICTORY = 5  # Nova tela de vitória com troféu
+    ENTER_NAME = 6  # Estado para inserir nome no ranking
+    SHOW_RANKING = 7  # Estado para mostrar ranking
 
 class Player:
     def __init__(self, x, y):
@@ -402,6 +468,11 @@ class Game:
         self.clock = pygame.time.Clock()
         self.state = GameState.PLAYING
         self.current_level = 1
+        
+        # Sistema de ranking
+        self.ranking_manager = RankingManager()
+        self.player_name = ""
+        self.name_input_active = False
         self.max_levels = 5
         
         # Sistema de câmera
@@ -694,12 +765,26 @@ class Game:
             if event.type == pygame.QUIT:
                 return False
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r and (self.state == GameState.GAME_OVER or self.state == GameState.VICTORY):
+                if self.state == GameState.ENTER_NAME:
+                    # Capturar entrada de nome
+                    if event.key == pygame.K_RETURN:
+                        if self.player_name.strip():
+                            # Adicionar ao ranking e mostrar
+                            self.ranking_manager.add_score(self.player_name.strip(), self.score)
+                            self.state = GameState.SHOW_RANKING
+                    elif event.key == pygame.K_BACKSPACE:
+                        self.player_name = self.player_name[:-1]
+                    else:
+                        # Adicionar caractere (limitado a 25)
+                        if len(self.player_name) < 25 and event.unicode.isprintable():
+                            self.player_name += event.unicode
+                elif event.key == pygame.K_r and (self.state == GameState.GAME_OVER or self.state == GameState.VICTORY or self.state == GameState.SHOW_RANKING):
                     self.current_level = 1
                     self.score = 0  # Resetar pontuação
                     self.platforms_jumped.clear()  # Resetar plataformas pontuadas
                     self.birds_dodged.clear()  # Resetar pássaros esquivados
                     self.lives = self.max_lives  # Resetar vidas
+                    self.player_name = ""  # Resetar nome
                     self.state = GameState.PLAYING
                     self.init_level()
                 elif event.key == pygame.K_ESCAPE:
@@ -718,8 +803,11 @@ class Game:
                     self.birds_dodged.clear()  # Limpar pássaros esquivados
                     self.init_level()
                 else:
-                    # Sem vidas, game over
-                    self.state = GameState.GAME_OVER
+                    # Sem vidas, game over - verificar se entra no ranking
+                    if self.ranking_manager.is_high_score(self.score):
+                        self.state = GameState.ENTER_NAME
+                    else:
+                        self.state = GameState.GAME_OVER
                 
             # Atualizar câmera para seguir o jogador
             target_camera_x = self.player.x - CAMERA_OFFSET_X
@@ -771,8 +859,11 @@ class Game:
                         self.birds.remove(bird)
                         self.lives -= 1
                         if self.lives <= 0:
-                            # Sem vidas, game over
-                            self.state = GameState.GAME_OVER
+                            # Sem vidas, game over - verificar se entra no ranking
+                            if self.ranking_manager.is_high_score(self.score):
+                                self.state = GameState.ENTER_NAME
+                            else:
+                                self.state = GameState.GAME_OVER
                         # Não reiniciar o nível imediatamente, deixar o jogador continuar
                     break
             
@@ -782,7 +873,11 @@ class Game:
                     self.current_level += 1
                     self.init_level()
                 else:
-                    self.state = GameState.VICTORY
+                    # Vitória - verificar se entra no ranking
+                    if self.ranking_manager.is_high_score(self.score):
+                        self.state = GameState.ENTER_NAME
+                    else:
+                        self.state = GameState.VICTORY
                     
     def draw(self):
         self.draw_ocean_background()
@@ -894,6 +989,88 @@ class Game:
             self.screen.blit(complete_text, (WIDTH//2 - 200, HEIGHT//2 + 170))
             self.screen.blit(final_score_text, (WIDTH//2 - 120, HEIGHT//2 + 200))
             self.screen.blit(restart_text, (WIDTH//2 - 180, HEIGHT//2 + 240))
+            
+        elif self.state == GameState.ENTER_NAME:
+            # Tela para inserir nome no ranking
+            title_text = self.big_font.render("NOVO RECORDE!", True, YELLOW)
+            score_text = self.font.render(f"Pontuação: {self.score}", True, WHITE)
+            prompt_text = self.font.render("Digite seu nome (máximo 25 caracteres):", True, WHITE)
+            
+            # Campo de entrada de nome com cursor
+            name_display = self.player_name + "_" if len(self.player_name) < 25 else self.player_name
+            name_text = self.font.render(name_display, True, WHITE)
+            
+            instruction_text = self.font.render("Pressione ENTER para confirmar", True, LIGHT_GRAY)
+            
+            # Centralizar textos
+            title_rect = title_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 150))
+            score_rect = score_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
+            prompt_rect = prompt_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 50))
+            name_rect = name_text.get_rect(center=(WIDTH//2, HEIGHT//2))
+            instruction_rect = instruction_text.get_rect(center=(WIDTH//2, HEIGHT//2 + 50))
+            
+            # Desenhar caixa de entrada
+            input_box = pygame.Rect(WIDTH//2 - 200, HEIGHT//2 - 15, 400, 30)
+            pygame.draw.rect(self.screen, DARK_GRAY, input_box)
+            pygame.draw.rect(self.screen, WHITE, input_box, 2)
+            
+            self.screen.blit(title_text, title_rect)
+            self.screen.blit(score_text, score_rect)
+            self.screen.blit(prompt_text, prompt_rect)
+            self.screen.blit(name_text, name_rect)
+            self.screen.blit(instruction_text, instruction_rect)
+            
+        elif self.state == GameState.SHOW_RANKING:
+            # Tela do ranking
+            title_text = self.big_font.render("TOP 10 RANKING", True, YELLOW)
+            rankings = self.ranking_manager.get_rankings()
+            
+            # Título
+            title_rect = title_text.get_rect(center=(WIDTH//2, 100))
+            self.screen.blit(title_text, title_rect)
+            
+            # Cabeçalho com posições fixas
+            pos_x = WIDTH//2 - 200  # Posição inicial da tabela
+            header_pos = self.font.render("POS", True, WHITE)
+            header_name = self.font.render("NOME", True, WHITE)
+            header_score = self.font.render("PONTUAÇÃO", True, WHITE)
+            
+            self.screen.blit(header_pos, (pos_x, 180))
+            self.screen.blit(header_name, (pos_x + 60, 180))
+            self.screen.blit(header_score, (pos_x + 300, 180))
+            
+            # Linha separadora
+            pygame.draw.line(self.screen, WHITE, (pos_x - 10, 200), (pos_x + 390, 200), 2)
+            
+            # Rankings com colunas alinhadas
+            y_offset = 230
+            for i, ranking in enumerate(rankings, 1):
+                # Destacar o jogador atual se estiver no ranking
+                color = YELLOW if ranking['name'] == self.player_name.strip() else WHITE
+                
+                # Coluna posição
+                pos_text = self.font.render(f"{i:2d}.", True, color)
+                self.screen.blit(pos_text, (pos_x, y_offset))
+                
+                # Coluna nome (limitado a 18 chars para caber na coluna)
+                name_display = ranking['name'][:18]
+                name_text = self.font.render(name_display, True, color)
+                self.screen.blit(name_text, (pos_x + 60, y_offset))
+                
+                # Coluna pontuação (alinhada à direita)
+                score_display = f"{int(ranking['score']):,}".replace(',', '.')
+                score_text = self.font.render(score_display, True, color)
+                score_rect = score_text.get_rect()
+                score_rect.right = pos_x + 390
+                score_rect.y = y_offset
+                self.screen.blit(score_text, score_rect)
+                
+                y_offset += 35
+            
+            # Instruções
+            restart_text = self.font.render("Pressione R para jogar novamente", True, LIGHT_GRAY)
+            restart_rect = restart_text.get_rect(center=(WIDTH//2, HEIGHT - 50))
+            self.screen.blit(restart_text, restart_rect)
             
         pygame.display.flip()
         
