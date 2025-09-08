@@ -241,13 +241,12 @@ class Player:
         if self.current_animation in self.sprites and self.sprites[self.current_animation]:
             current_sprite = self.sprites[self.current_animation][self.animation_frame]
             
-            # Ajustar posição Y para sprites agachados
+            # Ajustar posição Y para sprites agachados (sem redimensionar)
             draw_y = self.y
             if self.current_animation == 'crouch':
-                # Redimensionar sprite agachado se necessário
-                if current_sprite.get_height() != self.crouched_height:
-                    current_sprite = pygame.transform.scale(current_sprite, (self.width, self.crouched_height))
-                    self.sprites[self.current_animation][self.animation_frame] = current_sprite
+                # Ajustar posição Y para que o sprite apareça na posição correta
+                # quando agachado (sprite mantém tamanho original)
+                draw_y = self.y + (self.height - current_sprite.get_height())
             
             screen.blit(current_sprite, (self.x, draw_y))
         else:
