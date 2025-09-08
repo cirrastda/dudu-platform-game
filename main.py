@@ -253,21 +253,40 @@ class Player:
             # Resetar cooldown
             self.shoot_cooldown = self.max_shoot_cooldown
         
-    def update(self, platforms, bullet_image=None, camera_x=0):
+    def update(self, platforms, bullet_image=None, camera_x=0, joystick=None):
         # Aplicar gravidade
         self.vel_y += GRAVITY
         
         # Movimento horizontal
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+        joystick_x = 0
+        
+        # Verificar entrada do joystick
+        if joystick and joystick.get_numaxes() >= 1:
+            joystick_x = joystick.get_axis(0)  # Eixo X do analógico esquerdo
+            # Aplicar zona morta para evitar drift
+            if abs(joystick_x) < 0.1:
+                joystick_x = 0
+        
+        # Movimento com teclado ou joystick
+        if keys[pygame.K_LEFT] or keys[pygame.K_a] or joystick_x < -0.1:
             self.vel_x = -PLAYER_SPEED
-        elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        elif keys[pygame.K_RIGHT] or keys[pygame.K_d] or joystick_x > 0.1:
             self.vel_x = PLAYER_SPEED
         else:
             self.vel_x = 0
             
         # Sistema de agachamento
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+        joystick_y = 0
+        joystick_crouch = False
+        
+        # Verificar entrada do joystick para agachamento
+        if joystick and joystick.get_numaxes() >= 2:
+            joystick_y = joystick.get_axis(1)  # Eixo Y do analógico esquerdo
+            if joystick_y > 0.5:  # Analógico para baixo
+                joystick_crouch = True
+        
+        if keys[pygame.K_DOWN] or keys[pygame.K_s] or joystick_crouch:
             if not self.is_crouching and self.on_ground:
                 # Começar a agachar
                 old_y = self.y
@@ -282,12 +301,25 @@ class Player:
                 self.y = old_y - (self.original_height - self.crouched_height)
                 self.is_crouching = False
             
-        # Tiro com barra de espaço
-        if keys[pygame.K_SPACE]:
+        # Tiro com barra de espaço ou botão do joystick
+        joystick_shoot = False
+        if joystick and joystick.get_numbuttons() > 1:
+            joystick_shoot = joystick.get_button(1)  # Botão B/Círculo para tiro
+            
+        if keys[pygame.K_SPACE] or joystick_shoot:
             self.shoot(bullet_image)
             
-        # Pulo (apenas com setas e WASD, não mais com espaço)
-        if (keys[pygame.K_UP] or keys[pygame.K_w]) and self.on_ground and not self.is_crouching:
+        # Pulo com setas/WASD ou botão/analógico do joystick
+        joystick_jump = False
+        if joystick:
+            # Botão A/X para pulo
+            if joystick.get_numbuttons() > 0:
+                joystick_jump = joystick.get_button(0)
+            # Ou analógico para cima
+            if joystick.get_numaxes() >= 2 and joystick_y < -0.5:
+                joystick_jump = True
+                
+        if ((keys[pygame.K_UP] or keys[pygame.K_w]) or joystick_jump) and self.on_ground and not self.is_crouching:
             self.vel_y = JUMP_STRENGTH
             self.on_ground = False
         
@@ -577,6 +609,20 @@ class Game:
         # Sistema de vidas
         self.lives = 3
         self.max_lives = 3
+        
+        # Sistema de joystick
+        pygame.joystick.init()
+        self.joystick = None
+        self.joystick_connected = False
+        
+        # Verificar se há joystick conectado
+        if pygame.joystick.get_count() > 0:
+            self.joystick = pygame.joystick.Joystick(0)
+            self.joystick.init()
+            self.joystick_connected = True
+            print(f"Joystick conectado: {self.joystick.get_name()}")
+        else:
+            print("Nenhum joystick detectado. Usando controles do teclado.")
         
         # Sistema de pássaros
         self.birds = []
@@ -899,12 +945,45 @@ class Game:
                     self.init_level()
                 elif event.key == pygame.K_ESCAPE:
                     return False
+            
+            # Eventos do joystick
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if self.joystick_connected:
+                    # Botão A (0) ou X (0) para pular
+                    if event.button == 0:  # Botão A/X
+                        keys = pygame.key.get_pressed()
+                        keys = list(keys)
+                        keys[pygame.K_SPACE] = True
+                        keys = tuple(keys)
+                    # Botão B (1) ou Círculo (1) para atirar
+                    elif event.button == 1:  # Botão B/Círculo
+                        keys = pygame.key.get_pressed()
+                        keys = list(keys)
+                        keys[pygame.K_SPACE] = True  # Usar espaço para tiro também
+                        keys = tuple(keys)
+                    # Start/Options para confirmar nome ou reiniciar
+                    elif event.button in [6, 7, 8, 9]:  # Start/Options (varia entre drivers)
+                        if self.state == GameState.ENTER_NAME:
+                            # Confirmar entrada de nome (equivalente ao ENTER)
+                            if self.player_name.strip():
+                                self.ranking_manager.add_score(self.player_name.strip(), self.score)
+                                self.state = GameState.SHOW_RANKING
+                        elif self.state == GameState.GAME_OVER or self.state == GameState.VICTORY or self.state == GameState.SHOW_RANKING:
+                            # Reiniciar jogo (equivalente ao R)
+                            self.current_level = 1
+                            self.score = 0
+                            self.platforms_jumped.clear()
+                            self.birds_dodged.clear()
+                            self.lives = self.max_lives
+                            self.player_name = ""
+                            self.state = GameState.PLAYING
+                            self.init_level()
         return True
         
     def update(self):
         if self.state == GameState.PLAYING:
             # Atualizar jogador
-            if not self.player.update(self.platforms, self.bullet_image, self.camera_x):
+            if not self.player.update(self.platforms, self.bullet_image, self.camera_x, self.joystick if self.joystick_connected else None):
                 self.lives -= 1
                 if self.lives > 0:
                     # Ainda tem vidas, reiniciar fase atual
