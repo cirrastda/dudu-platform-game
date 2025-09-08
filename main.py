@@ -325,15 +325,30 @@ class Flag:
         self.flag_height = 40
         self.rect = pygame.Rect(x, y, self.width + self.flag_width, self.height)
         
+        # Carregar imagem da bandeira
+        try:
+            self.flag_image = pygame.image.load("imagens/elementos/bandeira.png")
+            # Redimensionar para ocupar toda a área (mastro + bandeira)
+            total_width = self.width + self.flag_width
+            self.flag_image = pygame.transform.scale(self.flag_image, (total_width, self.height))
+        except pygame.error:
+            self.flag_image = None
+        
     def draw(self, screen):
-        # Desenhar mastro
-        pygame.draw.rect(screen, BROWN, (self.x, self.y, self.width, self.height))
-        # Desenhar bandeira
-        flag_rect = pygame.Rect(self.x + self.width, self.y, self.flag_width, self.flag_height)
-        pygame.draw.rect(screen, RED, flag_rect)
-        pygame.draw.polygon(screen, RED, [(self.x + self.width + self.flag_width, self.y),
-                                         (self.x + self.width + self.flag_width + 20, self.y + self.flag_height//2),
-                                         (self.x + self.width + self.flag_width, self.y + self.flag_height)])
+        # Desenhar bandeira completa (imagem ou fallback)
+        if self.flag_image:
+            # A imagem substitui completamente mastro e bandeira
+            screen.blit(self.flag_image, (self.x, self.y))
+        else:
+            # Fallback para desenho original completo
+            # Desenhar mastro
+            pygame.draw.rect(screen, BROWN, (self.x, self.y, self.width, self.height))
+            # Desenhar bandeira
+            flag_rect = pygame.Rect(self.x + self.width, self.y, self.flag_width, self.flag_height)
+            pygame.draw.rect(screen, RED, flag_rect)
+            pygame.draw.polygon(screen, RED, [(self.x + self.width + self.flag_width, self.y),
+                                             (self.x + self.width + self.flag_width + 20, self.y + self.flag_height//2),
+                                             (self.x + self.width + self.flag_width, self.y + self.flag_height)])
 
 class Bird:
     _id_counter = 0  # Contador de ID para pássaros
@@ -435,7 +450,7 @@ class Game:
         """Carregar todas as imagens do jogo"""
         try:
             # Carregar fundo
-            self.background_img = pygame.image.load("imagens/fundo5.png")
+            self.background_img = pygame.image.load("imagens/fundo6.png")
             self.background_img = pygame.transform.scale(self.background_img, (WIDTH, HEIGHT))
             
             # Carregar textura de plataforma 20x20px para ladrilhamento perfeito
@@ -798,12 +813,14 @@ class Game:
             # Desenhar bandeira com offset da câmera
             flag_x = self.flag.x - self.camera_x
             if flag_x > -50 and flag_x < WIDTH:  # Só desenhar se visível
-                pygame.draw.rect(self.screen, YELLOW, (flag_x, self.flag.y, self.flag.width, self.flag.height))
-                pygame.draw.polygon(self.screen, RED, [
-                    (flag_x + 5, self.flag.y + 5),
-                    (flag_x + 25, self.flag.y + 15),
-                    (flag_x + 5, self.flag.y + 25)
-                ])
+                # Salvar posição original da bandeira
+                original_x = self.flag.x
+                # Ajustar posição temporariamente para o offset da câmera
+                self.flag.x = flag_x
+                # Desenhar usando o método da classe Flag
+                self.flag.draw(self.screen)
+                # Restaurar posição original
+                self.flag.x = original_x
             
             # Desenhar pássaros com offset da câmera
             for bird in self.birds:
