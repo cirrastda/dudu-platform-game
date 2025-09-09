@@ -559,6 +559,68 @@ class Bird:
             # Bico
             pygame.draw.polygon(screen, YELLOW, [(self.x, self.y + 8), (self.x - 5, self.y + 10), (self.x, self.y + 12)])
 
+class Turtle:
+    _id_counter = 0  # Contador de ID para tartarugas
+    
+    def __init__(self, x, y, left_limit, right_limit, turtle_images=None):
+        self.x = x
+        self.y = y
+        self.width = 40
+        self.height = 30
+        self.speed = 1  # Movimento lento
+        self.rect = pygame.Rect(x, y, self.width, self.height)
+        self.platform_left = left_limit  # Limite esquerdo da plataforma
+        self.platform_right = right_limit  # Limite direito da plataforma
+        self.direction = -1  # -1 para esquerda, 1 para direita (começa indo para esquerda)
+        
+        # Atribuir ID único
+        Turtle._id_counter += 1
+        self.id = Turtle._id_counter
+        
+        # Animação
+        self.turtle_images = turtle_images  # Dicionário com left e right arrays
+        self.animation_frame = 0
+        self.animation_speed = 15  # Frames para trocar de imagem (mais lento que pássaro)
+        
+    def update(self):
+        # Mover tartaruga na direção atual
+        self.x += self.speed * self.direction
+        
+        # Verificar limites da plataforma e inverter direção
+        if self.x <= self.platform_left:
+            self.x = self.platform_left
+            self.direction = 1  # Mudar para direita
+        elif self.x >= self.platform_right:
+            self.x = self.platform_right
+            self.direction = -1  # Mudar para esquerda
+            
+        self.rect.x = self.x
+        
+        # Atualizar animação
+        self.animation_frame += 1
+        
+        return True  # Tartaruga sempre permanece ativa
+        
+    def draw(self, screen):
+        if self.turtle_images and 'left' in self.turtle_images and 'right' in self.turtle_images:
+            # Usar animação com as imagens carregadas
+            current_images = self.turtle_images['left'] if self.direction == -1 else self.turtle_images['right']
+            if current_images and len(current_images) > 0:
+                current_image_index = (self.animation_frame // self.animation_speed) % len(current_images)
+                current_image = current_images[current_image_index]
+                if current_image:
+                    screen.blit(current_image, (self.x, self.y))
+                    return
+        
+        # Fallback para o desenho original se as imagens não carregaram
+        pygame.draw.ellipse(screen, (34, 139, 34), self.rect)  # Verde escuro para tartaruga
+        # Adicionar detalhes simples (cabeça)
+        head_x = self.x + (5 if self.direction == 1 else self.width - 15)
+        pygame.draw.circle(screen, (0, 100, 0), (head_x, self.y + 10), 8)
+        # Patas
+        pygame.draw.circle(screen, (0, 80, 0), (self.x + 8, self.y + 20), 4)
+        pygame.draw.circle(screen, (0, 80, 0), (self.x + self.width - 8, self.y + 20), 4)
+
 class Bullet:
     def __init__(self, x, y, direction=1, image=None):
         self.x = x
@@ -616,18 +678,51 @@ class Game:
         pygame.display.set_caption("Jogo de Plataforma - Mar")
         self.clock = pygame.time.Clock()
         self.state = GameState.SPLASH
-        self.current_level = 1
+        
+        # Configurar nível inicial baseado no ambiente
+        if ENV_CONFIG.get('environment') == 'development' and 'initial-stage' in ENV_CONFIG:
+            try:
+                self.current_level = int(ENV_CONFIG['initial-stage'])
+                # Validar se o nível está dentro do range válido
+                if self.current_level < 1 or self.current_level > 20:
+                    print(f"Aviso: initial-stage {self.current_level} inválido. Usando nível 1.")
+                    self.current_level = 1
+                else:
+                    print(f"Modo desenvolvimento: Iniciando no nível {self.current_level}")
+            except (ValueError, TypeError):
+                print("Aviso: initial-stage deve ser um número. Usando nível 1.")
+                self.current_level = 1
+        else:
+            self.current_level = 1
         
         # Sistema de ranking
         self.ranking_manager = RankingManager()
         self.player_name = ""
         self.name_input_active = False
-        self.max_levels = 5
+        self.max_levels = 20
         
-        # Sistema de música
-        pygame.mixer.init()
+        # Sistema de música - configuração otimizada para Windows
+        try:
+            pygame.mixer.quit()  # Garantir que não há instância anterior
+            pygame.mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=1024)
+            pygame.mixer.init()
+        except pygame.error as e:
+            print(f"Erro ao inicializar mixer: {e}")
+            # Fallback para inicialização padrão
+            pygame.mixer.init()
+        
         self.current_music = None
         self.music_volume = 0.7
+        
+        # Volumes individuais para cada música (equalização)
+        self.music_volumes = {
+            'intro': 0.6,  # Música do menu - geralmente mais alta
+            'musicas/fundo1.mp3': 0.7,  # Volume padrão
+            'musicas/fundo2.mp3': 0.8,  # Geralmente mais baixa
+            'musicas/fundo3.mp3': 0.7,  # Volume padrão
+            'musicas/fundo4.mp3': 0.6   # Geralmente mais alta
+        }
+        
         self.load_music()
         
         # Sistema de câmera
@@ -641,6 +736,8 @@ class Game:
         # Sistema de vidas
         self.lives = 3
         self.max_lives = 3
+        
+
         
         # Sistema de joystick
         pygame.joystick.init()
@@ -691,26 +788,39 @@ class Game:
         # Sistema de pássaros
         self.birds = []
         
+        # Sistema de tartarugas
+        self.turtles = []
+        
         # Sistema de explosões
         self.explosions = []
         self.bird_spawn_timer = 0
         
         # Ajustar dificuldade baseada no nível
-        if self.current_level == 1:
-            self.birds_per_spawn = 1
-            self.bird_spawn_interval = 180  # 3 segundos
-        elif self.current_level == 2:
-            self.birds_per_spawn = 2
-            self.bird_spawn_interval = 150  # 2.5 segundos
-        elif self.current_level == 3:
-            self.birds_per_spawn = 2
-            self.bird_spawn_interval = 120  # 2 segundos
-        elif self.current_level == 4:
-            self.birds_per_spawn = 3
-            self.bird_spawn_interval = 100  # 1.67 segundos
-        elif self.current_level == 5:
-            self.birds_per_spawn = 3
-            self.bird_spawn_interval = 80   # 1.33 segundos
+        if self.current_level <= 5:
+            # Níveis 1-5 (originais)
+            if self.current_level == 1:
+                self.birds_per_spawn = 1
+                self.bird_spawn_interval = 180  # 3 segundos
+            elif self.current_level == 2:
+                self.birds_per_spawn = 2
+                self.bird_spawn_interval = 150  # 2.5 segundos
+            elif self.current_level == 3:
+                self.birds_per_spawn = 2
+                self.bird_spawn_interval = 120  # 2 segundos
+            elif self.current_level == 4:
+                self.birds_per_spawn = 3
+                self.bird_spawn_interval = 100  # 1.67 segundos
+            elif self.current_level == 5:
+                self.birds_per_spawn = 3
+                self.bird_spawn_interval = 80   # 1.33 segundos
+        elif self.current_level <= 10:
+            # Níveis 6-10
+            self.birds_per_spawn = 3 + (self.current_level - 5)  # 4-8 pássaros
+            self.bird_spawn_interval = max(60, 80 - (self.current_level - 5) * 4)  # 76-60 segundos
+        else:
+            # Níveis 11-20
+            self.birds_per_spawn = 2 + (self.current_level - 10)  # 3-12 pássaros
+            self.bird_spawn_interval = max(40, 150 - (self.current_level - 10) * 11)  # 139-40 segundos
         
         # Fonte para texto
         self.font = pygame.font.Font(None, 36)
@@ -719,7 +829,19 @@ class Game:
         # Carregar imagens
         self.load_images()
         
-        self.init_level()
+        # Se estiver em modo desenvolvimento e iniciando em uma fase específica,
+        # pular para o estado PLAYING e tocar música do nível
+        if ENV_CONFIG.get('environment') == 'development' and 'initial-stage' in ENV_CONFIG and self.current_level > 1:
+            self.state = GameState.PLAYING
+            self.score = 0
+            self.platforms_jumped = set()
+            self.birds_dodged = set()
+            self.lives = self.max_lives
+            self.player_name = ""
+            self.init_level()
+            self.play_level_music(self.current_level)
+        else:
+            self.init_level()
         
     def load_images(self):
         """Carregar todas as imagens do jogo"""
@@ -738,6 +860,32 @@ class Game:
             # Redimensionar para manter o tamanho atual dos pássaros (30x20)
             self.bird_img1 = pygame.transform.scale(self.bird_img1, (40, 30))
             self.bird_img2 = pygame.transform.scale(self.bird_img2, (40, 30))
+            
+            # Carregar imagens das tartarugas para animação
+            try:
+                self.turtle_left1 = pygame.image.load("imagens/inimigos/turtle-left1.png")
+                self.turtle_left2 = pygame.image.load("imagens/inimigos/turtle-left2.png")
+                self.turtle_left3 = pygame.image.load("imagens/inimigos/turtle-left3.png")
+                self.turtle_right1 = pygame.image.load("imagens/inimigos/turtle-right1.png")
+                self.turtle_right2 = pygame.image.load("imagens/inimigos/turtle-right2.png")
+                self.turtle_right3 = pygame.image.load("imagens/inimigos/turtle-right3.png")
+                
+                # Redimensionar para manter o tamanho das tartarugas (40x30)
+                self.turtle_left1 = pygame.transform.scale(self.turtle_left1, (40, 30))
+                self.turtle_left2 = pygame.transform.scale(self.turtle_left2, (40, 30))
+                self.turtle_left3 = pygame.transform.scale(self.turtle_left3, (40, 30))
+                self.turtle_right1 = pygame.transform.scale(self.turtle_right1, (40, 30))
+                self.turtle_right2 = pygame.transform.scale(self.turtle_right2, (40, 30))
+                self.turtle_right3 = pygame.transform.scale(self.turtle_right3, (40, 30))
+                
+                # Organizar imagens em dicionário para facilitar o uso
+                self.turtle_images = {
+                    'left': [self.turtle_left1, self.turtle_left2, self.turtle_left3],
+                    'right': [self.turtle_right1, self.turtle_right2, self.turtle_right3]
+                }
+            except pygame.error as e:
+                print(f"Erro ao carregar imagens das tartarugas: {e}")
+                self.turtle_images = None
             
             # Carregar imagem do tiro
             self.bullet_img = pygame.image.load("imagens/elementos/tiro.png")
@@ -798,11 +946,16 @@ class Game:
         self.music_files = {
             'intro': "musicas/intro.mp3",  # Música do menu
             1: "musicas/fundo1.mp3",  # Primeira fase
-            2: "musicas/fundo2.mp3",  # Demais fases alternando
-            3: "musicas/fundo3.mp3",
-            4: "musicas/fundo4.mp3",
-            5: "musicas/fundo2.mp3"   # Volta para fundo2 na fase 5
+            2: "musicas/fundo2.mp3",  # Segunda fase
+            3: "musicas/fundo1.mp3",  # Terceira fase (também fundo1)
         }
+        
+        # Criar rodízio para fases 4-20 usando fundo2, fundo3 e fundo4
+        background_music = ["musicas/fundo2.mp3", "musicas/fundo3.mp3", "musicas/fundo4.mp3"]
+        for level in range(4, 21):  # Fases 4 a 20
+            # Usar módulo para criar rodízio: fase 4 = índice 0, fase 5 = índice 1, etc.
+            music_index = (level - 4) % len(background_music)
+            self.music_files[level] = background_music[music_index]
         
         # Verificar se os arquivos de música existem
         for level, music_file in self.music_files.items():
@@ -819,10 +972,12 @@ class Game:
                 
                 # Carregar e tocar música do menu
                 pygame.mixer.music.load(music_file)
-                pygame.mixer.music.set_volume(self.music_volume)
+                # Usar volume específico para a música do menu
+                volume = self.music_volumes.get('intro', self.music_volume)
+                pygame.mixer.music.set_volume(volume)
                 pygame.mixer.music.play(-1)  # -1 para loop infinito
                 self.current_music = music_file
-                print(f"Tocando música do menu: {music_file}")
+                print(f"Tocando música do menu: {music_file} (volume: {volume})")
             except pygame.error as e:
                 print(f"Erro ao carregar música do menu {music_file}: {e}")
         else:
@@ -839,10 +994,12 @@ class Game:
                     
                     # Carregar e tocar nova música
                     pygame.mixer.music.load(music_file)
-                    pygame.mixer.music.set_volume(self.music_volume)
+                    # Usar volume específico para esta música
+                    volume = self.music_volumes.get(music_file, self.music_volume)
+                    pygame.mixer.music.set_volume(volume)
                     pygame.mixer.music.play(-1)  # -1 para loop infinito
                     self.current_music = music_file
-                    print(f"Tocando música do nível {level}: {music_file}")
+                    print(f"Tocando música do nível {level}: {music_file} (volume: {volume})")
                 except pygame.error as e:
                     print(f"Erro ao carregar música {music_file}: {e}")
             else:
@@ -857,6 +1014,8 @@ class Game:
         # Reinicializar sistema de pássaros
         self.birds = []
         self.bird_spawn_timer = 0
+        # Reinicializar sistema de tartarugas
+        self.turtles = []
         # Reinicializar explosões
         self.explosions = []
         # Não resetar platforms_jumped aqui para manter pontuação entre níveis
@@ -872,6 +1031,36 @@ class Game:
             self.create_level_4()
         elif self.current_level == 5:
             self.create_level_5()
+        elif self.current_level == 6:
+            self.create_level_6()
+        elif self.current_level == 7:
+            self.create_level_7()
+        elif self.current_level == 8:
+            self.create_level_8()
+        elif self.current_level == 9:
+            self.create_level_9()
+        elif self.current_level == 10:
+            self.create_level_10()
+        elif self.current_level == 11:
+            self.create_level_11()
+        elif self.current_level == 12:
+            self.create_level_12()
+        elif self.current_level == 13:
+            self.create_level_13()
+        elif self.current_level == 14:
+            self.create_level_14()
+        elif self.current_level == 15:
+            self.create_level_15()
+        elif self.current_level == 16:
+            self.create_level_16()
+        elif self.current_level == 17:
+            self.create_level_17()
+        elif self.current_level == 18:
+            self.create_level_18()
+        elif self.current_level == 19:
+            self.create_level_19()
+        elif self.current_level == 20:
+            self.create_level_20()
             
     def create_level_1(self):
         """Nível 1 - Fácil (20 plataformas)"""
@@ -1047,6 +1236,465 @@ class Game:
         self.platforms.append(Platform(6840, HEIGHT - 240, 60, 20, self.platform_texture))
         self.flag = Flag(6860, HEIGHT - 340)
         
+    def create_level_6(self):
+        """Nível 6 - Progressão (29 plataformas)"""
+        platforms = []
+        x_pos = 60
+        for i in range(29):
+            y_pos = HEIGHT - (150 + (i % 8) * 50 + (i // 8) * 10)
+            platforms.append((x_pos, y_pos, 55, 20))
+            x_pos += 90 + (i % 3) * 20
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 200, 55, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        
+    def create_level_7(self):
+        """Nível 7 - Progressão (38 plataformas)"""
+        platforms = []
+        x_pos = 50
+        for i in range(38):
+            y_pos = HEIGHT - (140 + (i % 9) * 45 + (i // 9) * 15)
+            platforms.append((x_pos, y_pos, 55, 20))
+            x_pos += 95 + (i % 4) * 15
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 180, 55, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 280)
+        
+    def create_level_8(self):
+        """Nível 8 - Progressão (47 plataformas)"""
+        platforms = []
+        x_pos = 40
+        for i in range(47):
+            y_pos = HEIGHT - (130 + (i % 10) * 40 + (i // 10) * 20)
+            platforms.append((x_pos, y_pos, 50, 20))
+            x_pos += 100 + (i % 5) * 10
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 160, 50, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 260)
+        
+    def create_level_9(self):
+        """Nível 9 - Progressão (56 plataformas)"""
+        platforms = []
+        x_pos = 30
+        for i in range(56):
+            y_pos = HEIGHT - (120 + (i % 11) * 35 + (i // 11) * 25)
+            platforms.append((x_pos, y_pos, 50, 20))
+            x_pos += 105 + (i % 6) * 5
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 140, 50, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 240)
+        
+    def create_level_10(self):
+        """Nível 10 - Progressão (100 plataformas)"""
+        platforms = []
+        x_pos = 20
+        for i in range(100):
+            y_pos = HEIGHT - (110 + (i % 12) * 30 + (i // 12) * 30)
+            platforms.append((x_pos, y_pos, 45, 20))
+            x_pos += 110 + (i % 7) * 0
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 120, 45, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 220)
+        
+    def create_level_11(self):
+        """Nível 11 - Reinício com tartarugas (30 plataformas)"""
+        platforms = []
+        x_pos = 100
+        for i in range(30):
+            y_pos = HEIGHT - (200 + (i % 5) * 80 + (i // 5) * 20)
+            platforms.append((x_pos, y_pos, 80, 20))
+            x_pos += 120 + (i % 2) * 40
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar tartarugas (1 a cada 10 plataformas)
+        for i in range(10, len(platforms), 10):
+            if i < len(platforms):
+                platform = platforms[i]
+                turtle = Turtle(platform[0], platform[1] - 30, platform[0], platform[0] + platform[2], self.turtle_images)
+                self.turtles.append(turtle)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 200, 80, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        
+    def create_level_12(self):
+        """Nível 12 - Progressão com tartarugas (39 plataformas)"""
+        platforms = []
+        x_pos = 90
+        for i in range(39):
+            y_pos = HEIGHT - (190 + (i % 6) * 75 + (i // 6) * 25)
+            platforms.append((x_pos, y_pos, 75, 20))
+            x_pos += 115 + (i % 3) * 35
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar tartarugas (1 a cada 9 plataformas)
+        for i in range(9, len(platforms), 9):
+            if i < len(platforms):
+                platform = platforms[i]
+                turtle = Turtle(platform[0], platform[1] - 30, platform[0], platform[0] + platform[2])
+                self.turtles.append(turtle)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 190, 75, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 290)
+        
+    def create_level_13(self):
+        """Nível 13 - Progressão com tartarugas (48 plataformas)"""
+        platforms = []
+        x_pos = 80
+        for i in range(48):
+            y_pos = HEIGHT - (180 + (i % 7) * 70 + (i // 7) * 30)
+            platforms.append((x_pos, y_pos, 70, 20))
+            x_pos += 110 + (i % 4) * 30
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar tartarugas (1 a cada 8 plataformas)
+        for i in range(8, len(platforms), 8):
+            if i < len(platforms):
+                platform = platforms[i]
+                turtle = Turtle(platform[0], platform[1] - 30, platform[0], platform[0] + platform[2])
+                self.turtles.append(turtle)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 180, 70, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 280)
+        
+    def create_level_14(self):
+        """Nível 14 - Progressão com tartarugas (57 plataformas)"""
+        platforms = []
+        x_pos = 70
+        for i in range(57):
+            y_pos = HEIGHT - (170 + (i % 8) * 65 + (i // 8) * 35)
+            platforms.append((x_pos, y_pos, 65, 20))
+            x_pos += 105 + (i % 5) * 25
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar tartarugas (1 a cada 7 plataformas)
+        for i in range(7, len(platforms), 7):
+            if i < len(platforms):
+                platform = platforms[i]
+                turtle = Turtle(platform[0], platform[1] - 30, platform[0], platform[0] + platform[2])
+                self.turtles.append(turtle)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 170, 65, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 270)
+        
+    def create_level_15(self):
+        """Nível 15 - Progressão com tartarugas (66 plataformas)"""
+        platforms = []
+        x_pos = 60
+        for i in range(66):
+            y_pos = HEIGHT - (160 + (i % 9) * 60 + (i // 9) * 40)
+            platforms.append((x_pos, y_pos, 60, 20))
+            x_pos += 100 + (i % 6) * 20
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar tartarugas (1 a cada 6 plataformas)
+        for i in range(6, len(platforms), 6):
+            if i < len(platforms):
+                platform = platforms[i]
+                turtle = Turtle(platform[0], platform[1] - 30, platform[0], platform[0] + platform[2])
+                self.turtles.append(turtle)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 160, 60, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 260)
+        
+    def create_level_16(self):
+        """Nível 16 - Progressão com tartarugas (75 plataformas)"""
+        platforms = []
+        x_pos = 50
+        for i in range(75):
+            y_pos = HEIGHT - (150 + (i % 10) * 55 + (i // 10) * 45)
+            platforms.append((x_pos, y_pos, 55, 20))
+            x_pos += 95 + (i % 7) * 15
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar tartarugas (1 a cada 5 plataformas)
+        for i in range(5, len(platforms), 5):
+            if i < len(platforms):
+                platform = platforms[i]
+                turtle = Turtle(platform[0], platform[1] - 30, platform[0], platform[0] + platform[2])
+                self.turtles.append(turtle)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 150, 55, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 250)
+        
+    def create_level_17(self):
+        """Nível 17 - Progressão com tartarugas (84 plataformas)"""
+        platforms = []
+        x_pos = 40
+        for i in range(84):
+            y_pos = HEIGHT - (140 + (i % 11) * 50 + (i // 11) * 50)
+            platforms.append((x_pos, y_pos, 50, 20))
+            x_pos += 90 + (i % 8) * 10
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar tartarugas (1 a cada 4 plataformas)
+        for i in range(4, len(platforms), 4):
+            if i < len(platforms):
+                platform = platforms[i]
+                turtle = Turtle(platform[0], platform[1] - 30, platform[0], platform[0] + platform[2])
+                self.turtles.append(turtle)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 140, 50, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 240)
+        
+    def create_level_18(self):
+        """Nível 18 - Progressão com tartarugas (93 plataformas)"""
+        platforms = []
+        x_pos = 30
+        for i in range(93):
+            y_pos = HEIGHT - (130 + (i % 12) * 45 + (i // 12) * 55)
+            platforms.append((x_pos, y_pos, 45, 20))
+            x_pos += 85 + (i % 9) * 5
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar tartarugas (1 a cada 3 plataformas)
+        for i in range(3, len(platforms), 3):
+            if i < len(platforms):
+                platform = platforms[i]
+                turtle = Turtle(platform[0], platform[1] - 30, platform[0], platform[0] + platform[2])
+                self.turtles.append(turtle)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 130, 45, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 230)
+        
+    def create_level_19(self):
+        """Nível 19 - Progressão com tartarugas (102 plataformas)"""
+        platforms = []
+        x_pos = 20
+        for i in range(102):
+            y_pos = HEIGHT - (120 + (i % 13) * 40 + (i // 13) * 60)
+            platforms.append((x_pos, y_pos, 40, 20))
+            x_pos += 80 + (i % 10) * 0
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar tartarugas (1 a cada 2 plataformas)
+        for i in range(2, len(platforms), 2):
+            if i < len(platforms):
+                platform = platforms[i]
+                turtle = Turtle(platform[0], platform[1] - 30, platform[0], platform[0] + platform[2])
+                self.turtles.append(turtle)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 120, 40, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 220)
+        
+    def create_level_20(self):
+        """Nível 20 - Máxima dificuldade com tartarugas (110 plataformas)"""
+        platforms = []
+        x_pos = 10
+        for i in range(110):
+            y_pos = HEIGHT - (110 + (i % 15) * 35 + (i // 15) * 65)
+            platforms.append((x_pos, y_pos, 35, 20))
+            x_pos += 75
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar tartarugas (máxima quantidade - 1 por plataforma)
+        for i, platform in enumerate(platforms):
+            if i % 1 == 0:  # Uma tartaruga por plataforma
+                turtle = Turtle(platform[0], platform[1] - 30, platform[0], platform[0] + platform[2])
+                self.turtles.append(turtle)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = x_pos + 100
+        self.platforms.append(Platform(final_x, HEIGHT - 110, 35, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 210)
+        
     def draw_ocean_background(self):
         """Desenhar fundo do mar"""
         if self.background_img:
@@ -1109,7 +1757,17 @@ class Game:
                         self.game_over_selected = (self.game_over_selected + 1) % len(self.game_over_options)
                     elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         if self.game_over_selected == 0:  # Jogar novamente
-                            self.current_level = 1
+                            # Configurar nível inicial baseado no ambiente
+                            if ENV_CONFIG.get('environment') == 'development' and 'initial-stage' in ENV_CONFIG:
+                                try:
+                                    self.current_level = int(ENV_CONFIG['initial-stage'])
+                                    # Validar se o nível está dentro do range válido
+                                    if self.current_level < 1 or self.current_level > 20:
+                                        self.current_level = 1
+                                except (ValueError, TypeError):
+                                    self.current_level = 1
+                            else:
+                                self.current_level = 1
                             self.score = 0
                             self.platforms_jumped.clear()
                             self.birds_dodged.clear()
@@ -1139,13 +1797,24 @@ class Game:
                         if len(self.player_name) < 25 and event.unicode.isprintable():
                             self.player_name += event.unicode
                 elif event.key == pygame.K_r and (self.state == GameState.VICTORY or self.state == GameState.SHOW_RANKING):
-                    self.current_level = 1
+                    # Configurar nível inicial baseado no ambiente
+                    if ENV_CONFIG.get('environment') == 'development' and 'initial-stage' in ENV_CONFIG:
+                        try:
+                            self.current_level = int(ENV_CONFIG['initial-stage'])
+                            # Validar se o nível está dentro do range válido
+                            if self.current_level < 1 or self.current_level > 20:
+                                self.current_level = 1
+                        except (ValueError, TypeError):
+                            self.current_level = 1
+                    else:
+                        self.current_level = 1
                     self.score = 0  # Resetar pontuação
                     self.platforms_jumped.clear()  # Resetar plataformas pontuadas
                     self.birds_dodged.clear()  # Resetar pássaros esquivados
                     self.lives = self.max_lives  # Resetar vidas
                     self.player_name = ""  # Resetar nome
                     self.state = GameState.PLAYING
+                    self.init_level()  # Inicializar o nível para posicionar jogador corretamente
                 elif event.key == pygame.K_ESCAPE and self.state == GameState.SHOW_RANKING:
                     # Voltar ao estado anterior (GAME_OVER ou VICTORY)
                     if self.previous_state_before_ranking:
@@ -1189,7 +1858,17 @@ class Game:
                     elif self.state == GameState.GAME_OVER:
                         if event.button == 0 or event.button in [6, 7, 8, 9]:  # A/X ou Start/Options
                             if self.game_over_selected == 0:  # Jogar novamente
-                                self.current_level = 1
+                                # Configurar nível inicial baseado no ambiente
+                                if ENV_CONFIG.get('environment') == 'development' and 'initial-stage' in ENV_CONFIG:
+                                    try:
+                                        self.current_level = int(ENV_CONFIG['initial-stage'])
+                                        # Validar se o nível está dentro do range válido
+                                        if self.current_level < 1 or self.current_level > 20:
+                                            self.current_level = 1
+                                    except (ValueError, TypeError):
+                                        self.current_level = 1
+                                else:
+                                    self.current_level = 1
                                 self.score = 0
                                 self.platforms_jumped.clear()
                                 self.birds_dodged.clear()
@@ -1226,7 +1905,17 @@ class Game:
                                 self.state = GameState.SHOW_RANKING
                         elif self.state == GameState.GAME_OVER or self.state == GameState.VICTORY or self.state == GameState.SHOW_RANKING:
                             # Reiniciar jogo (equivalente ao R)
-                            self.current_level = 1
+                            # Configurar nível inicial baseado no ambiente
+                            if ENV_CONFIG.get('environment') == 'development' and 'initial-stage' in ENV_CONFIG:
+                                try:
+                                    self.current_level = int(ENV_CONFIG['initial-stage'])
+                                    # Validar se o nível está dentro do range válido
+                                    if self.current_level < 1 or self.current_level > 20:
+                                        self.current_level = 1
+                                except (ValueError, TypeError):
+                                    self.current_level = 1
+                            else:
+                                self.current_level = 1
                             self.score = 0
                             self.platforms_jumped.clear()
                             self.birds_dodged.clear()
@@ -1304,7 +1993,19 @@ class Game:
         
         if selected_option == 'Iniciar':
             # Iniciar novo jogo
-            self.current_level = 1
+            # Configurar nível inicial baseado no ambiente
+            if ENV_CONFIG.get('environment') == 'development' and 'initial-stage' in ENV_CONFIG:
+                try:
+                    self.current_level = int(ENV_CONFIG['initial-stage'])
+                    # Validar se o nível está dentro do range válido
+                    if self.current_level < 1 or self.current_level > 20:
+                        print(f"Aviso: initial-stage {self.current_level} inválido. Usando nível 1.")
+                        self.current_level = 1
+                except (ValueError, TypeError):
+                    print("Aviso: initial-stage deve ser um número. Usando nível 1.")
+                    self.current_level = 1
+            else:
+                self.current_level = 1
             self.score = 0
             self.platforms_jumped.clear()
             self.birds_dodged.clear()
@@ -1312,7 +2013,7 @@ class Game:
             self.player_name = ""
             self.state = GameState.PLAYING
             self.init_level()
-            # Tocar música do nível 1
+            # Tocar música do nível atual
             self.play_level_music(self.current_level)
         elif selected_option == 'Recordes':
             self.state = GameState.RECORDS
@@ -1342,19 +2043,17 @@ class Game:
         elif self.state == GameState.PLAYING:
             # Atualizar jogador
             if not self.player.update(self.platforms, self.bullet_image, self.camera_x, self.joystick if self.joystick_connected else None):
+                # Jogador morreu (caiu da tela) - decrementar vida
                 self.lives -= 1
-                if self.lives > 0:
-                    # Ainda tem vidas, reiniciar fase atual
-                    # Limpar plataformas pontuadas para permitir pontuação novamente
-                    self.platforms_jumped.clear()
-                    self.birds_dodged.clear()  # Limpar pássaros esquivados
-                    self.init_level()
-                else:
+                if self.lives <= 0:
                     # Sem vidas, game over - verificar se entra no ranking
                     if self.ranking_manager.is_high_score(self.score):
                         self.state = GameState.ENTER_NAME
                     else:
                         self.state = GameState.GAME_OVER
+                else:
+                    # Ainda tem vidas, reiniciar nível atual
+                    self.init_level()
                 
             # Atualizar câmera para seguir o jogador
             target_camera_x = self.player.x - CAMERA_OFFSET_X
@@ -1386,6 +2085,10 @@ class Game:
             # Atualizar pássaros
             self.birds = [bird for bird in self.birds if bird.update()]
             
+            # Atualizar tartarugas
+            for turtle in self.turtles:
+                turtle.update()
+            
             # Atualizar explosões
             self.explosions = [explosion for explosion in self.explosions if explosion.update()]
             
@@ -1400,6 +2103,19 @@ class Game:
                         self.explosions.append(Explosion(bird.x, bird.y, self.explosion_image))
                         # Adicionar pontos
                         self.score += 50
+                        break
+            
+            # Verificar colisão entre tiros e tartarugas
+            for bullet in self.player.bullets[:]:
+                for turtle in self.turtles[:]:
+                    if bullet.rect.colliderect(turtle.rect):
+                        # Tiro acertou tartaruga
+                        self.player.bullets.remove(bullet)
+                        self.turtles.remove(turtle)
+                        # Criar explosão na posição da tartaruga
+                        self.explosions.append(Explosion(turtle.x, turtle.y, self.explosion_image))
+                        # Adicionar pontos
+                        self.score += 60
                         break
             
             # Verificar colisão e esquiva com pássaros
@@ -1419,7 +2135,29 @@ class Game:
                     # Colidiu com pássaro, ativar animação de hit
                     if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
                         self.player.take_hit()
+                        # Criar explosão na posição do pássaro
+                        self.explosions.append(Explosion(bird.x, bird.y, self.explosion_image))
                         self.birds.remove(bird)
+                        self.lives -= 1
+                        if self.lives <= 0:
+                            # Sem vidas, game over - verificar se entra no ranking
+                            if self.ranking_manager.is_high_score(self.score):
+                                self.state = GameState.ENTER_NAME
+                            else:
+                                self.state = GameState.GAME_OVER
+                        # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                    break
+            
+            # Verificar colisão com tartarugas
+            for turtle in self.turtles[:]:
+                # Verificar colisão direta
+                if self.player.rect.colliderect(turtle.rect):
+                    # Colidiu com tartaruga, ativar animação de hit
+                    if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
+                        self.player.take_hit()
+                        # Criar explosão na posição da tartaruga
+                        self.explosions.append(Explosion(turtle.x, turtle.y, self.explosion_image))
+                        self.turtles.remove(turtle)
                         self.lives -= 1
                         if self.lives <= 0:
                             # Sem vidas, game over - verificar se entra no ranking
@@ -1567,6 +2305,19 @@ class Game:
                     bird.draw(self.screen)
                     # Restaurar posição original
                     bird.x = original_bird_x
+            
+            # Desenhar tartarugas com offset da câmera
+            for turtle in self.turtles:
+                turtle_x = turtle.x - self.camera_x
+                if turtle_x > -50 and turtle_x < WIDTH:  # Só desenhar se visível
+                    # Salvar posição original da tartaruga
+                    original_turtle_x = turtle.x
+                    # Ajustar posição para câmera
+                    turtle.x = turtle_x
+                    # Chamar método draw da tartaruga
+                    turtle.draw(self.screen)
+                    # Restaurar posição original
+                    turtle.x = original_turtle_x
             
             # Desenhar explosões com offset da câmera
             for explosion in self.explosions:
