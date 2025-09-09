@@ -33,6 +33,29 @@ GRAY = (128, 128, 128)
 LIGHT_GRAY = (200, 200, 200)
 DARK_GRAY = (64, 64, 64)
 
+# Função para carregar configurações do arquivo .env
+def load_env_config():
+    """Carrega configurações do arquivo .env"""
+    config = {'environment': 'production'}  # Valor padrão
+    
+    try:
+        with open('.env', 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    config[key.strip()] = value.strip()
+    except FileNotFoundError:
+        # Se o arquivo .env não existir, usar valores padrão
+        pass
+    except Exception as e:
+        print(f"Erro ao carregar .env: {e}")
+    
+    return config
+
+# Carregar configurações
+ENV_CONFIG = load_env_config()
+
 class RankingManager:
     def __init__(self):
         self.records_dir = "records"
@@ -93,13 +116,16 @@ class RankingManager:
         return self.rankings.copy()
 
 class GameState(Enum):
-    MENU = 1
-    PLAYING = 2
-    LEVEL_COMPLETE = 3
-    GAME_OVER = 4
-    VICTORY = 5  # Nova tela de vitória com troféu
-    ENTER_NAME = 6  # Estado para inserir nome no ranking
-    SHOW_RANKING = 7  # Estado para mostrar ranking
+    SPLASH = 1  # Tela de splash com logos
+    MAIN_MENU = 2  # Menu principal
+    PLAYING = 3
+    LEVEL_COMPLETE = 4
+    GAME_OVER = 5
+    VICTORY = 6  # Nova tela de vitória com troféu
+    ENTER_NAME = 7  # Estado para inserir nome no ranking
+    SHOW_RANKING = 8  # Estado para mostrar ranking
+    CREDITS = 9  # Tela de créditos
+    RECORDS = 10  # Tela de recordes
 
 class Player:
     def __init__(self, x, y):
@@ -589,7 +615,7 @@ class Game:
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Jogo de Plataforma - Mar")
         self.clock = pygame.time.Clock()
-        self.state = GameState.PLAYING
+        self.state = GameState.SPLASH
         self.current_level = 1
         
         # Sistema de ranking
@@ -629,6 +655,38 @@ class Game:
             print(f"Joystick conectado: {self.joystick.get_name()}")
         else:
             print("Nenhum joystick detectado. Usando controles do teclado.")
+        
+        # Sistema de splash screen e menu
+        self.splash_timer = 0
+        self.splash_duration = 360  # 6 segundos (60 FPS * 6)
+        self.current_logo_index = 0
+        self.logo_display_time = 120  # Tempo para cada logo (2 segundos)
+        self.logos = []  # Lista de logos para splash
+        self.menu_selected = 0  # Opção selecionada no menu
+        self.menu_options = ['Iniciar', 'Recordes', 'Créditos', 'Sair']
+        self.game_logo = None  # Logo principal do jogo
+        
+        # Efeitos de fade para splash screen
+        self.fade_in_duration = 30  # 0.5 segundos para fade in
+        self.fade_out_duration = 30  # 0.5 segundos para fade out
+        self.logo_hold_time = 60   # 1 segundo para mostrar o logo
+        self.music_started = False  # Controla se a música já foi iniciada
+        
+        # Controle de eixos do joystick para D-pad e analógicos
+        self.prev_dpad_vertical = 0
+        self.prev_dpad_horizontal = 0
+        self.prev_analog_vertical = 0
+        self.prev_analog_horizontal = 0
+        
+        # Sistema de menu de game over
+        self.game_over_selected = 0  # Opção selecionada no menu de game over
+        self.game_over_options = ['Jogar novamente', 'Recordes', 'Sair']
+        
+        # Variável para rastrear de onde veio o SHOW_RANKING
+        self.previous_state_before_ranking = None
+        
+        # Variável para rastrear de onde veio o RECORDS
+        self.previous_state_before_records = None
         
         # Sistema de pássaros
         self.birds = []
@@ -691,6 +749,38 @@ class Game:
             self.explosion_img = pygame.transform.scale(self.explosion_img, (40, 40))
             self.explosion_image = self.explosion_img  # Alias para compatibilidade
             
+            # Carregar logos para splash screen (exceto game.png)
+            logo_files = ['cirrastec.png', 'cirrasretrogames.png', 'canaldodudu.png']
+            self.logos = []
+            for logo_file in logo_files:
+                try:
+                    logo_path = f"imagens/logos/{logo_file}"
+                    logo_img = pygame.image.load(logo_path)
+                    # Redimensionar logos para caber na tela (máximo 400x300)
+                    logo_rect = logo_img.get_rect()
+                    if logo_rect.width > 400 or logo_rect.height > 300:
+                        scale_factor = min(400/logo_rect.width, 300/logo_rect.height)
+                        new_width = int(logo_rect.width * scale_factor)
+                        new_height = int(logo_rect.height * scale_factor)
+                        logo_img = pygame.transform.scale(logo_img, (new_width, new_height))
+                    self.logos.append(logo_img)
+                except pygame.error:
+                    print(f"Erro ao carregar logo: {logo_file}")
+            
+            # Carregar logo principal do jogo
+            try:
+                self.game_logo = pygame.image.load("imagens/logos/game.png")
+                # Redimensionar logo do jogo para o menu
+                logo_rect = self.game_logo.get_rect()
+                if logo_rect.width > 300 or logo_rect.height > 200:
+                    scale_factor = min(300/logo_rect.width, 200/logo_rect.height)
+                    new_width = int(logo_rect.width * scale_factor)
+                    new_height = int(logo_rect.height * scale_factor)
+                    self.game_logo = pygame.transform.scale(self.game_logo, (new_width, new_height))
+            except pygame.error:
+                print("Erro ao carregar logo do jogo")
+                self.game_logo = None
+            
         except pygame.error as e:
             print(f"Erro ao carregar imagens: {e}")
             # Fallback para cores sólidas se as imagens não carregarem
@@ -706,6 +796,7 @@ class Game:
     def load_music(self):
         """Carregar todas as músicas do jogo"""
         self.music_files = {
+            'intro': "musicas/intro.mp3",  # Música do menu
             1: "musicas/fundo1.mp3",  # Primeira fase
             2: "musicas/fundo2.mp3",  # Demais fases alternando
             3: "musicas/fundo3.mp3",
@@ -717,6 +808,25 @@ class Game:
         for level, music_file in self.music_files.items():
             if not os.path.exists(music_file):
                 print(f"Aviso: Arquivo de música não encontrado: {music_file}")
+    
+    def play_menu_music(self):
+        """Tocar a música do menu"""
+        music_file = self.music_files['intro']
+        if os.path.exists(music_file):
+            try:
+                # Parar música atual se estiver tocando
+                pygame.mixer.music.stop()
+                
+                # Carregar e tocar música do menu
+                pygame.mixer.music.load(music_file)
+                pygame.mixer.music.set_volume(self.music_volume)
+                pygame.mixer.music.play(-1)  # -1 para loop infinito
+                self.current_music = music_file
+                print(f"Tocando música do menu: {music_file}")
+            except pygame.error as e:
+                print(f"Erro ao carregar música do menu {music_file}: {e}")
+        else:
+            print(f"Arquivo de música do menu não encontrado: {music_file}")
     
     def play_level_music(self, level):
         """Tocar a música correspondente ao nível"""
@@ -750,9 +860,6 @@ class Game:
         # Reinicializar explosões
         self.explosions = []
         # Não resetar platforms_jumped aqui para manter pontuação entre níveis
-        
-        # Tocar música do nível
-        self.play_level_music(self.current_level)
         
         # Criar plataformas baseadas no nível
         if self.current_level == 1:
@@ -965,12 +1072,65 @@ class Game:
             if event.type == pygame.QUIT:
                 return False
             elif event.type == pygame.KEYDOWN:
+                # Navegação do splash screen
+                if self.state == GameState.SPLASH:
+                    # Só permite pular se estiver em modo development
+                    if ENV_CONFIG.get('environment', 'production') == 'development':
+                        self.state = GameState.MAIN_MENU
+                        # Iniciar música do menu quando pular para o menu
+                        if not self.music_started:
+                            self.play_menu_music()
+                            self.music_started = True
+                # Navegação do menu principal
+                elif self.state == GameState.MAIN_MENU:
+                    if event.key == pygame.K_UP:
+                        self.menu_selected = (self.menu_selected - 1) % len(self.menu_options)
+                    elif event.key == pygame.K_DOWN:
+                        self.menu_selected = (self.menu_selected + 1) % len(self.menu_options)
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        self.handle_menu_selection()
+                # Navegação das telas de créditos e recordes
+                elif self.state == GameState.CREDITS:
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
+                        self.state = GameState.MAIN_MENU
+                elif self.state == GameState.RECORDS:
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
+                        # Voltar ao estado anterior (MAIN_MENU ou GAME_OVER)
+                        if self.previous_state_before_records:
+                            self.state = self.previous_state_before_records
+                            self.previous_state_before_records = None
+                        else:
+                            self.state = GameState.MAIN_MENU  # Fallback
+                # Navegação do menu de game over
+                elif self.state == GameState.GAME_OVER:
+                    if event.key == pygame.K_UP:
+                        self.game_over_selected = (self.game_over_selected - 1) % len(self.game_over_options)
+                    elif event.key == pygame.K_DOWN:
+                        self.game_over_selected = (self.game_over_selected + 1) % len(self.game_over_options)
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        if self.game_over_selected == 0:  # Jogar novamente
+                            self.current_level = 1
+                            self.score = 0
+                            self.platforms_jumped.clear()
+                            self.birds_dodged.clear()
+                            self.lives = self.max_lives
+                            self.player_name = ""
+                            self.game_over_selected = 0  # Reset menu selection
+                            self.state = GameState.PLAYING
+                            self.init_level()
+                        elif self.game_over_selected == 1:  # Recordes
+                            self.previous_state_before_records = GameState.GAME_OVER
+                            self.state = GameState.RECORDS
+                        elif self.game_over_selected == 2:  # Sair
+                            return False
                 if self.state == GameState.ENTER_NAME:
                     # Capturar entrada de nome
                     if event.key == pygame.K_RETURN:
                         if self.player_name.strip():
                             # Adicionar ao ranking e mostrar
                             self.ranking_manager.add_score(self.player_name.strip(), self.score)
+                            # Salvar o estado anterior antes de ir para SHOW_RANKING
+                            self.previous_state_before_ranking = GameState.GAME_OVER
                             self.state = GameState.SHOW_RANKING
                     elif event.key == pygame.K_BACKSPACE:
                         self.player_name = self.player_name[:-1]
@@ -978,7 +1138,7 @@ class Game:
                         # Adicionar caractere (limitado a 25)
                         if len(self.player_name) < 25 and event.unicode.isprintable():
                             self.player_name += event.unicode
-                elif event.key == pygame.K_r and (self.state == GameState.GAME_OVER or self.state == GameState.VICTORY or self.state == GameState.SHOW_RANKING):
+                elif event.key == pygame.K_r and (self.state == GameState.VICTORY or self.state == GameState.SHOW_RANKING):
                     self.current_level = 1
                     self.score = 0  # Resetar pontuação
                     self.platforms_jumped.clear()  # Resetar plataformas pontuadas
@@ -986,6 +1146,13 @@ class Game:
                     self.lives = self.max_lives  # Resetar vidas
                     self.player_name = ""  # Resetar nome
                     self.state = GameState.PLAYING
+                elif event.key == pygame.K_ESCAPE and self.state == GameState.SHOW_RANKING:
+                    # Voltar ao estado anterior (GAME_OVER ou VICTORY)
+                    if self.previous_state_before_ranking:
+                        self.state = self.previous_state_before_ranking
+                        self.previous_state_before_ranking = None
+                    else:
+                        self.state = GameState.GAME_OVER  # Fallback
                     self.init_level()
                 elif event.key == pygame.K_ESCAPE:
                     return False
@@ -993,8 +1160,51 @@ class Game:
             # Eventos do joystick
             elif event.type == pygame.JOYBUTTONDOWN:
                 if self.joystick_connected:
+                    # Navegação do splash screen com joystick
+                    if self.state == GameState.SPLASH:
+                        # Só permite pular se estiver em modo development
+                        if ENV_CONFIG.get('environment', 'production') == 'development':
+                            self.state = GameState.MAIN_MENU
+                            # Iniciar música do menu quando pular para o menu
+                            if not self.music_started:
+                                self.play_menu_music()
+                                self.music_started = True
+                    # Navegação do menu principal com joystick
+                    elif self.state == GameState.MAIN_MENU:
+                        if event.button == 0 or event.button in [6, 7, 8, 9]:  # A/X ou Start/Options
+                            self.handle_menu_selection()
+                    # Navegação das telas de créditos e recordes com joystick
+                    elif self.state == GameState.CREDITS:
+                        if event.button == 1 or event.button in [6, 7, 8, 9]:  # B/Círculo ou Start/Options
+                            self.state = GameState.MAIN_MENU
+                    elif self.state == GameState.RECORDS:
+                        if event.button == 1 or event.button in [6, 7, 8, 9]:  # B/Círculo ou Start/Options
+                            # Voltar ao estado anterior (MAIN_MENU ou GAME_OVER)
+                            if self.previous_state_before_records:
+                                self.state = self.previous_state_before_records
+                                self.previous_state_before_records = None
+                            else:
+                                self.state = GameState.MAIN_MENU  # Fallback
+                    # Navegação do menu de game over com joystick
+                    elif self.state == GameState.GAME_OVER:
+                        if event.button == 0 or event.button in [6, 7, 8, 9]:  # A/X ou Start/Options
+                            if self.game_over_selected == 0:  # Jogar novamente
+                                self.current_level = 1
+                                self.score = 0
+                                self.platforms_jumped.clear()
+                                self.birds_dodged.clear()
+                                self.lives = self.max_lives
+                                self.player_name = ""
+                                self.game_over_selected = 0
+                                self.state = GameState.PLAYING
+                                self.init_level()
+                            elif self.game_over_selected == 1:  # Recordes
+                                self.previous_state_before_records = GameState.GAME_OVER
+                                self.state = GameState.RECORDS
+                            elif self.game_over_selected == 2:  # Sair
+                                return False
                     # Botão A (0) ou X (0) para pular
-                    if event.button == 0:  # Botão A/X
+                    elif event.button == 0:  # Botão A/X
                         keys = pygame.key.get_pressed()
                         keys = list(keys)
                         keys[pygame.K_SPACE] = True
@@ -1011,6 +1221,8 @@ class Game:
                             # Confirmar entrada de nome (equivalente ao ENTER)
                             if self.player_name.strip():
                                 self.ranking_manager.add_score(self.player_name.strip(), self.score)
+                                # Salvar o estado anterior antes de ir para SHOW_RANKING
+                                self.previous_state_before_ranking = GameState.GAME_OVER
                                 self.state = GameState.SHOW_RANKING
                         elif self.state == GameState.GAME_OVER or self.state == GameState.VICTORY or self.state == GameState.SHOW_RANKING:
                             # Reiniciar jogo (equivalente ao R)
@@ -1022,10 +1234,112 @@ class Game:
                             self.player_name = ""
                             self.state = GameState.PLAYING
                             self.init_level()
+                    # Botão B para voltar do ranking
+                    elif event.button == 1 and self.state == GameState.SHOW_RANKING:  # Botão B
+                        # Voltar ao estado anterior (GAME_OVER ou VICTORY)
+                        if self.previous_state_before_ranking:
+                            self.state = self.previous_state_before_ranking
+                            self.previous_state_before_ranking = None
+                        else:
+                            self.state = GameState.GAME_OVER  # Fallback
+        
+        # Verificar movimento do joystick (analógico e D-pad) para navegação dos menus
+        if self.joystick_connected:
+            # Capturar eixos analógicos (mesma lógica do gameplay)
+            analog_vertical = 0
+            analog_horizontal = 0
+            
+            if self.joystick.get_numaxes() >= 2:
+                analog_vertical = self.joystick.get_axis(1)  # Eixo Y do analógico esquerdo
+                # Aplicar zona morta para evitar drift
+                if abs(analog_vertical) < 0.1:
+                    analog_vertical = 0
+            
+            if self.joystick.get_numaxes() >= 1:
+                analog_horizontal = self.joystick.get_axis(0)  # Eixo X do analógico esquerdo
+                # Aplicar zona morta para evitar drift
+                if abs(analog_horizontal) < 0.1:
+                    analog_horizontal = 0
+            
+            # Capturar D-pad
+            dpad_vertical = 0
+            dpad_horizontal = 0
+            
+            if self.joystick.get_numaxes() > 7:
+                dpad_vertical = self.joystick.get_axis(7)
+            if self.joystick.get_numaxes() > 6:
+                dpad_horizontal = self.joystick.get_axis(6)
+            
+            # Detectar mudança no eixo vertical (analógico ou D-pad)
+            analog_up = analog_vertical < -0.5 and self.prev_analog_vertical >= -0.5
+            analog_down = analog_vertical > 0.5 and self.prev_analog_vertical <= 0.5
+            dpad_up = dpad_vertical < -0.5 and self.prev_dpad_vertical >= -0.5
+            dpad_down = dpad_vertical > 0.5 and self.prev_dpad_vertical <= 0.5
+            
+            # Navegação para cima (analógico ou D-pad)
+            if analog_up or dpad_up:
+                if self.state == GameState.MAIN_MENU:
+                    self.menu_selected = (self.menu_selected - 1) % len(self.menu_options)
+                elif self.state == GameState.GAME_OVER:
+                    self.game_over_selected = (self.game_over_selected - 1) % len(self.game_over_options)
+            
+            # Navegação para baixo (analógico ou D-pad)
+            elif analog_down or dpad_down:
+                if self.state == GameState.MAIN_MENU:
+                    self.menu_selected = (self.menu_selected + 1) % len(self.menu_options)
+                elif self.state == GameState.GAME_OVER:
+                    self.game_over_selected = (self.game_over_selected + 1) % len(self.game_over_options)
+            
+            # Atualizar valores anteriores
+            self.prev_analog_vertical = analog_vertical
+            self.prev_analog_horizontal = analog_horizontal
+            self.prev_dpad_vertical = dpad_vertical
+            self.prev_dpad_horizontal = dpad_horizontal
+        
         return True
+    
+    def handle_menu_selection(self):
+        """Processar seleção do menu principal"""
+        selected_option = self.menu_options[self.menu_selected]
+        
+        if selected_option == 'Iniciar':
+            # Iniciar novo jogo
+            self.current_level = 1
+            self.score = 0
+            self.platforms_jumped.clear()
+            self.birds_dodged.clear()
+            self.lives = self.max_lives
+            self.player_name = ""
+            self.state = GameState.PLAYING
+            self.init_level()
+            # Tocar música do nível 1
+            self.play_level_music(self.current_level)
+        elif selected_option == 'Recordes':
+            self.state = GameState.RECORDS
+        elif selected_option == 'Créditos':
+            self.state = GameState.CREDITS
+        elif selected_option == 'Sair':
+            pygame.quit()
+            sys.exit()
         
     def update(self):
-        if self.state == GameState.PLAYING:
+        if self.state == GameState.SPLASH:
+            # Atualizar timer do splash screen
+            self.splash_timer += 1
+            
+            # Calcular qual logo mostrar baseado no tempo com fade
+            if self.logos:
+                self.current_logo_index = (self.splash_timer // self.logo_display_time) % len(self.logos)
+            
+            # Após o tempo total, ir para o menu
+            if self.splash_timer >= self.splash_duration:
+                self.state = GameState.MAIN_MENU
+                # Iniciar música do menu quando aparecer o menu
+                if not self.music_started:
+                    self.play_menu_music()
+                    self.music_started = True
+        
+        elif self.state == GameState.PLAYING:
             # Atualizar jogador
             if not self.player.update(self.platforms, self.bullet_image, self.camera_x, self.joystick if self.joystick_connected else None):
                 self.lives -= 1
@@ -1129,9 +1443,84 @@ class Game:
                         self.state = GameState.VICTORY
                     
     def draw(self):
-        self.draw_ocean_background()
+        if self.state == GameState.SPLASH:
+            # Tela de splash com fundo preto
+            self.screen.fill(BLACK)
+            
+            # Mostrar logo atual com efeito de fade
+            if self.logos and self.current_logo_index < len(self.logos):
+                logo = self.logos[self.current_logo_index]
+                
+                # Calcular posição no ciclo do logo atual
+                logo_cycle_time = self.splash_timer % self.logo_display_time
+                alpha = 255  # Opacidade padrão
+                
+                # Fade in (primeiros frames)
+                if logo_cycle_time < self.fade_in_duration:
+                    alpha = int((logo_cycle_time / self.fade_in_duration) * 255)
+                # Fade out (últimos frames)
+                elif logo_cycle_time > (self.logo_display_time - self.fade_out_duration):
+                    fade_progress = (logo_cycle_time - (self.logo_display_time - self.fade_out_duration)) / self.fade_out_duration
+                    alpha = int((1 - fade_progress) * 255)
+                
+                # Aplicar alpha ao logo
+                if alpha < 255:
+                    logo_with_alpha = logo.copy()
+                    logo_with_alpha.set_alpha(alpha)
+                    logo_rect = logo_with_alpha.get_rect(center=(WIDTH//2, HEIGHT//2))
+                    self.screen.blit(logo_with_alpha, logo_rect)
+                else:
+                    logo_rect = logo.get_rect(center=(WIDTH//2, HEIGHT//2))
+                    self.screen.blit(logo, logo_rect)
+            
+            # Texto de instrução com fade suave (só em modo development)
+            if ENV_CONFIG.get('environment', 'production') == 'development':
+                instruction_alpha = min(255, self.splash_timer * 3)  # Fade in gradual
+                instruction_text = self.font.render("Pressione qualquer tecla para continuar", True, WHITE)
+                if instruction_alpha < 255:
+                    instruction_text.set_alpha(instruction_alpha)
+                instruction_rect = instruction_text.get_rect(center=(WIDTH//2, HEIGHT - 50))
+                self.screen.blit(instruction_text, instruction_rect)
         
-        if self.state == GameState.PLAYING:
+        elif self.state == GameState.MAIN_MENU:
+            # Tela de menu com fundo do jogo
+            self.draw_ocean_background()
+            
+            # Logo do jogo (aumentado)
+            if self.game_logo:
+                # Aumentar o tamanho do logo em 50%
+                logo_scaled = pygame.transform.scale(self.game_logo, 
+                    (int(self.game_logo.get_width() * 1.5), int(self.game_logo.get_height() * 1.5)))
+                logo_rect = logo_scaled.get_rect(center=(WIDTH//2, 120))
+                self.screen.blit(logo_scaled, logo_rect)
+            
+            # Título do jogo se não houver logo
+            else:
+                title_text = self.big_font.render("Jogo de Plataforma - Mar", True, WHITE)
+                title_rect = title_text.get_rect(center=(WIDTH//2, 150))
+                self.screen.blit(title_text, title_rect)
+            
+            # Opções do menu
+            menu_start_y = 300
+            for i, option in enumerate(self.menu_options):
+                color = YELLOW if i == self.menu_selected else WHITE
+                option_text = self.font.render(option, True, color)
+                option_rect = option_text.get_rect(center=(WIDTH//2, menu_start_y + i * 60))
+                
+                # Destacar opção selecionada com retângulo
+                if i == self.menu_selected:
+                    pygame.draw.rect(self.screen, DARK_BLUE, option_rect.inflate(20, 10))
+                
+                self.screen.blit(option_text, option_rect)
+            
+            # Rodapé com direitos autorais
+            footer_text = "Desenvolvido por CirrasTec, Cirras RetroGames e Canal do Dudu. Todos os direitos reservados."
+            footer_surface = pygame.font.Font(None, 24).render(footer_text, True, LIGHT_GRAY)
+            footer_rect = footer_surface.get_rect(center=(WIDTH//2, HEIGHT - 30))
+            self.screen.blit(footer_surface, footer_rect)
+        
+        elif self.state == GameState.PLAYING:
+            self.draw_ocean_background()
             # Criar surface temporária para aplicar offset da câmera
             temp_surface = pygame.Surface((WIDTH, HEIGHT))
             temp_surface.fill((0, 0, 0, 0))  # Transparente
@@ -1224,18 +1613,35 @@ class Game:
             self.screen.blit(lives_text, (10, 90))
             
         elif self.state == GameState.GAME_OVER:
+            # Usar fundo do cenário
+            self.draw_ocean_background()
+            
             game_over_text = self.big_font.render("GAME OVER", True, RED)
             score_text = self.font.render(f"Pontuação Final: {self.score}", True, WHITE)
-            restart_text = self.font.render("Pressione R para reiniciar", True, WHITE)
             
-            # Centralizar textos corretamente
-            game_over_rect = game_over_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
-            score_rect = score_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 30))
-            restart_rect = restart_text.get_rect(center=(WIDTH//2, HEIGHT//2 + 20))
+            # Centralizar textos principais
+            game_over_rect = game_over_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 120))
+            score_rect = score_text.get_rect(center=(WIDTH//2, HEIGHT//2 - 60))
             
             self.screen.blit(game_over_text, game_over_rect)
             self.screen.blit(score_text, score_rect)
-            self.screen.blit(restart_text, restart_rect)
+            
+            # Menu de opções
+            for i, option in enumerate(self.game_over_options):
+                color = YELLOW if i == self.game_over_selected else WHITE
+                option_text = self.font.render(option, True, color)
+                option_rect = option_text.get_rect(center=(WIDTH//2, HEIGHT//2 + i * 40))
+                
+                # Destacar opção selecionada com retângulo
+                if i == self.game_over_selected:
+                    pygame.draw.rect(self.screen, DARK_BLUE, option_rect.inflate(20, 10))
+                
+                self.screen.blit(option_text, option_rect)
+            
+            # Instruções de controle
+            control_text = self.font.render("Use ↑↓ ou D-pad para navegar, Enter ou A para selecionar", True, LIGHT_GRAY)
+            control_rect = control_text.get_rect(center=(WIDTH//2, HEIGHT//2 + 120))
+            self.screen.blit(control_text, control_rect)
             
         elif self.state == GameState.VICTORY:
             # Desenhar troféu (usando formas geométricas)
@@ -1296,6 +1702,9 @@ class Game:
             self.screen.blit(instruction_text, instruction_rect)
             
         elif self.state == GameState.SHOW_RANKING:
+            # Usar fundo do cenário em vez de fundo sólido
+            self.draw_ocean_background()
+            
             # Tela do ranking
             title_text = self.big_font.render("TOP 10 RANKING", True, YELLOW)
             rankings = self.ranking_manager.get_rankings()
@@ -1344,8 +1753,117 @@ class Game:
             
             # Instruções
             restart_text = self.font.render("Pressione R para jogar novamente", True, LIGHT_GRAY)
-            restart_rect = restart_text.get_rect(center=(WIDTH//2, HEIGHT - 50))
+            restart_rect = restart_text.get_rect(center=(WIDTH//2, HEIGHT - 80))
             self.screen.blit(restart_text, restart_rect)
+            
+            back_text = self.font.render("Pressione ESC ou Botão B para voltar", True, LIGHT_GRAY)
+            back_rect = back_text.get_rect(center=(WIDTH//2, HEIGHT - 50))
+            self.screen.blit(back_text, back_rect)
+        
+        elif self.state == GameState.CREDITS:
+            # Tela de créditos com fundo do jogo
+            self.draw_ocean_background()
+            
+            # Título
+            title_text = self.big_font.render("CRÉDITOS", True, YELLOW)
+            title_rect = title_text.get_rect(center=(WIDTH//2, 80))
+            self.screen.blit(title_text, title_rect)
+            
+            # Conteúdo dos créditos
+            credits_content = [
+                "Jogo de Plataforma - Mar",
+                "",
+                "Desenvolvido por:",
+                "CirrasTec",
+                "",
+                "Em parceria com:",
+                "Cirras RetroGames",
+                "https://www.youtube.com/@cirrasretrogames",
+                "",
+                "Canal do Dudu",
+                "https://www.youtube.com/@canaldodudu8789",
+                "",
+                "Este jogo foi criado com paixão e dedicação,",
+                "combinando a nostalgia dos jogos clássicos",
+                "com elementos modernos de gameplay.",
+                "",
+                "Agradecemos por jogar!",
+            ]
+            
+            y_offset = 150
+            for line in credits_content:
+                if line.startswith("https://"):
+                    # Links em cor diferente
+                    text_surface = self.font.render(line, True, LIGHT_BLUE)
+                elif line in ["CirrasTec", "Cirras RetroGames", "Canal do Dudu"]:
+                    # Nomes em destaque
+                    text_surface = self.font.render(line, True, YELLOW)
+                else:
+                    # Texto normal
+                    text_surface = self.font.render(line, True, WHITE)
+                
+                text_rect = text_surface.get_rect(center=(WIDTH//2, y_offset))
+                self.screen.blit(text_surface, text_rect)
+                y_offset += 30
+            
+            # Instruções
+            instruction_text = self.font.render("Pressione ESC ou ENTER para voltar", True, LIGHT_GRAY)
+            instruction_rect = instruction_text.get_rect(center=(WIDTH//2, HEIGHT - 50))
+            self.screen.blit(instruction_text, instruction_rect)
+        
+        elif self.state == GameState.RECORDS:
+            # Tela de recordes (reutilizar a lógica do ranking)
+            self.draw_ocean_background()
+            
+            # Título
+            title_text = self.big_font.render("RECORDES", True, YELLOW)
+            rankings = self.ranking_manager.get_rankings()
+            
+            # Título
+            title_rect = title_text.get_rect(center=(WIDTH//2, 100))
+            self.screen.blit(title_text, title_rect)
+            
+            # Cabeçalho com posições fixas
+            pos_x = WIDTH//2 - 200  # Posição inicial da tabela
+            header_pos = self.font.render("POS", True, WHITE)
+            header_name = self.font.render("NOME", True, WHITE)
+            header_score = self.font.render("PONTUAÇÃO", True, WHITE)
+            
+            self.screen.blit(header_pos, (pos_x, 180))
+            self.screen.blit(header_name, (pos_x + 60, 180))
+            self.screen.blit(header_score, (pos_x + 300, 180))
+            
+            # Linha separadora
+            pygame.draw.line(self.screen, WHITE, (pos_x - 10, 200), (pos_x + 390, 200), 2)
+            
+            # Rankings com colunas alinhadas
+            y_offset = 230
+            for i, ranking in enumerate(rankings, 1):
+                color = WHITE
+                
+                # Coluna posição
+                pos_text = self.font.render(f"{i:2d}.", True, color)
+                self.screen.blit(pos_text, (pos_x, y_offset))
+                
+                # Coluna nome (limitado a 18 chars para caber na coluna)
+                name_display = ranking['name'][:18]
+                name_text = self.font.render(name_display, True, color)
+                self.screen.blit(name_text, (pos_x + 60, y_offset))
+                
+                # Coluna pontuação (alinhada à direita)
+                score_display = f"{int(ranking['score']):,}".replace(',', '.')
+                score_text = self.font.render(score_display, True, color)
+                score_rect = score_text.get_rect()
+                score_rect.right = pos_x + 390
+                score_rect.y = y_offset
+                self.screen.blit(score_text, score_rect)
+                
+                y_offset += 35
+            
+            # Instruções
+            instruction_text = self.font.render("Pressione ESC ou ENTER para voltar", True, LIGHT_GRAY)
+            instruction_rect = instruction_text.get_rect(center=(WIDTH//2, HEIGHT - 50))
+            self.screen.blit(instruction_text, instruction_rect)
             
         pygame.display.flip()
         
