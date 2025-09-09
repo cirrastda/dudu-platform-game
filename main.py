@@ -598,6 +598,12 @@ class Game:
         self.name_input_active = False
         self.max_levels = 5
         
+        # Sistema de música
+        pygame.mixer.init()
+        self.current_music = None
+        self.music_volume = 0.7
+        self.load_music()
+        
         # Sistema de câmera
         self.camera_x = 0
         
@@ -696,6 +702,41 @@ class Game:
             self.bullet_image = None
             self.explosion_img = None
             self.explosion_image = None
+    
+    def load_music(self):
+        """Carregar todas as músicas do jogo"""
+        self.music_files = {
+            1: "musicas/fundo1.mp3",  # Primeira fase
+            2: "musicas/fundo2.mp3",  # Demais fases alternando
+            3: "musicas/fundo3.mp3",
+            4: "musicas/fundo4.mp3",
+            5: "musicas/fundo2.mp3"   # Volta para fundo2 na fase 5
+        }
+        
+        # Verificar se os arquivos de música existem
+        for level, music_file in self.music_files.items():
+            if not os.path.exists(music_file):
+                print(f"Aviso: Arquivo de música não encontrado: {music_file}")
+    
+    def play_level_music(self, level):
+        """Tocar a música correspondente ao nível"""
+        if level in self.music_files:
+            music_file = self.music_files[level]
+            if os.path.exists(music_file):
+                try:
+                    # Parar música atual se estiver tocando
+                    pygame.mixer.music.stop()
+                    
+                    # Carregar e tocar nova música
+                    pygame.mixer.music.load(music_file)
+                    pygame.mixer.music.set_volume(self.music_volume)
+                    pygame.mixer.music.play(-1)  # -1 para loop infinito
+                    self.current_music = music_file
+                    print(f"Tocando música do nível {level}: {music_file}")
+                except pygame.error as e:
+                    print(f"Erro ao carregar música {music_file}: {e}")
+            else:
+                print(f"Arquivo de música não encontrado: {music_file}")
         
     def init_level(self):
         """Inicializar o nível atual"""
@@ -709,6 +750,9 @@ class Game:
         # Reinicializar explosões
         self.explosions = []
         # Não resetar platforms_jumped aqui para manter pontuação entre níveis
+        
+        # Tocar música do nível
+        self.play_level_music(self.current_level)
         
         # Criar plataformas baseadas no nível
         if self.current_level == 1:
