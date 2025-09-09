@@ -1776,6 +1776,8 @@ class Game:
                             self.game_over_selected = 0  # Reset menu selection
                             self.state = GameState.PLAYING
                             self.init_level()
+                            # Tocar música do nível atual
+                            self.play_level_music(self.current_level)
                         elif self.game_over_selected == 1:  # Recordes
                             self.previous_state_before_records = GameState.GAME_OVER
                             self.state = GameState.RECORDS
@@ -1815,6 +1817,8 @@ class Game:
                     self.player_name = ""  # Resetar nome
                     self.state = GameState.PLAYING
                     self.init_level()  # Inicializar o nível para posicionar jogador corretamente
+                    # Tocar música do nível atual
+                    self.play_level_music(self.current_level)
                 elif event.key == pygame.K_ESCAPE and self.state == GameState.SHOW_RANKING:
                     # Voltar ao estado anterior (GAME_OVER ou VICTORY)
                     if self.previous_state_before_ranking:
@@ -1877,6 +1881,8 @@ class Game:
                                 self.game_over_selected = 0
                                 self.state = GameState.PLAYING
                                 self.init_level()
+                                # Tocar música do nível atual
+                                self.play_level_music(self.current_level)
                             elif self.game_over_selected == 1:  # Recordes
                                 self.previous_state_before_records = GameState.GAME_OVER
                                 self.state = GameState.RECORDS
@@ -2054,6 +2060,8 @@ class Game:
                 else:
                     # Ainda tem vidas, reiniciar nível atual
                     self.init_level()
+                    # Tocar música do nível atual
+                    self.play_level_music(self.current_level)
                 
             # Atualizar câmera para seguir o jogador
             target_camera_x = self.player.x - CAMERA_OFFSET_X
@@ -2173,6 +2181,8 @@ class Game:
                 if self.current_level < self.max_levels:
                     self.current_level += 1
                     self.init_level()
+                    # Tocar música do novo nível
+                    self.play_level_music(self.current_level)
                 else:
                     # Vitória - verificar se entra no ranking
                     if self.ranking_manager.is_high_score(self.score):
