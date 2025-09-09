@@ -278,6 +278,10 @@ class Player:
             
             # Resetar cooldown
             self.shoot_cooldown = self.max_shoot_cooldown
+            
+            # Retornar sinal de que atirou
+            return True
+        return False
         
     def update(self, platforms, bullet_image=None, camera_x=0, joystick=None):
         # Aplicar gravidade
@@ -332,8 +336,9 @@ class Player:
         if joystick and joystick.get_numbuttons() > 1:
             joystick_shoot = joystick.get_button(1)  # Botão B/Círculo para tiro
             
+        shot_sound = False
         if keys[pygame.K_SPACE] or joystick_shoot:
-            self.shoot(bullet_image)
+            shot_sound = self.shoot(bullet_image)
             
         # Pulo com setas/WASD ou botão/analógico do joystick
         joystick_jump = False
@@ -345,9 +350,11 @@ class Player:
             if joystick.get_numaxes() >= 2 and joystick_y < -0.5:
                 joystick_jump = True
                 
+        jump_sound = False
         if ((keys[pygame.K_UP] or keys[pygame.K_w]) or joystick_jump) and self.on_ground and not self.is_crouching:
             self.vel_y = JUMP_STRENGTH
             self.on_ground = False
+            jump_sound = True
         
         # Atualizar posição
         self.x += self.vel_x
@@ -395,8 +402,14 @@ class Player:
                     
         # Atualizar animação
         self.update_animation()
-                    
-        return True
+        
+        # Retornar ação baseada nos sons
+        if jump_sound:
+            return 'jump'
+        elif shot_sound:
+            return 'shot'
+        else:
+            return True
     
     def draw(self, screen):
         # Desenhar o sprite atual do personagem
@@ -723,7 +736,12 @@ class Game:
             'musicas/fundo4.mp3': 0.6   # Geralmente mais alta
         }
         
+        # Sistema de efeitos sonoros
+        self.sound_effects = {}
+        self.sound_volume = 0.8
+        
         self.load_music()
+        self.load_sound_effects()
         
         # Sistema de câmera
         self.camera_x = 0
@@ -1004,6 +1022,46 @@ class Game:
                     print(f"Erro ao carregar música {music_file}: {e}")
             else:
                 print(f"Arquivo de música não encontrado: {music_file}")
+    
+    def load_sound_effects(self):
+        """Carregar efeitos sonoros do jogo"""
+        try:
+            # Carregar som de pulo
+            if os.path.exists("sounds/jump.mp3"):
+                self.sound_effects['jump'] = pygame.mixer.Sound("sounds/jump.mp3")
+                self.sound_effects['jump'].set_volume(self.sound_volume)
+                print("Som de pulo carregado com sucesso")
+            else:
+                print("Aviso: Arquivo sounds/jump.mp3 não encontrado")
+            
+            # Carregar som de explosão
+            if os.path.exists("sounds/explosion.mp3"):
+                self.sound_effects['explosion'] = pygame.mixer.Sound("sounds/explosion.mp3")
+                self.sound_effects['explosion'].set_volume(self.sound_volume)
+                print("Som de explosão carregado com sucesso")
+            else:
+                print("Aviso: Arquivo sounds/explosion.mp3 não encontrado")
+            
+            # Carregar som de tiro
+            if os.path.exists("sounds/shot.mp3"):
+                self.sound_effects['shot'] = pygame.mixer.Sound("sounds/shot.mp3")
+                self.sound_effects['shot'].set_volume(self.sound_volume)
+                print("Som de tiro carregado com sucesso")
+            else:
+                print("Aviso: Arquivo sounds/shot.mp3 não encontrado")
+                
+        except pygame.error as e:
+            print(f"Erro ao carregar efeitos sonoros: {e}")
+    
+    def play_sound_effect(self, sound_name):
+        """Tocar um efeito sonoro específico"""
+        if sound_name in self.sound_effects:
+            try:
+                self.sound_effects[sound_name].play()
+            except pygame.error as e:
+                print(f"Erro ao tocar efeito sonoro {sound_name}: {e}")
+        else:
+            print(f"Efeito sonoro '{sound_name}' não encontrado")
         
     def init_level(self):
         """Inicializar o nível atual"""
@@ -2048,7 +2106,16 @@ class Game:
         
         elif self.state == GameState.PLAYING:
             # Atualizar jogador
-            if not self.player.update(self.platforms, self.bullet_image, self.camera_x, self.joystick if self.joystick_connected else None):
+            player_action = self.player.update(self.platforms, self.bullet_image, self.camera_x, self.joystick if self.joystick_connected else None)
+            
+            # Verificar ações do jogador e tocar sons
+            if player_action == 'jump':
+                self.play_sound_effect('jump')
+            elif player_action == 'shot':
+                self.play_sound_effect('shot')
+            
+            # Verificar se jogador morreu (retorno False)
+            if player_action is False:
                 # Jogador morreu (caiu da tela) - decrementar vida
                 self.lives -= 1
                 if self.lives <= 0:
@@ -2109,6 +2176,8 @@ class Game:
                         self.birds.remove(bird)
                         # Criar explosão na posição do pássaro
                         self.explosions.append(Explosion(bird.x, bird.y, self.explosion_image))
+                        # Tocar som de explosão
+                        self.play_sound_effect('explosion')
                         # Adicionar pontos
                         self.score += 50
                         break
@@ -2122,6 +2191,8 @@ class Game:
                         self.turtles.remove(turtle)
                         # Criar explosão na posição da tartaruga
                         self.explosions.append(Explosion(turtle.x, turtle.y, self.explosion_image))
+                        # Tocar som de explosão
+                        self.play_sound_effect('explosion')
                         # Adicionar pontos
                         self.score += 60
                         break
