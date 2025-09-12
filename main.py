@@ -1635,8 +1635,8 @@ class Game:
         # Adicionar plataforma embaixo da bandeira
         last_platform = platforms[-1]  # Última plataforma da lista
         final_x = last_platform[0] + last_platform[2] + 100  # x + width + 100
-        self.platforms.append(Platform(final_x, HEIGHT - 200, 40, 20, self.platform_texture))
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        self.platforms.append(Platform(final_x, HEIGHT - 200, 120, 20, self.platform_texture))
+        self.flag = Flag(final_x + 50, HEIGHT - 300)
         
     def create_level_2(self):
         """Nível 2 - Médio (30 plataformas)"""
@@ -1705,7 +1705,10 @@ class Game:
         self.flag = Flag(5760, HEIGHT - 340)
         
     def create_level_4(self):
-        """Nível 4 - Difícil (50 plataformas)"""
+        """Nível 4 - Difícil (50 plataformas) - Versão corrigida sem plataformas extras"""
+        # Limpar plataformas existentes para garantir que não há duplicatas
+        self.platforms.clear()
+        
         platforms = [
             (80, HEIGHT - 220, 70, 20), (200, HEIGHT - 350, 70, 20), (320, HEIGHT - 180, 70, 20),
             (440, HEIGHT - 400, 70, 20), (560, HEIGHT - 250, 70, 20), (680, HEIGHT - 450, 70, 20),
@@ -1721,11 +1724,11 @@ class Game:
             (4040, HEIGHT - 480, 70, 20), (4160, HEIGHT - 280, 70, 20), (4280, HEIGHT - 140, 70, 20),
             (4400, HEIGHT - 360, 70, 20), (4520, HEIGHT - 220, 70, 20), (4640, HEIGHT - 520, 70, 20),
             (4760, HEIGHT - 160, 70, 20), (4880, HEIGHT - 340, 70, 20), (5000, HEIGHT - 260, 70, 20),
-            (5120, HEIGHT - 120, 70, 20), (5240, HEIGHT - 400, 70, 20), (5360, HEIGHT - 200, 70, 20),
-            (5480, HEIGHT - 500, 70, 20), (5600, HEIGHT - 280, 70, 20), (5720, HEIGHT - 140, 70, 20),
-            (5840, HEIGHT - 380, 70, 20), (5960, HEIGHT - 240, 70, 20)
+            (5120, HEIGHT - 120, 70, 20), (5240, HEIGHT - 400, 70, 20), (5360, HEIGHT - 200, 70, 20)
+            # Removidas as 5 plataformas extras que estavam após a bandeira
         ]
         
+        # Adicionar apenas as 50 plataformas definidas
         for x, y, w, h in platforms:
             self.platforms.append(Platform(x, y, w, h, self.platform_texture))
             
@@ -1738,11 +1741,12 @@ class Game:
         self.player.vel_y = 0
         self.player.on_ground = True
             
-        # Adicionar plataforma embaixo da bandeira
+        # Adicionar APENAS a plataforma da bandeira (não há outras plataformas após esta)
         self.platforms.append(Platform(5540, HEIGHT - 200, 80, 20, self.platform_texture))
         self.flag = Flag(5560, HEIGHT - 300)
         
-
+        # Debug: Imprimir número total de plataformas para verificação
+        print(f"Nível 4 criado com {len(self.platforms)} plataformas (47 + 1 da bandeira = 48 total)")
         
     def create_level_8(self):
         """Nível 8 - Progressão (55 plataformas)"""
