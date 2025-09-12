@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <!-- SVG representation of a "tada" sound effect -->
+  <defs>
+    <radialGradient id="soundWave" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFA500;stop-opacity:0.7" />
+      <stop offset="100%" style="stop-color:#FF6347;stop-opacity:0.3" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Sound wave circles -->
+  <circle cx="50" cy="50" r="10" fill="url(#soundWave)" opacity="0.9">
+    <animate attributeName="r" values="10;30;10" dur="0.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.9;0.3;0.9" dur="0.5s" repeatCount="indefinite"/>
+  </circle>
+  
+  <circle cx="50" cy="50" r="20" fill="none" stroke="#FFD700" stroke-width="2" opacity="0.7">
+    <animate attributeName="r" values="20;40;20" dur="0.7s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.7;0.1;0.7" dur="0.7s" repeatCount="indefinite"/>
+  </circle>
+  
+  <circle cx="50" cy="50" r="30" fill="none" stroke="#FFA500" stroke-width="1" opacity="0.5">
+    <animate attributeName="r" values="30;50;30" dur="1s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.5;0.1;0.5" dur="1s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Musical notes -->
+  <text x="25" y="25" font-family="Arial" font-size="12" fill="#FFD700" opacity="0.8">
+    ♪
+    <animateTransform attributeName="transform" type="translate" values="0,0; -5,-10; 0,0" dur="1s" repeatCount="indefinite"/>
+  </text>
+  
+  <text x="75" y="30" font-family="Arial" font-size="10" fill="#FFA500" opacity="0.6">
+    ♫
+    <animateTransform attributeName="transform" type="translate" values="0,0; 5,-8; 0,0" dur="1.2s" repeatCount="indefinite"/>
+  </text>
+  
+  <!-- Central star for "tada" effect -->
+  <polygon points="50,15 52,25 62,25 54,32 57,42 50,37 43,42 46,32 38,25 48,25" fill="#FFD700" opacity="0.9">
+    <animateTransform attributeName="transform" type="scale" values="1;1.3;1" dur="0.8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.9;1;0.9" dur="0.8s" repeatCount="indefinite"/>
+  </polygon>
+</svg>

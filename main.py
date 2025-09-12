@@ -1118,6 +1118,11 @@ class Game:
         self.lives = 3
         self.max_lives = 3
         
+        # Sistema de vidas extras por pontuação
+        self.extra_life_milestones = [1000, 5000, 10000]  # Marcos iniciais
+        self.next_extra_life_score = 1000  # Próxima pontuação para vida extra
+        self.extra_lives_earned = 0  # Contador de vidas extras ganhas
+        
 
         
         # Sistema de joystick
@@ -1417,6 +1422,17 @@ class Game:
                     print("Som de tiro carregado com sucesso")
             else:
                 print("Aviso: Arquivo sounds/shot.mp3 não encontrado")
+            
+            # Carregar som de vida extra usando cache
+            if os.path.exists("sounds/new-life.mp3"):
+                sound = cache.get_sound("sounds/new-life.mp3")
+                if sound:
+                    self.sound_effects['new-life'] = sound
+                    # Volume mais alto para se sobressair sobre a música de fundo
+                    self.sound_effects['new-life'].set_volume(min(1.0, self.sound_volume * 1.5))
+                    print("Som de vida extra carregado com sucesso")
+            else:
+                print("Aviso: Arquivo sounds/new-life.mp3 não encontrado")
                 
         except pygame.error as e:
             print(f"Erro ao carregar efeitos sonoros: {e}")
@@ -1430,6 +1446,30 @@ class Game:
                 print(f"Erro ao tocar efeito sonoro {sound_name}: {e}")
         else:
             print(f"Efeito sonoro '{sound_name}' não encontrado")
+    
+    def check_extra_life(self):
+        """Verificar se o jogador merece uma vida extra baseada na pontuação"""
+        if self.score >= self.next_extra_life_score:
+            # Conceder vida extra
+            self.lives += 1
+            self.extra_lives_earned += 1
+            
+            # Tocar som de vida extra
+            self.play_sound_effect('new-life')  # Som específico para vida extra
+            
+            # Calcular próxima pontuação para vida extra
+            if self.extra_lives_earned <= 3:  # Primeiros 3 marcos: 1000, 5000, 10000
+                if self.extra_lives_earned < len(self.extra_life_milestones):
+                    self.next_extra_life_score = self.extra_life_milestones[self.extra_lives_earned]
+                else:
+                    # Após 10000, a cada 10000 pontos
+                    self.next_extra_life_score = 20000
+            else:
+                # A cada 10000 pontos após os marcos iniciais
+                self.next_extra_life_score += 10000
+            
+            return True  # Indica que uma vida extra foi concedida
+        return False
         
     def update_bird_difficulty(self):
         """Atualizar dificuldade dos pássaros baseada no nível atual
@@ -3155,6 +3195,8 @@ class Game:
                 if self.player.landed_platform_id not in self.platforms_jumped:
                     self.platforms_jumped.add(self.player.landed_platform_id)
                     self.score += 10
+                    # Verificar se merece vida extra
+                    self.check_extra_life()
                 # Reset da flag após verificar pontuação
                 self.player.just_landed = False
                 delattr(self.player, 'landed_platform_id')
@@ -3213,6 +3255,8 @@ class Game:
                         self.play_sound_effect('explosion')
                         # Adicionar pontos
                         self.score += 50
+                        # Verificar se merece vida extra
+                        self.check_extra_life()
                         break
             
             # Verificar colisão entre tiros e tartarugas
@@ -3231,6 +3275,8 @@ class Game:
                         self.play_sound_effect('explosion')
                         # Adicionar pontos
                         self.score += 60
+                        # Verificar se merece vida extra
+                        self.check_extra_life()
                         break
             
             # Verificar colisão e esquiva com pássaros
@@ -3244,6 +3290,8 @@ class Game:
                     bird.x < self.player.x and bird.id not in self.birds_dodged):
                     self.birds_dodged.add(bird.id)
                     self.score += 10  # Pontos por esquivar
+                    # Verificar se merece vida extra
+                    self.check_extra_life()
                 
                 # Verificar colisão direta
                 if self.player.rect.colliderect(bird.rect):
@@ -3252,6 +3300,8 @@ class Game:
                         self.explosions.append(Explosion(bird.x, bird.y, self.explosion_image))
                         self.birds.remove(bird)
                         self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
+                        # Verificar se merece vida extra
+                        self.check_extra_life()
                     else:
                         # Colidiu com pássaro, ativar animação de hit
                         if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
@@ -3278,6 +3328,8 @@ class Game:
                         self.explosions.append(Explosion(turtle.x, turtle.y, self.explosion_image))
                         self.turtles.remove(turtle)
                         self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
+                        # Verificar se merece vida extra
+                        self.check_extra_life()
                     else:
                         # Colidiu com tartaruga, ativar animação de hit
                         if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
