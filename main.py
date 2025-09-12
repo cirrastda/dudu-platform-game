@@ -31,6 +31,7 @@ GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BROWN = (139, 69, 19)
 YELLOW = (255, 255, 0)
+GOLD = (255, 215, 0)  # Cor dourada para invulnerabilidade
 GRAY = (128, 128, 128)
 LIGHT_GRAY = (200, 200, 200)
 DARK_GRAY = (64, 64, 64)
@@ -234,6 +235,9 @@ class Player:
         self.is_crouching = False
         self.is_hit = False  # Flag para quando o personagem é atingido
         self.hit_timer = 0  # Timer para controlar duração do estado de hit
+        self.is_invulnerable = False  # Flag para invulnerabilidade
+        self.invulnerability_timer = 0  # Timer para duração da invulnerabilidade (5 segundos = 300 frames)
+        self.blink_timer = 0  # Timer para controlar o piscar durante invulnerabilidade
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
         
         # Sistema de animação
@@ -348,10 +352,21 @@ class Player:
             if self.hit_timer <= 0:
                 self.is_hit = False
                 
+        # Atualizar timer de invulnerabilidade
+        if self.invulnerability_timer > 0:
+            self.invulnerability_timer -= 1
+            self.blink_timer += 1
+            if self.invulnerability_timer <= 0:
+                self.is_invulnerable = False
+                self.blink_timer = 0
+                
     def take_hit(self):
         """Método para quando o personagem é atingido"""
         self.is_hit = True
         self.hit_timer = 30  # 30 frames = 0.5 segundos a 60 FPS
+        self.is_invulnerable = True
+        self.invulnerability_timer = 300  # 300 frames = 5 segundos a 60 FPS
+        self.blink_timer = 0
         
     def shoot(self, bullet_image=None, game=None):
         """Criar um novo tiro usando pool de objetos se disponível"""
@@ -520,11 +535,36 @@ class Player:
                 # quando agachado (sprite mantém tamanho original)
                 draw_y = self.y + (self.height - current_sprite.get_height())
             
-            screen.blit(current_sprite, (self.x, draw_y))
+            # Efeito de piscar durante invulnerabilidade
+            if self.is_invulnerable:
+                # Piscar a cada 8 frames entre normal e esmaecido
+                if (self.blink_timer // 8) % 2 == 0:
+                    # Sprite normal
+                    screen.blit(current_sprite, (self.x, draw_y))
+                else:
+                    # Sprite esmaecido
+                    faded_sprite = current_sprite.copy()
+                    faded_sprite.set_alpha(80)  # 80/255 = ~31% de opacidade
+                    screen.blit(faded_sprite, (self.x, draw_y))
+            else:
+                # Sprite normal quando não invulnerável
+                screen.blit(current_sprite, (self.x, draw_y))
         else:
             # Fallback: desenhar retângulo colorido
             color = RED if self.is_hit else BLUE
-            pygame.draw.rect(screen, color, self.rect)
+            
+            # Efeito de piscar durante invulnerabilidade no fallback também
+            if self.is_invulnerable:
+                if (self.blink_timer // 8) % 2 == 0:
+                    # Retângulo normal
+                    pygame.draw.rect(screen, color, self.rect)
+                else:
+                    # Retângulo esmaecido
+                    fade_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+                    fade_surface.fill((*color, 80))  # Cor com alpha 80
+                    screen.blit(fade_surface, (self.x, self.y))
+            else:
+                pygame.draw.rect(screen, color, self.rect)
             
         # Tiros são desenhados no método draw da classe Game com offset da câmera
 
@@ -1553,7 +1593,8 @@ class Game:
         self.player.on_ground = True
             
         # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
+        last_platform = platforms[-1]  # Última plataforma da lista
+        final_x = last_platform[0] + last_platform[2] + 100  # x + width + 100
         self.platforms.append(Platform(final_x, HEIGHT - 200, 40, 20, self.platform_texture))
         self.flag = Flag(final_x + 20, HEIGHT - 300)
         
@@ -3206,40 +3247,52 @@ class Game:
                 
                 # Verificar colisão direta
                 if self.player.rect.colliderect(bird.rect):
-                    # Colidiu com pássaro, ativar animação de hit
-                    if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
-                        self.player.take_hit()
-                        # Criar explosão na posição do pássaro
+                    if self.player.is_invulnerable:
+                        # Jogador invulnerável: explodir inimigo sem causar dano
                         self.explosions.append(Explosion(bird.x, bird.y, self.explosion_image))
                         self.birds.remove(bird)
-                        self.lives -= 1
-                        if self.lives <= 0:
-                            # Sem vidas, game over - verificar se entra no ranking
-                            if self.ranking_manager.is_high_score(self.score):
-                                self.state = GameState.ENTER_NAME
-                            else:
-                                self.state = GameState.GAME_OVER
-                        # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                        self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
+                    else:
+                        # Colidiu com pássaro, ativar animação de hit
+                        if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
+                            self.player.take_hit()
+                            # Criar explosão na posição do pássaro
+                            self.explosions.append(Explosion(bird.x, bird.y, self.explosion_image))
+                            self.birds.remove(bird)
+                            self.lives -= 1
+                            if self.lives <= 0:
+                                # Sem vidas, game over - verificar se entra no ranking
+                                if self.ranking_manager.is_high_score(self.score):
+                                    self.state = GameState.ENTER_NAME
+                                else:
+                                    self.state = GameState.GAME_OVER
+                            # Não reiniciar o nível imediatamente, deixar o jogador continuar
                     break
             
             # Verificar colisão com tartarugas
             for turtle in self.turtles[:]:
                 # Verificar colisão direta
                 if self.player.rect.colliderect(turtle.rect):
-                    # Colidiu com tartaruga, ativar animação de hit
-                    if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
-                        self.player.take_hit()
-                        # Criar explosão na posição da tartaruga
+                    if self.player.is_invulnerable:
+                        # Jogador invulnerável: explodir inimigo sem causar dano
                         self.explosions.append(Explosion(turtle.x, turtle.y, self.explosion_image))
                         self.turtles.remove(turtle)
-                        self.lives -= 1
-                        if self.lives <= 0:
-                            # Sem vidas, game over - verificar se entra no ranking
-                            if self.ranking_manager.is_high_score(self.score):
-                                self.state = GameState.ENTER_NAME
-                            else:
-                                self.state = GameState.GAME_OVER
-                        # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                        self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
+                    else:
+                        # Colidiu com tartaruga, ativar animação de hit
+                        if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
+                            self.player.take_hit()
+                            # Criar explosão na posição da tartaruga
+                            self.explosions.append(Explosion(turtle.x, turtle.y, self.explosion_image))
+                            self.turtles.remove(turtle)
+                            self.lives -= 1
+                            if self.lives <= 0:
+                                # Sem vidas, game over - verificar se entra no ranking
+                                if self.ranking_manager.is_high_score(self.score):
+                                    self.state = GameState.ENTER_NAME
+                                else:
+                                    self.state = GameState.GAME_OVER
+                            # Não reiniciar o nível imediatamente, deixar o jogador continuar
                     break
             
             # Verificar se tocou a bandeira
