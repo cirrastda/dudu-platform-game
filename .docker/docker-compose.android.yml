@@ -1,0 +1,61 @@
+# Docker Compose para Build Android do Jump and Hit
+# Use: docker-compose -f docker-compose.android.yml up --build
+
+version: '3.8'
+
+services:
+  android-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.android
+    container_name: jumpandhit-android-builder
+    volumes:
+      # Montar diretório atual para sincronizar código
+      - .:/home/builduser/app
+      # Volume persistente para cache do buildozer
+      - buildozer-cache:/home/builduser/.buildozer
+      # Volume para output dos APKs
+      - ./bin:/home/builduser/app/bin
+    environment:
+      - PYTHONUNBUFFERED=1
+      - BUILDOZER_LOG_LEVEL=2
+    working_dir: /home/builduser/app
+    # Comando personalizado (pode ser sobrescrito)
+    command: ["/home/builduser/build_android.sh"]
+    
+  # Serviço para build release
+  android-builder-release:
+    build:
+      context: .
+      dockerfile: Dockerfile.android
+    container_name: jumpandhit-android-builder-release
+    volumes:
+      - .:/home/builduser/app
+      - buildozer-cache:/home/builduser/.buildozer
+      - ./bin:/home/builduser/app/bin
+    environment:
+      - PYTHONUNBUFFERED=1
+      - BUILDOZER_LOG_LEVEL=2
+    working_dir: /home/builduser/app
+    command: ["buildozer", "android", "release"]
+    
+  # Serviço para shell interativo (debug)
+  android-shell:
+    build:
+      context: .
+      dockerfile: Dockerfile.android
+    container_name: jumpandhit-android-shell
+    volumes:
+      - .:/home/builduser/app
+      - buildozer-cache:/home/builduser/.buildozer
+      - ./bin:/home/builduser/app/bin
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /home/builduser/app
+    command: ["/bin/bash"]
+    stdin_open: true
+    tty: true
+
+volumes:
+  buildozer-cache:
+    driver: local

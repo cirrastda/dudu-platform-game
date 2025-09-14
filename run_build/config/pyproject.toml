@@ -1,0 +1,53 @@
+[build-system]
+requires = ["briefcase"]
+
+[tool.briefcase]
+project_name = "Platform Game"
+bundle = "com.platformgame"
+version = "1.0.0"
+description = "Um jogo de plataforma 2D feito com Pygame"
+author = "Platform Game Developer"
+author_email = "developer@platformgame.com"
+url = "https://github.com/platformgame/platform-game"
+license = "MIT"
+
+[tool.briefcase.app.platformgame]
+formal_name = "Platform Game"
+description = "Um jogo de plataforma 2D com controles touch para Android"
+sources = ["main_android"]
+requires = [
+    "pygame>=2.1.0",
+]
+
+[tool.briefcase.app.platformgame.android]
+requires = [
+    "pygame>=2.1.0",
+]
+permissions = [
+    "android.permission.INTERNET",
+    "android.permission.WRITE_EXTERNAL_STORAGE",
+    "android.permission.READ_EXTERNAL_STORAGE",
+]
+orientation = "landscape"
+theme = "@android:style/Theme.NoTitleBar.Fullscreen"
+
+[tool.briefcase.app.platformgame.android.gradle_dependencies]
+# Dependências específicas do Android
+
+[tool.briefcase.app.platformgame.android.gradle_extra_content]
+# Configurações extras do Gradle
+
+[project]
+name = "platform-game"
+version = "1.0.0"
+description = "Um jogo de plataforma 2D"
+authors = [{name = "Platform Game Developer", email = "developer@platformgame.com"}]
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+    "pygame>=2.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/platformgame/platform-game"
+Repository = "https://github.com/platformgame/platform-game.git"

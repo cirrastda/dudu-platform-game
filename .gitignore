@@ -12,6 +12,28 @@ records/
 # Distribution / packaging
 .Python
 build/
+bin/
+.buildozer/
+dist/
+*.apk
+*.aab
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+env/
+ENV/
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
 develop-eggs/
 dist/
 downloads/
@@ -193,4 +215,10 @@ screenshots/
 saves/
 
 .env
-.vscode/
+.buildozer/
+
+# VS Code - versionar configurações do projeto, ignorar configurações pessoais
+.vscode/settings.json
+.vscode/*.code-workspace
+releases/
+apk_build/

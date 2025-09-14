@@ -1,0 +1,175 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🎮 Jogo - Windows (Debug)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": true,
+            "stopOnEntry": false
+        },
+        {
+            "name": "🎮 Jogo - Windows (Run)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "📱 Build e Teste Android (Debug)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_build/run_android.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "📱 Build e Instalar Android",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_android.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [
+                "--install"
+            ],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "🚀 Build e Executar Android",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_build/build_and_run_android.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "🐧 Jogo - Linux (via WSL2)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_build/run_linux.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "🔧 Debug Joystick",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/debug_joystick.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "📦 Build Release Windows",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_build/build_release.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "🧪 Testar Configurações",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/test_setup.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "🏗️ Build Linux (WSL2)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_build/build_linux.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "📱 Build Android Release",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_build/build_android_release.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "📦 Gerar APK Apenas (Sem Instalar)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_build/build_apk_only.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        }
+    ]
+}

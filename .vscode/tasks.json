@@ -1,0 +1,155 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "setup-linux-environment",
+            "type": "shell",
+            "command": "wsl",
+            "args": [
+                "--",
+                "bash",
+                "-c",
+                "cd '${workspaceFolder}' && if [ ! -d 'venv' ]; then python3 -m venv venv; fi && source venv/bin/activate && pip install -r requirements.txt && export DISPLAY=:0 && python3 main.py"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Configura ambiente Linux via WSL2 e executa o jogo"
+        },
+        {
+            "label": "build-android-debug",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "build_mobile.py",
+                "android",
+                "debug"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Compila versão debug para Android"
+        },
+        {
+            "label": "build-android-release",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "build_mobile.py",
+                "android",
+                "release"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Compila versão release para Android"
+        },
+        {
+            "label": "install-dependencies",
+            "type": "shell",
+            "command": "pip",
+            "args": [
+                "install",
+                "-r",
+                "requirements.txt"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Instala dependências do projeto"
+        },
+        {
+            "label": "install-mobile-dependencies",
+            "type": "shell",
+            "command": "pip",
+            "args": [
+                "install",
+                "-r",
+                "requirements-mobile.txt"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Instala dependências para desenvolvimento mobile"
+        },
+        {
+            "label": "setup-wsl2",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "setup_wsl2.ps1"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Configura ambiente WSL2 para desenvolvimento Linux"
+        },
+        {
+            "label": "check-system",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "check_system.ps1"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Verifica configuração do sistema"
+        }
+    ]
+}

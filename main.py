@@ -6,6 +6,7 @@ import json
 from enum import Enum
 import random
 import math
+from pathlib import Path
 
 # Inicializar pygame
 pygame.init()
@@ -36,13 +37,25 @@ GRAY = (128, 128, 128)
 LIGHT_GRAY = (200, 200, 200)
 DARK_GRAY = (64, 64, 64)
 
+def resource_path(relative_path):
+    """Obter caminho absoluto para recursos, funciona para dev e PyInstaller"""
+    try:
+        # PyInstaller cria uma pasta temporária e armazena o caminho em _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # Modo desenvolvimento - usar diretório atual
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
+
 # Função para carregar configurações do arquivo .env
 def load_env_config():
     """Carrega configurações do arquivo .env"""
     config = {'environment': 'production'}  # Valor padrão
     
     try:
-        with open('.env', 'r', encoding='utf-8') as f:
+        env_path = resource_path('.env')
+        with open(env_path, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#') and '=' in line:
@@ -88,8 +101,9 @@ class ResourceCache:
             return self.image_cache[cache_key]
         
         try:
-            # Carregar imagem do disco
-            image = pygame.image.load(path)
+            # Carregar imagem do disco usando caminho correto
+            full_path = resource_path(path)
+            image = pygame.image.load(full_path)
             if scale:
                 image = pygame.transform.scale(image, scale)
             
@@ -108,7 +122,9 @@ class ResourceCache:
             return self.sound_cache[path]
         
         try:
-            sound = pygame.mixer.Sound(path)
+            # Carregar som usando caminho correto
+            full_path = resource_path(path)
+            sound = pygame.mixer.Sound(full_path)
             self.sound_cache[path] = sound
             self.cache_misses += 1
             return sound
@@ -258,30 +274,30 @@ class Player:
         """Carregar todos os sprites do personagem"""
         try:
             # Sprite parado (idle)
-            self.sprites['idle'] = [pygame.image.load("imagens/personagem/1.png")]
+            self.sprites['idle'] = [pygame.image.load(resource_path("imagens/personagem/1.png"))]
             
             # Sprites de caminhada
             self.sprites['walk'] = [
-                pygame.image.load("imagens/personagem/1.png"),
-                pygame.image.load("imagens/personagem/2.png"),
-                pygame.image.load("imagens/personagem/3.png"),
-                pygame.image.load("imagens/personagem/4.png")
+                pygame.image.load(resource_path("imagens/personagem/1.png")),
+                pygame.image.load(resource_path("imagens/personagem/2.png")),
+                pygame.image.load(resource_path("imagens/personagem/3.png")),
+                pygame.image.load(resource_path("imagens/personagem/4.png"))
             ]
             
             # Sprites de pulo
             self.sprites['jump'] = [
-                pygame.image.load("imagens/personagem/j1.png"),
-                pygame.image.load("imagens/personagem/j2.png"),
-                pygame.image.load("imagens/personagem/j3.png"),
-                pygame.image.load("imagens/personagem/j4.png"),
-                pygame.image.load("imagens/personagem/j5.png")  # Aterrissagem
+                pygame.image.load(resource_path("imagens/personagem/j1.png")),
+                pygame.image.load(resource_path("imagens/personagem/j2.png")),
+                pygame.image.load(resource_path("imagens/personagem/j3.png")),
+                pygame.image.load(resource_path("imagens/personagem/j4.png")),
+                pygame.image.load(resource_path("imagens/personagem/j5.png"))  # Aterrissagem
             ]
             
             # Sprite agachado
-            self.sprites['crouch'] = [pygame.image.load("imagens/personagem/dn1.png")]
+            self.sprites['crouch'] = [pygame.image.load(resource_path("imagens/personagem/dn1.png"))]
             
             # Sprite quando atingido
-            self.sprites['hit'] = [pygame.image.load("imagens/personagem/d1.png")]
+            self.sprites['hit'] = [pygame.image.load(resource_path("imagens/personagem/d1.png"))]
             
             # Redimensionar todos os sprites para o tamanho do personagem
             for animation in self.sprites:
@@ -641,7 +657,8 @@ class Flag:
         
         # Carregar imagem da bandeira
         try:
-            self.flag_image = pygame.image.load("imagens/elementos/bandeira.png")
+            flag_path = resource_path("imagens/elementos/bandeira.png")
+            self.flag_image = pygame.image.load(flag_path)
             # Redimensionar para ocupar toda a área (mastro + bandeira)
             total_width = self.width + self.flag_width
             self.flag_image = pygame.transform.scale(self.flag_image, (total_width, self.height))
@@ -1051,7 +1068,7 @@ class Explosion:
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("Jogo de Plataforma - Mar")
+        pygame.display.set_caption("Jump and Hit")
         self.clock = pygame.time.Clock()
         self.state = GameState.SPLASH
         
@@ -1341,19 +1358,21 @@ class Game:
         
         # Verificar se os arquivos de música existem
         for level, music_file in self.music_files.items():
-            if not os.path.exists(music_file):
+            full_path = resource_path(music_file)
+            if not os.path.exists(full_path):
                 print(f"Aviso: Arquivo de música não encontrado: {music_file}")
     
     def play_menu_music(self):
         """Tocar a música do menu"""
         music_file = self.music_files['intro']
-        if os.path.exists(music_file):
+        full_music_path = resource_path(music_file)
+        if os.path.exists(full_music_path):
             try:
                 # Parar música atual se estiver tocando
                 pygame.mixer.music.stop()
                 
                 # Carregar e tocar música do menu
-                pygame.mixer.music.load(music_file)
+                pygame.mixer.music.load(full_music_path)
                 # Usar volume específico para a música do menu
                 volume = self.music_volumes.get('intro', self.music_volume)
                 pygame.mixer.music.set_volume(volume)
@@ -1369,13 +1388,14 @@ class Game:
         """Tocar a música correspondente ao nível"""
         if level in self.music_files:
             music_file = self.music_files[level]
-            if os.path.exists(music_file):
+            full_music_path = resource_path(music_file)
+            if os.path.exists(full_music_path):
                 try:
                     # Parar música atual se estiver tocando
                     pygame.mixer.music.stop()
                     
                     # Carregar e tocar nova música
-                    pygame.mixer.music.load(music_file)
+                    pygame.mixer.music.load(full_music_path)
                     # Usar volume específico para esta música
                     volume = self.music_volumes.get(music_file, self.music_volume)
                     pygame.mixer.music.set_volume(volume)
@@ -1394,8 +1414,9 @@ class Game:
             cache = ResourceCache()
             
             # Carregar som de pulo usando cache
-            if os.path.exists("sounds/jump.mp3"):
-                sound = cache.get_sound("sounds/jump.mp3")
+            jump_path = "sounds/jump.mp3"
+            if os.path.exists(resource_path(jump_path)):
+                sound = cache.get_sound(jump_path)
                 if sound:
                     self.sound_effects['jump'] = sound
                     self.sound_effects['jump'].set_volume(self.sound_volume)
@@ -1404,8 +1425,9 @@ class Game:
                 print("Aviso: Arquivo sounds/jump.mp3 não encontrado")
             
             # Carregar som de explosão usando cache
-            if os.path.exists("sounds/explosion.mp3"):
-                sound = cache.get_sound("sounds/explosion.mp3")
+            explosion_path = "sounds/explosion.mp3"
+            if os.path.exists(resource_path(explosion_path)):
+                sound = cache.get_sound(explosion_path)
                 if sound:
                     self.sound_effects['explosion'] = sound
                     self.sound_effects['explosion'].set_volume(self.sound_volume)
@@ -1414,8 +1436,9 @@ class Game:
                 print("Aviso: Arquivo sounds/explosion.mp3 não encontrado")
             
             # Carregar som de tiro usando cache
-            if os.path.exists("sounds/shot.mp3"):
-                sound = cache.get_sound("sounds/shot.mp3")
+            shot_path = "sounds/shot.mp3"
+            if os.path.exists(resource_path(shot_path)):
+                sound = cache.get_sound(shot_path)
                 if sound:
                     self.sound_effects['shot'] = sound
                     self.sound_effects['shot'].set_volume(self.sound_volume)
@@ -1424,8 +1447,9 @@ class Game:
                 print("Aviso: Arquivo sounds/shot.mp3 não encontrado")
             
             # Carregar som de vida extra usando cache
-            if os.path.exists("sounds/new-life.mp3"):
-                sound = cache.get_sound("sounds/new-life.mp3")
+            newlife_path = "sounds/new-life.mp3"
+            if os.path.exists(resource_path(newlife_path)):
+                sound = cache.get_sound(newlife_path)
                 if sound:
                     self.sound_effects['new-life'] = sound
                     # Volume mais alto para se sobressair sobre a música de fundo
