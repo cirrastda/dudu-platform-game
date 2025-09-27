@@ -726,6 +726,61 @@ class Bird:
             # Bico
             pygame.draw.polygon(screen, YELLOW, [(self.x, self.y + 8), (self.x - 5, self.y + 10), (self.x, self.y + 12)])
 
+class Bat:
+    _id_counter = 0  # Contador de ID para morcegos
+    
+    def __init__(self, x, y, bat_images=None):
+        self.x = x
+        self.y = y
+        self.width = 40
+        self.height = 30
+        self.speed = 2  # Velocidade similar aos pássaros
+        self.rect = pygame.Rect(x, y, self.width, self.height)
+        self.direction = -1  # -1 para esquerda, 1 para direita
+        
+        # Atribuir ID único
+        Bat._id_counter += 1
+        self.id = Bat._id_counter
+        
+        # Animação
+        self.bat_images = bat_images
+        self.animation_frame = 0
+        self.animation_speed = 8  # Velocidade de animação similar aos pássaros
+        
+    def update(self):
+        # Mover morcego na direção atual
+        self.x += self.speed * self.direction
+        self.rect.x = self.x
+        
+        # Atualizar animação
+        self.animation_frame += 1
+        
+        # Remover se saiu da tela (com margem)
+        if self.x < -100 or self.x > 2000:
+            return False
+        return True
+        
+    def draw(self, screen):
+        if self.bat_images and len(self.bat_images) > 0:
+            # Usar animação com as imagens carregadas
+            current_image_index = (self.animation_frame // self.animation_speed) % len(self.bat_images)
+            current_image = self.bat_images[current_image_index]
+            if current_image:
+                # Espelhar imagem se necessário
+                if self.direction == 1:
+                    flipped_image = pygame.transform.flip(current_image, True, False)
+                    screen.blit(flipped_image, (self.x, self.y))
+                else:
+                    screen.blit(current_image, (self.x, self.y))
+                return
+        
+        # Fallback para o desenho original se as imagens não carregaram
+        pygame.draw.ellipse(screen, DARK_GRAY, self.rect)  # Cinza escuro para morcego
+        # Adicionar detalhes simples (asas)
+        wing_y = self.y + 5
+        pygame.draw.polygon(screen, BLACK, [(self.x, wing_y), (self.x + 10, wing_y - 5), (self.x + 15, wing_y + 10)])
+        pygame.draw.polygon(screen, BLACK, [(self.x + self.width - 15, wing_y + 10), (self.x + self.width - 10, wing_y - 5), (self.x + self.width, wing_y)])
+
 class Turtle:
     _id_counter = 0  # Contador de ID para tartarugas
     
@@ -787,6 +842,76 @@ class Turtle:
         # Patas
         pygame.draw.circle(screen, (0, 80, 0), (self.x + 8, self.y + 20), 4)
         pygame.draw.circle(screen, (0, 80, 0), (self.x + self.width - 8, self.y + 20), 4)
+
+class Spider:
+    _id_counter = 0  # Contador de ID para aranhas
+    
+    def __init__(self, x, y, top_limit, bottom_limit, spider_images=None):
+        self.x = x
+        self.y = y
+        self.width = 30
+        self.height = 25
+        self.speed = 1.5  # Velocidade de movimento vertical
+        self.rect = pygame.Rect(x, y, self.width, self.height)
+        self.top_limit = top_limit  # Limite superior do movimento
+        self.bottom_limit = bottom_limit  # Limite inferior do movimento (máximo na linha da plataforma)
+        self.direction = 1  # 1 para baixo, -1 para cima
+        self.web_start_y = top_limit  # Ponto inicial da teia
+        
+        # Atribuir ID único
+        Spider._id_counter += 1
+        self.id = Spider._id_counter
+        
+        # Animação
+        self.spider_images = spider_images
+        self.animation_frame = 0
+        self.animation_speed = 12  # Velocidade de animação mais lenta que pássaros
+        
+    def update(self):
+        # Mover aranha na direção atual
+        self.y += self.speed * self.direction
+        
+        # Verificar limites e inverter direção
+        if self.y <= self.top_limit:
+            self.y = self.top_limit
+            self.direction = 1  # Mudar para baixo
+        elif self.y >= self.bottom_limit:
+            self.y = self.bottom_limit
+            self.direction = -1  # Mudar para cima
+            
+        self.rect.y = self.y
+        
+        # Atualizar animação
+        self.animation_frame += 1
+        
+        return True  # Aranha sempre permanece ativa
+        
+    def draw(self, screen):
+        # Desenhar a teia (linha branca do ponto inicial até a posição atual)
+        pygame.draw.line(screen, WHITE, (self.x + self.width // 2, self.web_start_y), (self.x + self.width // 2, self.y), 2)
+        
+        if self.spider_images and len(self.spider_images) > 0:
+            # Usar animação com as imagens carregadas
+            current_image_index = (self.animation_frame // self.animation_speed) % len(self.spider_images)
+            current_image = self.spider_images[current_image_index]
+            if current_image:
+                screen.blit(current_image, (self.x, self.y))
+                return
+        
+        # Fallback para o desenho original se as imagens não carregaram
+        pygame.draw.ellipse(screen, BLACK, self.rect)  # Preto para aranha
+        # Adicionar detalhes simples (patas)
+        leg_length = 8
+        center_x = self.x + self.width // 2
+        center_y = self.y + self.height // 2
+        # Patas da esquerda
+        pygame.draw.line(screen, BLACK, (center_x - 5, center_y - 3), (center_x - leg_length, center_y - 8), 2)
+        pygame.draw.line(screen, BLACK, (center_x - 5, center_y), (center_x - leg_length, center_y), 2)
+        pygame.draw.line(screen, BLACK, (center_x - 5, center_y + 3), (center_x - leg_length, center_y + 8), 2)
+        # Patas da direita
+        pygame.draw.line(screen, BLACK, (center_x + 5, center_y - 3), (center_x + leg_length, center_y - 8), 2)
+        pygame.draw.line(screen, BLACK, (center_x + 5, center_y), (center_x + leg_length, center_y), 2)
+        pygame.draw.line(screen, BLACK, (center_x + 5, center_y + 3), (center_x + leg_length, center_y + 8), 2)
 
 class LevelGenerator:
     """Gerador procedural de níveis para criar fases variadas e interessantes"""
@@ -1077,7 +1202,7 @@ class Game:
             try:
                 self.current_level = int(ENV_CONFIG['initial-stage'])
                 # Validar se o nível está dentro do range válido
-                if self.current_level < 1 or self.current_level > 20:
+                if self.current_level < 1 or self.current_level > 30:
                     print(f"Aviso: initial-stage {self.current_level} inválido. Usando nível 1.")
                     self.current_level = 1
                 else:
@@ -1092,7 +1217,7 @@ class Game:
         self.ranking_manager = RankingManager()
         self.player_name = ""
         self.name_input_active = False
-        self.max_levels = 20
+        self.max_levels = 30
         
         # Sistema de música - configuração otimizada para Windows
         try:
@@ -1198,6 +1323,12 @@ class Game:
         self.explosions = []
         self.bird_spawn_timer = 0
         
+        # Inicializar variáveis de spawn de morcegos (níveis 21-30)
+        self.bats = []
+        self.bat_spawn_timer = 0
+        self.bats_per_spawn = 1
+        self.bat_spawn_interval = 180
+        
         # Ajustar dificuldade baseada no nível
         if self.current_level <= 5:
             # Níveis 1-5 (originais)
@@ -1252,6 +1383,8 @@ class Game:
             return "imagens/fundo3.png"
         elif 11 <= level <= 20:
             return "imagens/fundo5.png"
+        elif 21 <= level <= 30:
+            return "imagens/fundo7.png"
         else:
             # Fallback para níveis fora do range esperado
             return "imagens/fundo6.png"
@@ -1276,6 +1409,11 @@ class Game:
             self.bird_img1 = cache.get_image("imagens/inimigos/bird1.png", (40, 30))
             self.bird_img2 = cache.get_image("imagens/inimigos/bird2.png", (40, 30))
             
+            # Carregar imagens dos morcegos usando cache
+            self.bat_img1 = cache.get_image("imagens/inimigos/bat1.png", (40, 30))
+            self.bat_img2 = cache.get_image("imagens/inimigos/bat2.png", (40, 30))
+            self.bat_img3 = cache.get_image("imagens/inimigos/bat3.png", (40, 30))
+            
             # Carregar imagens das tartarugas usando cache
             try:
                 self.turtle_left1 = cache.get_image("imagens/inimigos/turtle-left1.png", (40, 30))
@@ -1293,6 +1431,18 @@ class Game:
             except pygame.error as e:
                 print(f"Erro ao carregar imagens das tartarugas: {e}")
                 self.turtle_images = None
+            
+            # Carregar imagens das aranhas usando cache
+            try:
+                self.spider_img1 = cache.get_image("imagens/inimigos/spider1.png", (40, 30))
+                self.spider_img2 = cache.get_image("imagens/inimigos/spider2.png", (40, 30))
+                self.spider_img3 = cache.get_image("imagens/inimigos/spider3.png", (40, 30))
+                
+                # Organizar imagens em lista para facilitar o uso
+                self.spider_images = [self.spider_img1, self.spider_img2, self.spider_img3]
+            except pygame.error as e:
+                print(f"Erro ao carregar imagens das aranhas: {e}")
+                self.spider_images = None
             
             # Carregar imagem do tiro usando cache
             self.bullet_img = cache.get_image("imagens/elementos/tiro.png", (15, 8))
@@ -1400,26 +1550,36 @@ class Game:
     
     def play_level_music(self, level):
         """Tocar a música correspondente ao nível"""
-        if level in self.music_files:
+        # Para níveis 21-30, alternar entre fundo5.mp3 e fundo6.mp3
+        if 21 <= level <= 30:
+            # Alternar entre fundo5 e fundo6 baseado no nível
+            if level % 2 == 1:  # Níveis ímpares (21, 23, 25, 27, 29)
+                music_file = "musicas/fundo5.mp3"
+            else:  # Níveis pares (22, 24, 26, 28, 30)
+                music_file = "musicas/fundo6.mp3"
+        elif level in self.music_files:
             music_file = self.music_files[level]
-            full_music_path = resource_path(music_file)
-            if os.path.exists(full_music_path):
-                try:
-                    # Parar música atual se estiver tocando
-                    pygame.mixer.music.stop()
-                    
-                    # Carregar e tocar nova música
-                    pygame.mixer.music.load(full_music_path)
-                    # Usar volume específico para esta música
-                    volume = self.music_volumes.get(music_file, self.music_volume)
-                    pygame.mixer.music.set_volume(volume)
-                    pygame.mixer.music.play(-1)  # -1 para loop infinito
-                    self.current_music = music_file
-                    print(f"Tocando música do nível {level}: {music_file} (volume: {volume})")
-                except pygame.error as e:
-                    print(f"Erro ao carregar música {music_file}: {e}")
-            else:
-                print(f"Arquivo de música não encontrado: {music_file}")
+        else:
+            return  # Não há música definida para este nível
+            
+        full_music_path = resource_path(music_file)
+        if os.path.exists(full_music_path):
+            try:
+                # Parar música atual se estiver tocando
+                pygame.mixer.music.stop()
+                
+                # Carregar e tocar nova música
+                pygame.mixer.music.load(full_music_path)
+                # Usar volume específico para esta música
+                volume = self.music_volumes.get(music_file, self.music_volume)
+                pygame.mixer.music.set_volume(volume)
+                pygame.mixer.music.play(-1)  # -1 para loop infinito
+                self.current_music = music_file
+                print(f"Tocando música do nível {level}: {music_file} (volume: {volume})")
+            except pygame.error as e:
+                print(f"Erro ao carregar música {music_file}: {e}")
+        else:
+            print(f"Arquivo de música não encontrado: {music_file}")
     
     def load_sound_effects(self):
         """Carregar efeitos sonoros do jogo usando sistema de cache"""
@@ -1538,8 +1698,30 @@ class Game:
                 self.bird_spawn_interval = max(60, int(180 - (level_progress * 120)))
             else:  # Níveis 17-20: intervalo maior para compensar
                 self.bird_spawn_interval = max(70, int(90 - (self.current_level - 17) * 5))
+        elif self.current_level <= 30:
+            # Níveis 21-30: usar morcegos seguindo EXATAMENTE o mesmo padrão dos pássaros das fases 11-20
+            equivalent_bird_level = self.current_level - 10  # 21->11, 22->12, etc.
+            level_progress = (equivalent_bird_level - 1) / 19.0  # 0.0 a 1.0 (mesmo cálculo das fases 11-20)
+            
+            # Morcegos por spawn: seguir EXATAMENTE o mesmo padrão dos pássaros das fases 11-20
+            if equivalent_bird_level <= 4:  # Fases 21-24 (equivalente a 11-14)
+                self.bats_per_spawn = 1
+            elif equivalent_bird_level <= 12:  # Fases 25-32 (equivalente a 15-22, mas limitado a 30)
+                self.bats_per_spawn = 2
+            elif equivalent_bird_level <= 15:  # Fases 26-29 (equivalente a 16-19)
+                self.bats_per_spawn = 2
+            elif equivalent_bird_level <= 17:  # Fase 30 (equivalente a 20)
+                self.bats_per_spawn = 3
+            else:  # Níveis além de 30
+                self.bats_per_spawn = 2
+            
+            # Intervalo de spawn: seguir EXATAMENTE o mesmo padrão dos pássaros das fases 11-20
+            if equivalent_bird_level <= 16:  # Fases 21-26 (equivalente a 11-16)
+                self.bat_spawn_interval = max(60, int(180 - (level_progress * 120)))
+            else:  # Fases 27-30 (equivalente a 17-20): intervalo maior para compensar
+                self.bat_spawn_interval = max(70, int(90 - (equivalent_bird_level - 17) * 5))
         else:
-            # Níveis além de 20 (futuras expansões)
+            # Níveis além de 30 (futuras expansões)
             # Mantém dificuldade máxima jogável
             self.birds_per_spawn = 2  # Reduzido para 2 pássaros
             self.bird_spawn_interval = max(60, 70 - min(10, (self.current_level - 20)))  # Mínimo 60
@@ -1553,8 +1735,13 @@ class Game:
         # Reinicializar sistema de pássaros
         self.birds = []
         self.bird_spawn_timer = 0
+        # Reinicializar sistema de morcegos
+        self.bats = []
+        self.bat_spawn_timer = 0
         # Reinicializar sistema de tartarugas
         self.turtles = []
+        # Reinicializar sistema de aranhas
+        self.spiders = []
         # Reinicializar explosões
         self.explosions = []
         
@@ -1618,6 +1805,26 @@ class Game:
             self.create_level_19()
         elif self.current_level == 20:
             self.create_level_20()
+        elif self.current_level == 21:
+            self.create_level_21()
+        elif self.current_level == 22:
+            self.create_level_22()
+        elif self.current_level == 23:
+            self.create_level_23()
+        elif self.current_level == 24:
+            self.create_level_24()
+        elif self.current_level == 25:
+            self.create_level_25()
+        elif self.current_level == 26:
+            self.create_level_26()
+        elif self.current_level == 27:
+            self.create_level_27()
+        elif self.current_level == 28:
+            self.create_level_28()
+        elif self.current_level == 29:
+            self.create_level_29()
+        elif self.current_level == 30:
+            self.create_level_30()
     
     def get_pooled_bullet(self, x, y, direction=1, image=None):
         """Obter bala do pool ou criar nova se necessário"""
@@ -2859,6 +3066,764 @@ class Game:
         self.platforms.append(Platform(final_x, HEIGHT - 110, 35, 20, self.platform_texture))
         self.flag = Flag(final_x + 20, HEIGHT - 210)
         
+    def create_level_21(self):
+        """Nível 21 - Início dos morcegos e aranhas (111 plataformas) - Padrão aleatório"""
+        platforms = [
+            (10, HEIGHT - 100, 30, 20), (120, HEIGHT - 280, 30, 20), (240, HEIGHT - 160, 30, 20),
+            (360, HEIGHT - 320, 30, 20), (480, HEIGHT - 200, 30, 20), (600, HEIGHT - 360, 30, 20),
+            (720, HEIGHT - 140, 30, 20), (840, HEIGHT - 300, 30, 20), (960, HEIGHT - 180, 30, 20),
+            (1080, HEIGHT - 340, 30, 20), (1200, HEIGHT - 120, 30, 20), (1320, HEIGHT - 280, 30, 20),
+            (1440, HEIGHT - 220, 30, 20), (1560, HEIGHT - 360, 30, 20), (1680, HEIGHT - 160, 30, 20),
+            (1800, HEIGHT - 300, 30, 20), (1920, HEIGHT - 140, 30, 20), (2040, HEIGHT - 320, 30, 20),
+            (2160, HEIGHT - 200, 30, 20), (2280, HEIGHT - 340, 30, 20), (2400, HEIGHT - 180, 30, 20),
+            (2520, HEIGHT - 300, 30, 20), (2640, HEIGHT - 120, 30, 20), (2760, HEIGHT - 280, 30, 20),
+            (2880, HEIGHT - 240, 30, 20), (3000, HEIGHT - 360, 30, 20), (3120, HEIGHT - 160, 30, 20),
+            (3240, HEIGHT - 320, 30, 20), (3360, HEIGHT - 200, 30, 20), (3480, HEIGHT - 340, 30, 20),
+            (3600, HEIGHT - 140, 30, 20), (3720, HEIGHT - 300, 30, 20), (3840, HEIGHT - 180, 30, 20),
+            (3960, HEIGHT - 320, 30, 20), (4080, HEIGHT - 220, 30, 20), (4200, HEIGHT - 360, 30, 20),
+            (4320, HEIGHT - 160, 30, 20), (4440, HEIGHT - 300, 30, 20), (4560, HEIGHT - 140, 30, 20),
+            (4680, HEIGHT - 280, 30, 20), (4800, HEIGHT - 200, 30, 20), (4920, HEIGHT - 340, 30, 20),
+            (5040, HEIGHT - 180, 30, 20), (5160, HEIGHT - 320, 30, 20), (5280, HEIGHT - 120, 30, 20),
+            (5400, HEIGHT - 280, 30, 20), (5520, HEIGHT - 240, 30, 20), (5640, HEIGHT - 360, 30, 20),
+            (5760, HEIGHT - 160, 30, 20), (5880, HEIGHT - 300, 30, 20), (6000, HEIGHT - 200, 30, 20),
+            (6120, HEIGHT - 340, 30, 20), (6240, HEIGHT - 140, 30, 20), (6360, HEIGHT - 320, 30, 20),
+            (6480, HEIGHT - 180, 30, 20), (6600, HEIGHT - 300, 30, 20), (6720, HEIGHT - 220, 30, 20),
+            (6840, HEIGHT - 360, 30, 20), (6960, HEIGHT - 160, 30, 20), (7080, HEIGHT - 280, 30, 20),
+            (7200, HEIGHT - 200, 30, 20), (7320, HEIGHT - 340, 30, 20), (7440, HEIGHT - 140, 30, 20),
+            (7560, HEIGHT - 300, 30, 20), (7680, HEIGHT - 180, 30, 20), (7800, HEIGHT - 320, 30, 20),
+            (7920, HEIGHT - 240, 30, 20), (8040, HEIGHT - 360, 30, 20), (8160, HEIGHT - 160, 30, 20),
+            (8280, HEIGHT - 300, 30, 20), (8400, HEIGHT - 120, 30, 20), (8520, HEIGHT - 280, 30, 20),
+            (8640, HEIGHT - 200, 30, 20), (8760, HEIGHT - 340, 30, 20), (8880, HEIGHT - 180, 30, 20),
+            (9000, HEIGHT - 320, 30, 20), (9120, HEIGHT - 140, 30, 20), (9240, HEIGHT - 300, 30, 20),
+            (9360, HEIGHT - 220, 30, 20), (9480, HEIGHT - 360, 30, 20), (9600, HEIGHT - 160, 30, 20),
+            (9720, HEIGHT - 280, 30, 20), (9840, HEIGHT - 200, 30, 20), (9960, HEIGHT - 340, 30, 20),
+            (10080, HEIGHT - 140, 30, 20), (10200, HEIGHT - 300, 30, 20), (10320, HEIGHT - 180, 30, 20),
+            (10440, HEIGHT - 320, 30, 20), (10560, HEIGHT - 240, 30, 20), (10680, HEIGHT - 360, 30, 20),
+            (10800, HEIGHT - 160, 30, 20), (10920, HEIGHT - 300, 30, 20), (11040, HEIGHT - 120, 30, 20),
+            (11160, HEIGHT - 280, 30, 20), (11280, HEIGHT - 200, 30, 20), (11400, HEIGHT - 340, 30, 20),
+            (11520, HEIGHT - 180, 30, 20), (11640, HEIGHT - 320, 30, 20), (11760, HEIGHT - 140, 30, 20),
+            (11880, HEIGHT - 300, 30, 20), (12000, HEIGHT - 220, 30, 20), (12120, HEIGHT - 360, 30, 20),
+            (12240, HEIGHT - 160, 30, 20), (12360, HEIGHT - 280, 30, 20), (12480, HEIGHT - 200, 30, 20),
+            (12600, HEIGHT - 340, 30, 20), (12720, HEIGHT - 140, 30, 20), (12840, HEIGHT - 300, 30, 20),
+            (12960, HEIGHT - 180, 30, 20), (13080, HEIGHT - 320, 30, 20), (13200, HEIGHT - 240, 30, 20),
+            (13320, HEIGHT - 360, 30, 20), (13440, HEIGHT - 160, 30, 20)
+        ]
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar aranhas (1 a cada 4 plataformas - padrão da fase 11)
+        for i in range(4, len(platforms), 4):
+            if i < len(platforms):
+                platform = platforms[i]
+                top_limit = platform[1] - 100
+                bottom_limit = platform[1] - 30
+                spider = Spider(platform[0] + platform[2]//2, top_limit, top_limit, bottom_limit, self.spider_images)
+                self.spiders.append(spider)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = 13560
+        self.platforms.append(Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        
+    def create_level_22(self):
+        """Nível 22 - Progressão com morcegos e aranhas (112 plataformas) - Padrão manual como fase 21"""
+        platforms = [
+            (10, HEIGHT - 100, 30, 20), (120, HEIGHT - 280, 30, 20), (240, HEIGHT - 160, 30, 20),
+            (360, HEIGHT - 320, 30, 20), (480, HEIGHT - 200, 30, 20), (600, HEIGHT - 360, 30, 20),
+            (720, HEIGHT - 140, 30, 20), (840, HEIGHT - 300, 30, 20), (960, HEIGHT - 180, 30, 20),
+            (1080, HEIGHT - 340, 30, 20), (1200, HEIGHT - 120, 30, 20), (1320, HEIGHT - 280, 30, 20),
+            (1440, HEIGHT - 220, 30, 20), (1560, HEIGHT - 360, 30, 20), (1680, HEIGHT - 160, 30, 20),
+            (1800, HEIGHT - 300, 30, 20), (1920, HEIGHT - 140, 30, 20), (2040, HEIGHT - 320, 30, 20),
+            (2160, HEIGHT - 200, 30, 20), (2280, HEIGHT - 340, 30, 20), (2400, HEIGHT - 180, 30, 20),
+            (2520, HEIGHT - 300, 30, 20), (2640, HEIGHT - 120, 30, 20), (2760, HEIGHT - 280, 30, 20),
+            (2880, HEIGHT - 240, 30, 20), (3000, HEIGHT - 360, 30, 20), (3120, HEIGHT - 160, 30, 20),
+            (3240, HEIGHT - 320, 30, 20), (3360, HEIGHT - 200, 30, 20), (3480, HEIGHT - 340, 30, 20),
+            (3600, HEIGHT - 140, 30, 20), (3720, HEIGHT - 300, 30, 20), (3840, HEIGHT - 180, 30, 20),
+            (3960, HEIGHT - 320, 30, 20), (4080, HEIGHT - 220, 30, 20), (4200, HEIGHT - 360, 30, 20),
+            (4320, HEIGHT - 160, 30, 20), (4440, HEIGHT - 300, 30, 20), (4560, HEIGHT - 140, 30, 20),
+            (4680, HEIGHT - 280, 30, 20), (4800, HEIGHT - 200, 30, 20), (4920, HEIGHT - 340, 30, 20),
+            (5040, HEIGHT - 180, 30, 20), (5160, HEIGHT - 320, 30, 20), (5280, HEIGHT - 120, 30, 20),
+            (5400, HEIGHT - 280, 30, 20), (5520, HEIGHT - 240, 30, 20), (5640, HEIGHT - 360, 30, 20),
+            (5760, HEIGHT - 160, 30, 20), (5880, HEIGHT - 300, 30, 20), (6000, HEIGHT - 200, 30, 20),
+            (6120, HEIGHT - 340, 30, 20), (6240, HEIGHT - 140, 30, 20), (6360, HEIGHT - 320, 30, 20),
+            (6480, HEIGHT - 180, 30, 20), (6600, HEIGHT - 300, 30, 20), (6720, HEIGHT - 220, 30, 20),
+            (6840, HEIGHT - 360, 30, 20), (6960, HEIGHT - 160, 30, 20), (7080, HEIGHT - 280, 30, 20),
+            (7200, HEIGHT - 200, 30, 20), (7320, HEIGHT - 340, 30, 20), (7440, HEIGHT - 140, 30, 20),
+            (7560, HEIGHT - 300, 30, 20), (7680, HEIGHT - 180, 30, 20), (7800, HEIGHT - 320, 30, 20),
+            (7920, HEIGHT - 240, 30, 20), (8040, HEIGHT - 360, 30, 20), (8160, HEIGHT - 160, 30, 20),
+            (8280, HEIGHT - 300, 30, 20), (8400, HEIGHT - 120, 30, 20), (8520, HEIGHT - 280, 30, 20),
+            (8640, HEIGHT - 200, 30, 20), (8760, HEIGHT - 340, 30, 20), (8880, HEIGHT - 180, 30, 20),
+            (9000, HEIGHT - 320, 30, 20), (9120, HEIGHT - 140, 30, 20), (9240, HEIGHT - 300, 30, 20),
+            (9360, HEIGHT - 220, 30, 20), (9480, HEIGHT - 360, 30, 20), (9600, HEIGHT - 160, 30, 20),
+            (9720, HEIGHT - 280, 30, 20), (9840, HEIGHT - 200, 30, 20), (9960, HEIGHT - 340, 30, 20),
+            (10080, HEIGHT - 140, 30, 20), (10200, HEIGHT - 300, 30, 20), (10320, HEIGHT - 180, 30, 20),
+            (10440, HEIGHT - 320, 30, 20), (10560, HEIGHT - 240, 30, 20), (10680, HEIGHT - 360, 30, 20),
+            (10800, HEIGHT - 160, 30, 20), (10920, HEIGHT - 300, 30, 20), (11040, HEIGHT - 120, 30, 20),
+            (11160, HEIGHT - 280, 30, 20), (11280, HEIGHT - 200, 30, 20), (11400, HEIGHT - 340, 30, 20),
+            (11520, HEIGHT - 180, 30, 20), (11640, HEIGHT - 320, 30, 20), (11760, HEIGHT - 140, 30, 20),
+            (11880, HEIGHT - 300, 30, 20), (12000, HEIGHT - 220, 30, 20), (12120, HEIGHT - 360, 30, 20),
+            (12240, HEIGHT - 160, 30, 20), (12360, HEIGHT - 280, 30, 20), (12480, HEIGHT - 200, 30, 20),
+            (12600, HEIGHT - 340, 30, 20), (12720, HEIGHT - 140, 30, 20), (12840, HEIGHT - 300, 30, 20),
+            (12960, HEIGHT - 180, 30, 20), (13080, HEIGHT - 320, 30, 20), (13200, HEIGHT - 240, 30, 20),
+            (13320, HEIGHT - 360, 30, 20), (13440, HEIGHT - 160, 30, 20), (13560, HEIGHT - 280, 30, 20),
+            (13680, HEIGHT - 200, 30, 20), (13800, HEIGHT - 340, 30, 20), (13920, HEIGHT - 140, 30, 20),
+            (14040, HEIGHT - 300, 30, 20), (14160, HEIGHT - 180, 30, 20), (14280, HEIGHT - 320, 30, 20),
+            (14400, HEIGHT - 240, 30, 20), (14520, HEIGHT - 360, 30, 20), (14640, HEIGHT - 160, 30, 20)
+        ]
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar aranhas (1 a cada 3 plataformas - padrão da fase 12)
+        for i in range(3, len(platforms), 3):
+            if i < len(platforms):
+                platform = platforms[i]
+                top_limit = platform[1] - 100
+                bottom_limit = platform[1] - 30
+                spider = Spider(platform[0] + platform[2]//2, top_limit, top_limit, bottom_limit, self.spider_images)
+                self.spiders.append(spider)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = 14760
+        self.platforms.append(Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        
+    def create_level_23(self):
+        """Nível 23 - Mais aranhas (113 plataformas) - Padrão manual como fase 21"""
+        platforms = [
+            (10, HEIGHT - 100, 30, 20), (120, HEIGHT - 280, 30, 20), (240, HEIGHT - 160, 30, 20),
+            (360, HEIGHT - 320, 30, 20), (480, HEIGHT - 200, 30, 20), (600, HEIGHT - 360, 30, 20),
+            (720, HEIGHT - 140, 30, 20), (840, HEIGHT - 300, 30, 20), (960, HEIGHT - 180, 30, 20),
+            (1080, HEIGHT - 340, 30, 20), (1200, HEIGHT - 120, 30, 20), (1320, HEIGHT - 280, 30, 20),
+            (1440, HEIGHT - 220, 30, 20), (1560, HEIGHT - 360, 30, 20), (1680, HEIGHT - 160, 30, 20),
+            (1800, HEIGHT - 300, 30, 20), (1920, HEIGHT - 140, 30, 20), (2040, HEIGHT - 320, 30, 20),
+            (2160, HEIGHT - 200, 30, 20), (2280, HEIGHT - 340, 30, 20), (2400, HEIGHT - 180, 30, 20),
+            (2520, HEIGHT - 300, 30, 20), (2640, HEIGHT - 120, 30, 20), (2760, HEIGHT - 280, 30, 20),
+            (2880, HEIGHT - 240, 30, 20), (3000, HEIGHT - 360, 30, 20), (3120, HEIGHT - 160, 30, 20),
+            (3240, HEIGHT - 320, 30, 20), (3360, HEIGHT - 200, 30, 20), (3480, HEIGHT - 340, 30, 20),
+            (3600, HEIGHT - 140, 30, 20), (3720, HEIGHT - 300, 30, 20), (3840, HEIGHT - 180, 30, 20),
+            (3960, HEIGHT - 320, 30, 20), (4080, HEIGHT - 220, 30, 20), (4200, HEIGHT - 360, 30, 20),
+            (4320, HEIGHT - 160, 30, 20), (4440, HEIGHT - 300, 30, 20), (4560, HEIGHT - 140, 30, 20),
+            (4680, HEIGHT - 280, 30, 20), (4800, HEIGHT - 200, 30, 20), (4920, HEIGHT - 340, 30, 20),
+            (5040, HEIGHT - 180, 30, 20), (5160, HEIGHT - 320, 30, 20), (5280, HEIGHT - 120, 30, 20),
+            (5400, HEIGHT - 280, 30, 20), (5520, HEIGHT - 240, 30, 20), (5640, HEIGHT - 360, 30, 20),
+            (5760, HEIGHT - 160, 30, 20), (5880, HEIGHT - 300, 30, 20), (6000, HEIGHT - 200, 30, 20),
+            (6120, HEIGHT - 340, 30, 20), (6240, HEIGHT - 140, 30, 20), (6360, HEIGHT - 320, 30, 20),
+            (6480, HEIGHT - 180, 30, 20), (6600, HEIGHT - 300, 30, 20), (6720, HEIGHT - 220, 30, 20),
+            (6840, HEIGHT - 360, 30, 20), (6960, HEIGHT - 160, 30, 20), (7080, HEIGHT - 280, 30, 20),
+            (7200, HEIGHT - 200, 30, 20), (7320, HEIGHT - 340, 30, 20), (7440, HEIGHT - 140, 30, 20),
+            (7560, HEIGHT - 300, 30, 20), (7680, HEIGHT - 180, 30, 20), (7800, HEIGHT - 320, 30, 20),
+            (7920, HEIGHT - 240, 30, 20), (8040, HEIGHT - 360, 30, 20), (8160, HEIGHT - 160, 30, 20),
+            (8280, HEIGHT - 300, 30, 20), (8400, HEIGHT - 120, 30, 20), (8520, HEIGHT - 280, 30, 20),
+            (8640, HEIGHT - 200, 30, 20), (8760, HEIGHT - 340, 30, 20), (8880, HEIGHT - 180, 30, 20),
+            (9000, HEIGHT - 320, 30, 20), (9120, HEIGHT - 140, 30, 20), (9240, HEIGHT - 300, 30, 20),
+            (9360, HEIGHT - 220, 30, 20), (9480, HEIGHT - 360, 30, 20), (9600, HEIGHT - 160, 30, 20),
+            (9720, HEIGHT - 280, 30, 20), (9840, HEIGHT - 200, 30, 20), (9960, HEIGHT - 340, 30, 20),
+            (10080, HEIGHT - 140, 30, 20), (10200, HEIGHT - 300, 30, 20), (10320, HEIGHT - 180, 30, 20),
+            (10440, HEIGHT - 320, 30, 20), (10560, HEIGHT - 240, 30, 20), (10680, HEIGHT - 360, 30, 20),
+            (10800, HEIGHT - 160, 30, 20), (10920, HEIGHT - 300, 30, 20), (11040, HEIGHT - 120, 30, 20),
+            (11160, HEIGHT - 280, 30, 20), (11280, HEIGHT - 200, 30, 20), (11400, HEIGHT - 340, 30, 20),
+            (11520, HEIGHT - 180, 30, 20), (11640, HEIGHT - 320, 30, 20), (11760, HEIGHT - 140, 30, 20),
+            (11880, HEIGHT - 300, 30, 20), (12000, HEIGHT - 220, 30, 20), (12120, HEIGHT - 360, 30, 20),
+            (12240, HEIGHT - 160, 30, 20), (12360, HEIGHT - 280, 30, 20), (12480, HEIGHT - 200, 30, 20),
+            (12600, HEIGHT - 340, 30, 20), (12720, HEIGHT - 140, 30, 20), (12840, HEIGHT - 300, 30, 20),
+            (12960, HEIGHT - 180, 30, 20), (13080, HEIGHT - 320, 30, 20), (13200, HEIGHT - 240, 30, 20),
+            (13320, HEIGHT - 360, 30, 20), (13440, HEIGHT - 160, 30, 20), (13560, HEIGHT - 280, 30, 20),
+            (13680, HEIGHT - 200, 30, 20), (13800, HEIGHT - 340, 30, 20), (13920, HEIGHT - 140, 30, 20),
+            (14040, HEIGHT - 300, 30, 20), (14160, HEIGHT - 180, 30, 20), (14280, HEIGHT - 320, 30, 20),
+            (14400, HEIGHT - 240, 30, 20), (14520, HEIGHT - 360, 30, 20), (14640, HEIGHT - 160, 30, 20),
+            (14760, HEIGHT - 280, 30, 20), (14880, HEIGHT - 200, 30, 20)
+        ]
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar aranhas (1 a cada 4 plataformas - seguindo padrão do nível 13)
+        for i in range(4, len(platforms), 4):  # Começar do índice 4 (5ª plataforma)
+            if i < len(platforms):
+                platform = platforms[i]
+                top_limit = platform[1] - 100
+                bottom_limit = platform[1] - 30
+                spider = Spider(platform[0] + platform[2]//2, top_limit, top_limit, bottom_limit, self.spider_images)
+                self.spiders.append(spider)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = 15000
+        self.platforms.append(Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        
+    def create_level_24(self):
+        """Nível 24 - Dificuldade crescente (114 plataformas) - Padrão manual como fase 21"""
+        platforms = [
+            (10, HEIGHT - 100, 30, 20), (120, HEIGHT - 280, 30, 20), (240, HEIGHT - 160, 30, 20),
+            (360, HEIGHT - 320, 30, 20), (480, HEIGHT - 200, 30, 20), (600, HEIGHT - 360, 30, 20),
+            (720, HEIGHT - 140, 30, 20), (840, HEIGHT - 300, 30, 20), (960, HEIGHT - 180, 30, 20),
+            (1080, HEIGHT - 340, 30, 20), (1200, HEIGHT - 120, 30, 20), (1320, HEIGHT - 280, 30, 20),
+            (1440, HEIGHT - 220, 30, 20), (1560, HEIGHT - 360, 30, 20), (1680, HEIGHT - 160, 30, 20),
+            (1800, HEIGHT - 300, 30, 20), (1920, HEIGHT - 140, 30, 20), (2040, HEIGHT - 320, 30, 20),
+            (2160, HEIGHT - 200, 30, 20), (2280, HEIGHT - 340, 30, 20), (2400, HEIGHT - 180, 30, 20),
+            (2520, HEIGHT - 300, 30, 20), (2640, HEIGHT - 120, 30, 20), (2760, HEIGHT - 280, 30, 20),
+            (2880, HEIGHT - 240, 30, 20), (3000, HEIGHT - 360, 30, 20), (3120, HEIGHT - 160, 30, 20),
+            (3240, HEIGHT - 320, 30, 20), (3360, HEIGHT - 200, 30, 20), (3480, HEIGHT - 340, 30, 20),
+            (3600, HEIGHT - 140, 30, 20), (3720, HEIGHT - 300, 30, 20), (3840, HEIGHT - 180, 30, 20),
+            (3960, HEIGHT - 320, 30, 20), (4080, HEIGHT - 220, 30, 20), (4200, HEIGHT - 360, 30, 20),
+            (4320, HEIGHT - 160, 30, 20), (4440, HEIGHT - 300, 30, 20), (4560, HEIGHT - 140, 30, 20),
+            (4680, HEIGHT - 280, 30, 20), (4800, HEIGHT - 200, 30, 20), (4920, HEIGHT - 340, 30, 20),
+            (5040, HEIGHT - 180, 30, 20), (5160, HEIGHT - 320, 30, 20), (5280, HEIGHT - 120, 30, 20),
+            (5400, HEIGHT - 280, 30, 20), (5520, HEIGHT - 240, 30, 20), (5640, HEIGHT - 360, 30, 20),
+            (5760, HEIGHT - 160, 30, 20), (5880, HEIGHT - 300, 30, 20), (6000, HEIGHT - 200, 30, 20),
+            (6120, HEIGHT - 340, 30, 20), (6240, HEIGHT - 140, 30, 20), (6360, HEIGHT - 320, 30, 20),
+            (6480, HEIGHT - 180, 30, 20), (6600, HEIGHT - 300, 30, 20), (6720, HEIGHT - 220, 30, 20),
+            (6840, HEIGHT - 360, 30, 20), (6960, HEIGHT - 160, 30, 20), (7080, HEIGHT - 280, 30, 20),
+            (7200, HEIGHT - 200, 30, 20), (7320, HEIGHT - 340, 30, 20), (7440, HEIGHT - 140, 30, 20),
+            (7560, HEIGHT - 300, 30, 20), (7680, HEIGHT - 180, 30, 20), (7800, HEIGHT - 320, 30, 20),
+            (7920, HEIGHT - 240, 30, 20), (8040, HEIGHT - 360, 30, 20), (8160, HEIGHT - 160, 30, 20),
+            (8280, HEIGHT - 300, 30, 20), (8400, HEIGHT - 120, 30, 20), (8520, HEIGHT - 280, 30, 20),
+            (8640, HEIGHT - 200, 30, 20), (8760, HEIGHT - 340, 30, 20), (8880, HEIGHT - 180, 30, 20),
+            (9000, HEIGHT - 320, 30, 20), (9120, HEIGHT - 140, 30, 20), (9240, HEIGHT - 300, 30, 20),
+            (9360, HEIGHT - 220, 30, 20), (9480, HEIGHT - 360, 30, 20), (9600, HEIGHT - 160, 30, 20),
+            (9720, HEIGHT - 280, 30, 20), (9840, HEIGHT - 200, 30, 20), (9960, HEIGHT - 340, 30, 20),
+            (10080, HEIGHT - 140, 30, 20), (10200, HEIGHT - 300, 30, 20), (10320, HEIGHT - 180, 30, 20),
+            (10440, HEIGHT - 320, 30, 20), (10560, HEIGHT - 240, 30, 20), (10680, HEIGHT - 360, 30, 20),
+            (10800, HEIGHT - 160, 30, 20), (10920, HEIGHT - 300, 30, 20), (11040, HEIGHT - 120, 30, 20),
+            (11160, HEIGHT - 280, 30, 20), (11280, HEIGHT - 200, 30, 20), (11400, HEIGHT - 340, 30, 20),
+            (11520, HEIGHT - 180, 30, 20), (11640, HEIGHT - 320, 30, 20), (11760, HEIGHT - 140, 30, 20),
+            (11880, HEIGHT - 300, 30, 20), (12000, HEIGHT - 220, 30, 20), (12120, HEIGHT - 360, 30, 20),
+            (12240, HEIGHT - 160, 30, 20), (12360, HEIGHT - 280, 30, 20), (12480, HEIGHT - 200, 30, 20),
+            (12600, HEIGHT - 340, 30, 20), (12720, HEIGHT - 140, 30, 20), (12840, HEIGHT - 300, 30, 20),
+            (12960, HEIGHT - 180, 30, 20), (13080, HEIGHT - 320, 30, 20), (13200, HEIGHT - 240, 30, 20),
+            (13320, HEIGHT - 360, 30, 20), (13440, HEIGHT - 160, 30, 20), (13560, HEIGHT - 280, 30, 20),
+            (13680, HEIGHT - 200, 30, 20), (13800, HEIGHT - 340, 30, 20), (13920, HEIGHT - 140, 30, 20),
+            (14040, HEIGHT - 300, 30, 20), (14160, HEIGHT - 180, 30, 20), (14280, HEIGHT - 320, 30, 20),
+            (14400, HEIGHT - 240, 30, 20), (14520, HEIGHT - 360, 30, 20), (14640, HEIGHT - 160, 30, 20),
+            (14760, HEIGHT - 280, 30, 20), (14880, HEIGHT - 200, 30, 20), (15000, HEIGHT - 340, 30, 20)
+        ]
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão da fase 14)
+        for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
+            if i < len(platforms):
+                platform = platforms[i]
+                top_limit = platform[1] - 100
+                bottom_limit = platform[1] - 30
+                spider = Spider(platform[0] + platform[2]//2, top_limit, top_limit, bottom_limit, self.spider_images)
+                self.spiders.append(spider)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = 15120
+        self.platforms.append(Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        
+    def create_level_25(self):
+        """Nível 25 - Máxima dificuldade (115 plataformas) - Padrão manual como fase 21"""
+        platforms = [
+            (10, HEIGHT - 100, 30, 20), (120, HEIGHT - 280, 30, 20), (240, HEIGHT - 160, 30, 20),
+            (360, HEIGHT - 320, 30, 20), (480, HEIGHT - 200, 30, 20), (600, HEIGHT - 360, 30, 20),
+            (720, HEIGHT - 140, 30, 20), (840, HEIGHT - 300, 30, 20), (960, HEIGHT - 180, 30, 20),
+            (1080, HEIGHT - 340, 30, 20), (1200, HEIGHT - 120, 30, 20), (1320, HEIGHT - 280, 30, 20),
+            (1440, HEIGHT - 220, 30, 20), (1560, HEIGHT - 360, 30, 20), (1680, HEIGHT - 160, 30, 20),
+            (1800, HEIGHT - 300, 30, 20), (1920, HEIGHT - 140, 30, 20), (2040, HEIGHT - 320, 30, 20),
+            (2160, HEIGHT - 200, 30, 20), (2280, HEIGHT - 340, 30, 20), (2400, HEIGHT - 180, 30, 20),
+            (2520, HEIGHT - 300, 30, 20), (2640, HEIGHT - 120, 30, 20), (2760, HEIGHT - 280, 30, 20),
+            (2880, HEIGHT - 240, 30, 20), (3000, HEIGHT - 360, 30, 20), (3120, HEIGHT - 160, 30, 20),
+            (3240, HEIGHT - 320, 30, 20), (3360, HEIGHT - 200, 30, 20), (3480, HEIGHT - 340, 30, 20),
+            (3600, HEIGHT - 140, 30, 20), (3720, HEIGHT - 300, 30, 20), (3840, HEIGHT - 180, 30, 20),
+            (3960, HEIGHT - 320, 30, 20), (4080, HEIGHT - 220, 30, 20), (4200, HEIGHT - 360, 30, 20),
+            (4320, HEIGHT - 160, 30, 20), (4440, HEIGHT - 300, 30, 20), (4560, HEIGHT - 140, 30, 20),
+            (4680, HEIGHT - 280, 30, 20), (4800, HEIGHT - 200, 30, 20), (4920, HEIGHT - 340, 30, 20),
+            (5040, HEIGHT - 180, 30, 20), (5160, HEIGHT - 320, 30, 20), (5280, HEIGHT - 120, 30, 20),
+            (5400, HEIGHT - 280, 30, 20), (5520, HEIGHT - 240, 30, 20), (5640, HEIGHT - 360, 30, 20),
+            (5760, HEIGHT - 160, 30, 20), (5880, HEIGHT - 300, 30, 20), (6000, HEIGHT - 200, 30, 20),
+            (6120, HEIGHT - 340, 30, 20), (6240, HEIGHT - 140, 30, 20), (6360, HEIGHT - 320, 30, 20),
+            (6480, HEIGHT - 180, 30, 20), (6600, HEIGHT - 300, 30, 20), (6720, HEIGHT - 220, 30, 20),
+            (6840, HEIGHT - 360, 30, 20), (6960, HEIGHT - 160, 30, 20), (7080, HEIGHT - 280, 30, 20),
+            (7200, HEIGHT - 200, 30, 20), (7320, HEIGHT - 340, 30, 20), (7440, HEIGHT - 140, 30, 20),
+            (7560, HEIGHT - 300, 30, 20), (7680, HEIGHT - 180, 30, 20), (7800, HEIGHT - 320, 30, 20),
+            (7920, HEIGHT - 240, 30, 20), (8040, HEIGHT - 360, 30, 20), (8160, HEIGHT - 160, 30, 20),
+            (8280, HEIGHT - 300, 30, 20), (8400, HEIGHT - 120, 30, 20), (8520, HEIGHT - 280, 30, 20),
+            (8640, HEIGHT - 200, 30, 20), (8760, HEIGHT - 340, 30, 20), (8880, HEIGHT - 180, 30, 20),
+            (9000, HEIGHT - 320, 30, 20), (9120, HEIGHT - 140, 30, 20), (9240, HEIGHT - 300, 30, 20),
+            (9360, HEIGHT - 220, 30, 20), (9480, HEIGHT - 360, 30, 20), (9600, HEIGHT - 160, 30, 20),
+            (9720, HEIGHT - 280, 30, 20), (9840, HEIGHT - 200, 30, 20), (9960, HEIGHT - 340, 30, 20),
+            (10080, HEIGHT - 140, 30, 20), (10200, HEIGHT - 300, 30, 20), (10320, HEIGHT - 180, 30, 20),
+            (10440, HEIGHT - 320, 30, 20), (10560, HEIGHT - 240, 30, 20), (10680, HEIGHT - 360, 30, 20),
+            (10800, HEIGHT - 160, 30, 20), (10920, HEIGHT - 300, 30, 20), (11040, HEIGHT - 120, 30, 20),
+            (11160, HEIGHT - 280, 30, 20), (11280, HEIGHT - 200, 30, 20), (11400, HEIGHT - 340, 30, 20),
+            (11520, HEIGHT - 180, 30, 20), (11640, HEIGHT - 320, 30, 20), (11760, HEIGHT - 140, 30, 20),
+            (11880, HEIGHT - 300, 30, 20), (12000, HEIGHT - 220, 30, 20), (12120, HEIGHT - 360, 30, 20),
+            (12240, HEIGHT - 160, 30, 20), (12360, HEIGHT - 280, 30, 20), (12480, HEIGHT - 200, 30, 20),
+            (12600, HEIGHT - 340, 30, 20), (12720, HEIGHT - 140, 30, 20), (12840, HEIGHT - 300, 30, 20),
+            (12960, HEIGHT - 180, 30, 20), (13080, HEIGHT - 320, 30, 20), (13200, HEIGHT - 240, 30, 20),
+            (13320, HEIGHT - 360, 30, 20), (13440, HEIGHT - 160, 30, 20), (13560, HEIGHT - 280, 30, 20),
+            (13680, HEIGHT - 200, 30, 20), (13800, HEIGHT - 340, 30, 20), (13920, HEIGHT - 140, 30, 20),
+            (14040, HEIGHT - 300, 30, 20), (14160, HEIGHT - 180, 30, 20), (14280, HEIGHT - 320, 30, 20),
+            (14400, HEIGHT - 240, 30, 20), (14520, HEIGHT - 360, 30, 20), (14640, HEIGHT - 160, 30, 20),
+            (14760, HEIGHT - 280, 30, 20), (14880, HEIGHT - 200, 30, 20), (15000, HEIGHT - 340, 30, 20),
+            (15120, HEIGHT - 180, 30, 20)
+        ]
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão da fase 15)
+        for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
+            if i < len(platforms):
+                platform = platforms[i]
+                top_limit = platform[1] - 100
+                bottom_limit = platform[1] - 30
+                spider = Spider(platform[0] + platform[2]//2, top_limit, top_limit, bottom_limit, self.spider_images)
+                self.spiders.append(spider)
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = 15240
+        self.platforms.append(Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        
+    def create_level_26(self):
+        """Nível 26 - Introdução dos morcegos (116 plataformas) - Padrão manual como fase 21"""
+        platforms = [
+            (10, HEIGHT - 100, 30, 20), (120, HEIGHT - 280, 30, 20), (240, HEIGHT - 160, 30, 20),
+            (360, HEIGHT - 320, 30, 20), (480, HEIGHT - 200, 30, 20), (600, HEIGHT - 360, 30, 20),
+            (720, HEIGHT - 140, 30, 20), (840, HEIGHT - 300, 30, 20), (960, HEIGHT - 180, 30, 20),
+            (1080, HEIGHT - 340, 30, 20), (1200, HEIGHT - 120, 30, 20), (1320, HEIGHT - 280, 30, 20),
+            (1440, HEIGHT - 220, 30, 20), (1560, HEIGHT - 360, 30, 20), (1680, HEIGHT - 160, 30, 20),
+            (1800, HEIGHT - 300, 30, 20), (1920, HEIGHT - 140, 30, 20), (2040, HEIGHT - 320, 30, 20),
+            (2160, HEIGHT - 200, 30, 20), (2280, HEIGHT - 340, 30, 20), (2400, HEIGHT - 180, 30, 20),
+            (2520, HEIGHT - 300, 30, 20), (2640, HEIGHT - 120, 30, 20), (2760, HEIGHT - 280, 30, 20),
+            (2880, HEIGHT - 240, 30, 20), (3000, HEIGHT - 360, 30, 20), (3120, HEIGHT - 160, 30, 20),
+            (3240, HEIGHT - 320, 30, 20), (3360, HEIGHT - 200, 30, 20), (3480, HEIGHT - 340, 30, 20),
+            (3600, HEIGHT - 140, 30, 20), (3720, HEIGHT - 300, 30, 20), (3840, HEIGHT - 180, 30, 20),
+            (3960, HEIGHT - 320, 30, 20), (4080, HEIGHT - 220, 30, 20), (4200, HEIGHT - 360, 30, 20),
+            (4320, HEIGHT - 160, 30, 20), (4440, HEIGHT - 300, 30, 20), (4560, HEIGHT - 140, 30, 20),
+            (4680, HEIGHT - 280, 30, 20), (4800, HEIGHT - 200, 30, 20), (4920, HEIGHT - 340, 30, 20),
+            (5040, HEIGHT - 180, 30, 20), (5160, HEIGHT - 320, 30, 20), (5280, HEIGHT - 120, 30, 20),
+            (5400, HEIGHT - 280, 30, 20), (5520, HEIGHT - 240, 30, 20), (5640, HEIGHT - 360, 30, 20),
+            (5760, HEIGHT - 160, 30, 20), (5880, HEIGHT - 300, 30, 20), (6000, HEIGHT - 200, 30, 20),
+            (6120, HEIGHT - 340, 30, 20), (6240, HEIGHT - 140, 30, 20), (6360, HEIGHT - 320, 30, 20),
+            (6480, HEIGHT - 180, 30, 20), (6600, HEIGHT - 300, 30, 20), (6720, HEIGHT - 220, 30, 20),
+            (6840, HEIGHT - 360, 30, 20), (6960, HEIGHT - 160, 30, 20), (7080, HEIGHT - 280, 30, 20),
+            (7200, HEIGHT - 200, 30, 20), (7320, HEIGHT - 340, 30, 20), (7440, HEIGHT - 140, 30, 20),
+            (7560, HEIGHT - 300, 30, 20), (7680, HEIGHT - 180, 30, 20), (7800, HEIGHT - 320, 30, 20),
+            (7920, HEIGHT - 240, 30, 20), (8040, HEIGHT - 360, 30, 20), (8160, HEIGHT - 160, 30, 20),
+            (8280, HEIGHT - 300, 30, 20), (8400, HEIGHT - 120, 30, 20), (8520, HEIGHT - 280, 30, 20),
+            (8640, HEIGHT - 200, 30, 20), (8760, HEIGHT - 340, 30, 20), (8880, HEIGHT - 180, 30, 20),
+            (9000, HEIGHT - 320, 30, 20), (9120, HEIGHT - 140, 30, 20), (9240, HEIGHT - 300, 30, 20),
+            (9360, HEIGHT - 220, 30, 20), (9480, HEIGHT - 360, 30, 20), (9600, HEIGHT - 160, 30, 20),
+            (9720, HEIGHT - 280, 30, 20), (9840, HEIGHT - 200, 30, 20), (9960, HEIGHT - 340, 30, 20),
+            (10080, HEIGHT - 140, 30, 20), (10200, HEIGHT - 300, 30, 20), (10320, HEIGHT - 180, 30, 20),
+            (10440, HEIGHT - 320, 30, 20), (10560, HEIGHT - 240, 30, 20), (10680, HEIGHT - 360, 30, 20),
+            (10800, HEIGHT - 160, 30, 20), (10920, HEIGHT - 300, 30, 20), (11040, HEIGHT - 120, 30, 20),
+            (11160, HEIGHT - 280, 30, 20), (11280, HEIGHT - 200, 30, 20), (11400, HEIGHT - 340, 30, 20),
+            (11520, HEIGHT - 180, 30, 20), (11640, HEIGHT - 320, 30, 20), (11760, HEIGHT - 140, 30, 20),
+            (11880, HEIGHT - 300, 30, 20), (12000, HEIGHT - 220, 30, 20), (12120, HEIGHT - 360, 30, 20),
+            (12240, HEIGHT - 160, 30, 20), (12360, HEIGHT - 280, 30, 20), (12480, HEIGHT - 200, 30, 20),
+            (12600, HEIGHT - 340, 30, 20), (12720, HEIGHT - 140, 30, 20), (12840, HEIGHT - 300, 30, 20),
+            (12960, HEIGHT - 180, 30, 20), (13080, HEIGHT - 320, 30, 20), (13200, HEIGHT - 240, 30, 20),
+            (13320, HEIGHT - 360, 30, 20), (13440, HEIGHT - 160, 30, 20), (13560, HEIGHT - 280, 30, 20),
+            (13680, HEIGHT - 200, 30, 20), (13800, HEIGHT - 340, 30, 20), (13920, HEIGHT - 140, 30, 20),
+            (14040, HEIGHT - 300, 30, 20), (14160, HEIGHT - 180, 30, 20), (14280, HEIGHT - 320, 30, 20),
+            (14400, HEIGHT - 240, 30, 20), (14520, HEIGHT - 360, 30, 20), (14640, HEIGHT - 160, 30, 20),
+            (14760, HEIGHT - 280, 30, 20), (14880, HEIGHT - 200, 30, 20), (15000, HEIGHT - 340, 30, 20),
+            (15120, HEIGHT - 180, 30, 20), (15240, HEIGHT - 300, 30, 20)
+        ]
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar aranhas (1 a cada 3 plataformas - seguindo padrão da fase 16)
+        for i in range(3, len(platforms), 3):
+            if i < len(platforms):
+                platform = platforms[i]
+                top_limit = platform[1] - 100
+                bottom_limit = platform[1] - 30
+                spider = Spider(platform[0] + platform[2]//2, top_limit, top_limit, bottom_limit, self.spider_images)
+                self.spiders.append(spider)
+        
+        # Nível 26 corresponde ao nível 16 - morcegos são gerados dinamicamente pelo sistema
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = 15360
+        self.platforms.append(Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        
+    def create_level_27(self):
+        """Nível 27 - Mais morcegos (117 plataformas) - Padrão escadinha como nível 21"""
+        # Padrão manual de plataformas seguindo o mesmo layout da fase 21 com extensões
+        platforms = [
+            (10, HEIGHT - 100, 30, 20), (120, HEIGHT - 280, 30, 20), (240, HEIGHT - 160, 30, 20),
+            (360, HEIGHT - 320, 30, 20), (480, HEIGHT - 200, 30, 20), (600, HEIGHT - 360, 30, 20),
+            (720, HEIGHT - 140, 30, 20), (840, HEIGHT - 300, 30, 20), (960, HEIGHT - 180, 30, 20),
+            (1080, HEIGHT - 340, 30, 20), (1200, HEIGHT - 120, 30, 20), (1320, HEIGHT - 280, 30, 20),
+            (1440, HEIGHT - 220, 30, 20), (1560, HEIGHT - 360, 30, 20), (1680, HEIGHT - 160, 30, 20),
+            (1800, HEIGHT - 300, 30, 20), (1920, HEIGHT - 140, 30, 20), (2040, HEIGHT - 320, 30, 20),
+            (2160, HEIGHT - 200, 30, 20), (2280, HEIGHT - 340, 30, 20), (2400, HEIGHT - 180, 30, 20),
+            (2520, HEIGHT - 300, 30, 20), (2640, HEIGHT - 120, 30, 20), (2760, HEIGHT - 280, 30, 20),
+            (2880, HEIGHT - 240, 30, 20), (3000, HEIGHT - 360, 30, 20), (3120, HEIGHT - 160, 30, 20),
+            (3240, HEIGHT - 320, 30, 20), (3360, HEIGHT - 200, 30, 20), (3480, HEIGHT - 340, 30, 20),
+            (3600, HEIGHT - 140, 30, 20), (3720, HEIGHT - 300, 30, 20), (3840, HEIGHT - 180, 30, 20),
+            (3960, HEIGHT - 320, 30, 20), (4080, HEIGHT - 220, 30, 20), (4200, HEIGHT - 360, 30, 20),
+            (4320, HEIGHT - 160, 30, 20), (4440, HEIGHT - 300, 30, 20), (4560, HEIGHT - 140, 30, 20),
+            (4680, HEIGHT - 280, 30, 20), (4800, HEIGHT - 200, 30, 20), (4920, HEIGHT - 340, 30, 20),
+            (5040, HEIGHT - 180, 30, 20), (5160, HEIGHT - 320, 30, 20), (5280, HEIGHT - 120, 30, 20),
+            (5400, HEIGHT - 280, 30, 20), (5520, HEIGHT - 240, 30, 20), (5640, HEIGHT - 360, 30, 20),
+            (5760, HEIGHT - 160, 30, 20), (5880, HEIGHT - 300, 30, 20), (6000, HEIGHT - 200, 30, 20),
+            (6120, HEIGHT - 340, 30, 20), (6240, HEIGHT - 140, 30, 20), (6360, HEIGHT - 320, 30, 20),
+            (6480, HEIGHT - 180, 30, 20), (6600, HEIGHT - 300, 30, 20), (6720, HEIGHT - 220, 30, 20),
+            (6840, HEIGHT - 360, 30, 20), (6960, HEIGHT - 160, 30, 20), (7080, HEIGHT - 280, 30, 20),
+            (7200, HEIGHT - 200, 30, 20), (7320, HEIGHT - 340, 30, 20), (7440, HEIGHT - 140, 30, 20),
+            (7560, HEIGHT - 300, 30, 20), (7680, HEIGHT - 180, 30, 20), (7800, HEIGHT - 320, 30, 20),
+            (7920, HEIGHT - 240, 30, 20), (8040, HEIGHT - 360, 30, 20), (8160, HEIGHT - 160, 30, 20),
+            (8280, HEIGHT - 300, 30, 20), (8400, HEIGHT - 120, 30, 20), (8520, HEIGHT - 280, 30, 20),
+            (8640, HEIGHT - 200, 30, 20), (8760, HEIGHT - 340, 30, 20), (8880, HEIGHT - 180, 30, 20),
+            (9000, HEIGHT - 320, 30, 20), (9120, HEIGHT - 140, 30, 20), (9240, HEIGHT - 300, 30, 20),
+            (9360, HEIGHT - 220, 30, 20), (9480, HEIGHT - 360, 30, 20), (9600, HEIGHT - 160, 30, 20),
+            (9720, HEIGHT - 280, 30, 20), (9840, HEIGHT - 200, 30, 20), (9960, HEIGHT - 340, 30, 20),
+            (10080, HEIGHT - 140, 30, 20), (10200, HEIGHT - 300, 30, 20), (10320, HEIGHT - 180, 30, 20),
+            (10440, HEIGHT - 320, 30, 20), (10560, HEIGHT - 240, 30, 20), (10680, HEIGHT - 360, 30, 20),
+            (10800, HEIGHT - 160, 30, 20), (10920, HEIGHT - 300, 30, 20), (11040, HEIGHT - 120, 30, 20),
+            (11160, HEIGHT - 280, 30, 20), (11280, HEIGHT - 200, 30, 20), (11400, HEIGHT - 340, 30, 20),
+            (11520, HEIGHT - 180, 30, 20), (11640, HEIGHT - 320, 30, 20), (11760, HEIGHT - 140, 30, 20),
+            (11880, HEIGHT - 300, 30, 20), (12000, HEIGHT - 220, 30, 20), (12120, HEIGHT - 360, 30, 20),
+            (12240, HEIGHT - 160, 30, 20), (12360, HEIGHT - 280, 30, 20), (12480, HEIGHT - 200, 30, 20),
+            (12600, HEIGHT - 340, 30, 20), (12720, HEIGHT - 140, 30, 20), (12840, HEIGHT - 300, 30, 20),
+            (12960, HEIGHT - 180, 30, 20), (13080, HEIGHT - 320, 30, 20), (13200, HEIGHT - 240, 30, 20),
+            (13320, HEIGHT - 360, 30, 20), (13440, HEIGHT - 160, 30, 20), (13560, HEIGHT - 280, 30, 20),
+            (13680, HEIGHT - 200, 30, 20), (13800, HEIGHT - 340, 30, 20), (13920, HEIGHT - 140, 30, 20),
+            (14040, HEIGHT - 300, 30, 20), (14160, HEIGHT - 180, 30, 20), (14280, HEIGHT - 320, 30, 20),
+            (14400, HEIGHT - 240, 30, 20), (14520, HEIGHT - 360, 30, 20), (14640, HEIGHT - 160, 30, 20),
+            (14760, HEIGHT - 280, 30, 20), (14880, HEIGHT - 200, 30, 20), (15000, HEIGHT - 340, 30, 20),
+            # Plataformas extras para nível 27 (6 adicionais)
+            (15120, HEIGHT - 180, 30, 20), (15240, HEIGHT - 300, 30, 20), (15360, HEIGHT - 160, 30, 20),
+            (15480, HEIGHT - 320, 30, 20), (15600, HEIGHT - 200, 30, 20), (15720, HEIGHT - 340, 30, 20)
+        ]
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão do nível 17)
+        for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
+            if i < len(platforms):
+                platform = platforms[i]
+                top_limit = platform[1] - 70
+                bottom_limit = platform[1] - 30
+                spider = Spider(platform[0] + platform[2]//2, top_limit, top_limit, bottom_limit, self.spider_images)
+                self.spiders.append(spider)
+        
+        # Nível 27 corresponde ao nível 17 - morcegos são gerados dinamicamente pelo sistema
+        # Não adicionar morcegos estáticos aqui
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = 15840
+        self.platforms.append(Platform(final_x, HEIGHT - 70, 18, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 170)
+        
+    def create_level_28(self):
+        """Nível 28 - Combinação intensa (118 plataformas) - Padrão escadinha como nível 21"""
+        # Padrão manual de plataformas seguindo o mesmo layout da fase 21 com extensões
+        platforms = [
+            (10, HEIGHT - 100, 30, 20), (120, HEIGHT - 280, 30, 20), (240, HEIGHT - 160, 30, 20),
+            (360, HEIGHT - 320, 30, 20), (480, HEIGHT - 200, 30, 20), (600, HEIGHT - 360, 30, 20),
+            (720, HEIGHT - 140, 30, 20), (840, HEIGHT - 300, 30, 20), (960, HEIGHT - 180, 30, 20),
+            (1080, HEIGHT - 340, 30, 20), (1200, HEIGHT - 120, 30, 20), (1320, HEIGHT - 280, 30, 20),
+            (1440, HEIGHT - 220, 30, 20), (1560, HEIGHT - 360, 30, 20), (1680, HEIGHT - 160, 30, 20),
+            (1800, HEIGHT - 300, 30, 20), (1920, HEIGHT - 140, 30, 20), (2040, HEIGHT - 320, 30, 20),
+            (2160, HEIGHT - 200, 30, 20), (2280, HEIGHT - 340, 30, 20), (2400, HEIGHT - 180, 30, 20),
+            (2520, HEIGHT - 300, 30, 20), (2640, HEIGHT - 120, 30, 20), (2760, HEIGHT - 280, 30, 20),
+            (2880, HEIGHT - 240, 30, 20), (3000, HEIGHT - 360, 30, 20), (3120, HEIGHT - 160, 30, 20),
+            (3240, HEIGHT - 320, 30, 20), (3360, HEIGHT - 200, 30, 20), (3480, HEIGHT - 340, 30, 20),
+            (3600, HEIGHT - 140, 30, 20), (3720, HEIGHT - 300, 30, 20), (3840, HEIGHT - 180, 30, 20),
+            (3960, HEIGHT - 320, 30, 20), (4080, HEIGHT - 220, 30, 20), (4200, HEIGHT - 360, 30, 20),
+            (4320, HEIGHT - 160, 30, 20), (4440, HEIGHT - 300, 30, 20), (4560, HEIGHT - 140, 30, 20),
+            (4680, HEIGHT - 280, 30, 20), (4800, HEIGHT - 200, 30, 20), (4920, HEIGHT - 340, 30, 20),
+            (5040, HEIGHT - 180, 30, 20), (5160, HEIGHT - 320, 30, 20), (5280, HEIGHT - 120, 30, 20),
+            (5400, HEIGHT - 280, 30, 20), (5520, HEIGHT - 240, 30, 20), (5640, HEIGHT - 360, 30, 20),
+            (5760, HEIGHT - 160, 30, 20), (5880, HEIGHT - 300, 30, 20), (6000, HEIGHT - 200, 30, 20),
+            (6120, HEIGHT - 340, 30, 20), (6240, HEIGHT - 140, 30, 20), (6360, HEIGHT - 320, 30, 20),
+            (6480, HEIGHT - 180, 30, 20), (6600, HEIGHT - 300, 30, 20), (6720, HEIGHT - 220, 30, 20),
+            (6840, HEIGHT - 360, 30, 20), (6960, HEIGHT - 160, 30, 20), (7080, HEIGHT - 280, 30, 20),
+            (7200, HEIGHT - 200, 30, 20), (7320, HEIGHT - 340, 30, 20), (7440, HEIGHT - 140, 30, 20),
+            (7560, HEIGHT - 300, 30, 20), (7680, HEIGHT - 180, 30, 20), (7800, HEIGHT - 320, 30, 20),
+            (7920, HEIGHT - 240, 30, 20), (8040, HEIGHT - 360, 30, 20), (8160, HEIGHT - 160, 30, 20),
+            (8280, HEIGHT - 300, 30, 20), (8400, HEIGHT - 120, 30, 20), (8520, HEIGHT - 280, 30, 20),
+            (8640, HEIGHT - 200, 30, 20), (8760, HEIGHT - 340, 30, 20), (8880, HEIGHT - 180, 30, 20),
+            (9000, HEIGHT - 320, 30, 20), (9120, HEIGHT - 140, 30, 20), (9240, HEIGHT - 300, 30, 20),
+            (9360, HEIGHT - 220, 30, 20), (9480, HEIGHT - 360, 30, 20), (9600, HEIGHT - 160, 30, 20),
+            (9720, HEIGHT - 280, 30, 20), (9840, HEIGHT - 200, 30, 20), (9960, HEIGHT - 340, 30, 20),
+            (10080, HEIGHT - 140, 30, 20), (10200, HEIGHT - 300, 30, 20), (10320, HEIGHT - 180, 30, 20),
+            (10440, HEIGHT - 320, 30, 20), (10560, HEIGHT - 240, 30, 20), (10680, HEIGHT - 360, 30, 20),
+            (10800, HEIGHT - 160, 30, 20), (10920, HEIGHT - 300, 30, 20), (11040, HEIGHT - 120, 30, 20),
+            (11160, HEIGHT - 280, 30, 20), (11280, HEIGHT - 200, 30, 20), (11400, HEIGHT - 340, 30, 20),
+            (11520, HEIGHT - 180, 30, 20), (11640, HEIGHT - 320, 30, 20), (11760, HEIGHT - 140, 30, 20),
+            (11880, HEIGHT - 300, 30, 20), (12000, HEIGHT - 220, 30, 20), (12120, HEIGHT - 360, 30, 20),
+            (12240, HEIGHT - 160, 30, 20), (12360, HEIGHT - 280, 30, 20), (12480, HEIGHT - 200, 30, 20),
+            (12600, HEIGHT - 340, 30, 20), (12720, HEIGHT - 140, 30, 20), (12840, HEIGHT - 300, 30, 20),
+            (12960, HEIGHT - 180, 30, 20), (13080, HEIGHT - 320, 30, 20), (13200, HEIGHT - 240, 30, 20),
+            (13320, HEIGHT - 360, 30, 20), (13440, HEIGHT - 160, 30, 20), (13560, HEIGHT - 280, 30, 20),
+            (13680, HEIGHT - 200, 30, 20), (13800, HEIGHT - 340, 30, 20), (13920, HEIGHT - 140, 30, 20),
+            (14040, HEIGHT - 300, 30, 20), (14160, HEIGHT - 180, 30, 20), (14280, HEIGHT - 320, 30, 20),
+            (14400, HEIGHT - 240, 30, 20), (14520, HEIGHT - 360, 30, 20), (14640, HEIGHT - 160, 30, 20),
+            (14760, HEIGHT - 280, 30, 20), (14880, HEIGHT - 200, 30, 20), (15000, HEIGHT - 340, 30, 20),
+            # Plataformas extras para nível 28 (7 adicionais)
+            (15120, HEIGHT - 180, 30, 20), (15240, HEIGHT - 300, 30, 20), (15360, HEIGHT - 160, 30, 20),
+            (15480, HEIGHT - 320, 30, 20), (15600, HEIGHT - 200, 30, 20), (15720, HEIGHT - 340, 30, 20),
+            (15840, HEIGHT - 180, 30, 20)
+        ]
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão do nível 18)
+        for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
+            if i < len(platforms):
+                platform = platforms[i]
+                top_limit = platform[1] - 65
+                bottom_limit = platform[1] - 30
+                spider = Spider(platform[0] + platform[2]//2, top_limit, top_limit, bottom_limit, self.spider_images)
+                self.spiders.append(spider)
+        
+        # Nível 28 corresponde ao nível 18 - morcegos são gerados dinamicamente pelo sistema
+        # Não adicionar morcegos estáticos aqui
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = 15960
+        self.platforms.append(Platform(final_x, HEIGHT - 65, 16, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 165)
+        
+    def create_level_29(self):
+        """Nível 29 - Quase impossível (119 plataformas) - Padrão escadinha como nível 21"""
+        # Padrão manual de plataformas seguindo o mesmo layout da fase 21 com extensões
+        platforms = [
+            (10, HEIGHT - 100, 30, 20), (120, HEIGHT - 280, 30, 20), (240, HEIGHT - 160, 30, 20),
+            (360, HEIGHT - 320, 30, 20), (480, HEIGHT - 200, 30, 20), (600, HEIGHT - 360, 30, 20),
+            (720, HEIGHT - 140, 30, 20), (840, HEIGHT - 300, 30, 20), (960, HEIGHT - 180, 30, 20),
+            (1080, HEIGHT - 340, 30, 20), (1200, HEIGHT - 120, 30, 20), (1320, HEIGHT - 280, 30, 20),
+            (1440, HEIGHT - 220, 30, 20), (1560, HEIGHT - 360, 30, 20), (1680, HEIGHT - 160, 30, 20),
+            (1800, HEIGHT - 300, 30, 20), (1920, HEIGHT - 140, 30, 20), (2040, HEIGHT - 320, 30, 20),
+            (2160, HEIGHT - 200, 30, 20), (2280, HEIGHT - 340, 30, 20), (2400, HEIGHT - 180, 30, 20),
+            (2520, HEIGHT - 300, 30, 20), (2640, HEIGHT - 120, 30, 20), (2760, HEIGHT - 280, 30, 20),
+            (2880, HEIGHT - 240, 30, 20), (3000, HEIGHT - 360, 30, 20), (3120, HEIGHT - 160, 30, 20),
+            (3240, HEIGHT - 320, 30, 20), (3360, HEIGHT - 200, 30, 20), (3480, HEIGHT - 340, 30, 20),
+            (3600, HEIGHT - 140, 30, 20), (3720, HEIGHT - 300, 30, 20), (3840, HEIGHT - 180, 30, 20),
+            (3960, HEIGHT - 320, 30, 20), (4080, HEIGHT - 220, 30, 20), (4200, HEIGHT - 360, 30, 20),
+            (4320, HEIGHT - 160, 30, 20), (4440, HEIGHT - 300, 30, 20), (4560, HEIGHT - 140, 30, 20),
+            (4680, HEIGHT - 280, 30, 20), (4800, HEIGHT - 200, 30, 20), (4920, HEIGHT - 340, 30, 20),
+            (5040, HEIGHT - 180, 30, 20), (5160, HEIGHT - 320, 30, 20), (5280, HEIGHT - 120, 30, 20),
+            (5400, HEIGHT - 280, 30, 20), (5520, HEIGHT - 240, 30, 20), (5640, HEIGHT - 360, 30, 20),
+            (5760, HEIGHT - 160, 30, 20), (5880, HEIGHT - 300, 30, 20), (6000, HEIGHT - 200, 30, 20),
+            (6120, HEIGHT - 340, 30, 20), (6240, HEIGHT - 140, 30, 20), (6360, HEIGHT - 320, 30, 20),
+            (6480, HEIGHT - 180, 30, 20), (6600, HEIGHT - 300, 30, 20), (6720, HEIGHT - 220, 30, 20),
+            (6840, HEIGHT - 360, 30, 20), (6960, HEIGHT - 160, 30, 20), (7080, HEIGHT - 280, 30, 20),
+            (7200, HEIGHT - 200, 30, 20), (7320, HEIGHT - 340, 30, 20), (7440, HEIGHT - 140, 30, 20),
+            (7560, HEIGHT - 300, 30, 20), (7680, HEIGHT - 180, 30, 20), (7800, HEIGHT - 320, 30, 20),
+            (7920, HEIGHT - 240, 30, 20), (8040, HEIGHT - 360, 30, 20), (8160, HEIGHT - 160, 30, 20),
+            (8280, HEIGHT - 300, 30, 20), (8400, HEIGHT - 120, 30, 20), (8520, HEIGHT - 280, 30, 20),
+            (8640, HEIGHT - 200, 30, 20), (8760, HEIGHT - 340, 30, 20), (8880, HEIGHT - 180, 30, 20),
+            (9000, HEIGHT - 320, 30, 20), (9120, HEIGHT - 140, 30, 20), (9240, HEIGHT - 300, 30, 20),
+            (9360, HEIGHT - 220, 30, 20), (9480, HEIGHT - 360, 30, 20), (9600, HEIGHT - 160, 30, 20),
+            (9720, HEIGHT - 280, 30, 20), (9840, HEIGHT - 200, 30, 20), (9960, HEIGHT - 340, 30, 20),
+            (10080, HEIGHT - 140, 30, 20), (10200, HEIGHT - 300, 30, 20), (10320, HEIGHT - 180, 30, 20),
+            (10440, HEIGHT - 320, 30, 20), (10560, HEIGHT - 240, 30, 20), (10680, HEIGHT - 360, 30, 20),
+            (10800, HEIGHT - 160, 30, 20), (10920, HEIGHT - 300, 30, 20), (11040, HEIGHT - 120, 30, 20),
+            (11160, HEIGHT - 280, 30, 20), (11280, HEIGHT - 200, 30, 20), (11400, HEIGHT - 340, 30, 20),
+            (11520, HEIGHT - 180, 30, 20), (11640, HEIGHT - 320, 30, 20), (11760, HEIGHT - 140, 30, 20),
+            (11880, HEIGHT - 300, 30, 20), (12000, HEIGHT - 220, 30, 20), (12120, HEIGHT - 360, 30, 20),
+            (12240, HEIGHT - 160, 30, 20), (12360, HEIGHT - 280, 30, 20), (12480, HEIGHT - 200, 30, 20),
+            (12600, HEIGHT - 340, 30, 20), (12720, HEIGHT - 140, 30, 20), (12840, HEIGHT - 300, 30, 20),
+            (12960, HEIGHT - 180, 30, 20), (13080, HEIGHT - 320, 30, 20), (13200, HEIGHT - 240, 30, 20),
+            (13320, HEIGHT - 360, 30, 20), (13440, HEIGHT - 160, 30, 20), (13560, HEIGHT - 280, 30, 20),
+            (13680, HEIGHT - 200, 30, 20), (13800, HEIGHT - 340, 30, 20), (13920, HEIGHT - 140, 30, 20),
+            (14040, HEIGHT - 300, 30, 20), (14160, HEIGHT - 180, 30, 20), (14280, HEIGHT - 320, 30, 20),
+            (14400, HEIGHT - 240, 30, 20), (14520, HEIGHT - 360, 30, 20), (14640, HEIGHT - 160, 30, 20),
+            (14760, HEIGHT - 280, 30, 20), (14880, HEIGHT - 200, 30, 20), (15000, HEIGHT - 340, 30, 20),
+            # Plataformas extras para nível 29 (8 adicionais)
+            (15120, HEIGHT - 180, 30, 20), (15240, HEIGHT - 300, 30, 20), (15360, HEIGHT - 160, 30, 20),
+            (15480, HEIGHT - 320, 30, 20), (15600, HEIGHT - 200, 30, 20), (15720, HEIGHT - 340, 30, 20),
+            (15840, HEIGHT - 180, 30, 20), (15960, HEIGHT - 300, 30, 20)
+        ]
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar aranhas (1 por plataforma - seguindo padrão do nível 19)
+        for i, platform in enumerate(platforms):
+            if i % 1 == 0:
+                top_limit = platform[1] - 60
+                bottom_limit = platform[1] - 30
+                spider = Spider(platform[0] + platform[2]//2, top_limit, top_limit, bottom_limit, self.spider_images)
+                self.spiders.append(spider)
+        
+        # Nível 29 corresponde ao nível 19 - morcegos são gerados dinamicamente pelo sistema
+        # Não adicionar morcegos estáticos aqui
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = 16080
+        self.platforms.append(Platform(final_x, HEIGHT - 60, 14, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 160)
+        
+    def create_level_30(self):
+        """Nível 30 - FINAL BOSS (120 plataformas) - Padrão escadinha como nível 21"""
+        # Padrão manual de plataformas seguindo o mesmo layout da fase 21 com extensões
+        platforms = [
+            (10, HEIGHT - 100, 30, 20), (120, HEIGHT - 280, 30, 20), (240, HEIGHT - 160, 30, 20),
+            (360, HEIGHT - 320, 30, 20), (480, HEIGHT - 200, 30, 20), (600, HEIGHT - 360, 30, 20),
+            (720, HEIGHT - 140, 30, 20), (840, HEIGHT - 300, 30, 20), (960, HEIGHT - 180, 30, 20),
+            (1080, HEIGHT - 340, 30, 20), (1200, HEIGHT - 120, 30, 20), (1320, HEIGHT - 280, 30, 20),
+            (1440, HEIGHT - 220, 30, 20), (1560, HEIGHT - 360, 30, 20), (1680, HEIGHT - 160, 30, 20),
+            (1800, HEIGHT - 300, 30, 20), (1920, HEIGHT - 140, 30, 20), (2040, HEIGHT - 320, 30, 20),
+            (2160, HEIGHT - 200, 30, 20), (2280, HEIGHT - 340, 30, 20), (2400, HEIGHT - 180, 30, 20),
+            (2520, HEIGHT - 300, 30, 20), (2640, HEIGHT - 120, 30, 20), (2760, HEIGHT - 280, 30, 20),
+            (2880, HEIGHT - 240, 30, 20), (3000, HEIGHT - 360, 30, 20), (3120, HEIGHT - 160, 30, 20),
+            (3240, HEIGHT - 320, 30, 20), (3360, HEIGHT - 200, 30, 20), (3480, HEIGHT - 340, 30, 20),
+            (3600, HEIGHT - 140, 30, 20), (3720, HEIGHT - 300, 30, 20), (3840, HEIGHT - 180, 30, 20),
+            (3960, HEIGHT - 320, 30, 20), (4080, HEIGHT - 220, 30, 20), (4200, HEIGHT - 360, 30, 20),
+            (4320, HEIGHT - 160, 30, 20), (4440, HEIGHT - 300, 30, 20), (4560, HEIGHT - 140, 30, 20),
+            (4680, HEIGHT - 280, 30, 20), (4800, HEIGHT - 200, 30, 20), (4920, HEIGHT - 340, 30, 20),
+            (5040, HEIGHT - 180, 30, 20), (5160, HEIGHT - 320, 30, 20), (5280, HEIGHT - 120, 30, 20),
+            (5400, HEIGHT - 280, 30, 20), (5520, HEIGHT - 240, 30, 20), (5640, HEIGHT - 360, 30, 20),
+            (5760, HEIGHT - 160, 30, 20), (5880, HEIGHT - 300, 30, 20), (6000, HEIGHT - 200, 30, 20),
+            (6120, HEIGHT - 340, 30, 20), (6240, HEIGHT - 140, 30, 20), (6360, HEIGHT - 320, 30, 20),
+            (6480, HEIGHT - 180, 30, 20), (6600, HEIGHT - 300, 30, 20), (6720, HEIGHT - 220, 30, 20),
+            (6840, HEIGHT - 360, 30, 20), (6960, HEIGHT - 160, 30, 20), (7080, HEIGHT - 280, 30, 20),
+            (7200, HEIGHT - 200, 30, 20), (7320, HEIGHT - 340, 30, 20), (7440, HEIGHT - 140, 30, 20),
+            (7560, HEIGHT - 300, 30, 20), (7680, HEIGHT - 180, 30, 20), (7800, HEIGHT - 320, 30, 20),
+            (7920, HEIGHT - 240, 30, 20), (8040, HEIGHT - 360, 30, 20), (8160, HEIGHT - 160, 30, 20),
+            (8280, HEIGHT - 300, 30, 20), (8400, HEIGHT - 120, 30, 20), (8520, HEIGHT - 280, 30, 20),
+            (8640, HEIGHT - 200, 30, 20), (8760, HEIGHT - 340, 30, 20), (8880, HEIGHT - 180, 30, 20),
+            (9000, HEIGHT - 320, 30, 20), (9120, HEIGHT - 140, 30, 20), (9240, HEIGHT - 300, 30, 20),
+            (9360, HEIGHT - 220, 30, 20), (9480, HEIGHT - 360, 30, 20), (9600, HEIGHT - 160, 30, 20),
+            (9720, HEIGHT - 280, 30, 20), (9840, HEIGHT - 200, 30, 20), (9960, HEIGHT - 340, 30, 20),
+            (10080, HEIGHT - 140, 30, 20), (10200, HEIGHT - 300, 30, 20), (10320, HEIGHT - 180, 30, 20),
+            (10440, HEIGHT - 320, 30, 20), (10560, HEIGHT - 240, 30, 20), (10680, HEIGHT - 360, 30, 20),
+            (10800, HEIGHT - 160, 30, 20), (10920, HEIGHT - 300, 30, 20), (11040, HEIGHT - 120, 30, 20),
+            (11160, HEIGHT - 280, 30, 20), (11280, HEIGHT - 200, 30, 20), (11400, HEIGHT - 340, 30, 20),
+            (11520, HEIGHT - 180, 30, 20), (11640, HEIGHT - 320, 30, 20), (11760, HEIGHT - 140, 30, 20),
+            (11880, HEIGHT - 300, 30, 20), (12000, HEIGHT - 220, 30, 20), (12120, HEIGHT - 360, 30, 20),
+            (12240, HEIGHT - 160, 30, 20), (12360, HEIGHT - 280, 30, 20), (12480, HEIGHT - 200, 30, 20),
+            (12600, HEIGHT - 340, 30, 20), (12720, HEIGHT - 140, 30, 20), (12840, HEIGHT - 300, 30, 20),
+            (12960, HEIGHT - 180, 30, 20), (13080, HEIGHT - 320, 30, 20), (13200, HEIGHT - 240, 30, 20),
+            (13320, HEIGHT - 360, 30, 20), (13440, HEIGHT - 160, 30, 20), (13560, HEIGHT - 280, 30, 20),
+            (13680, HEIGHT - 200, 30, 20), (13800, HEIGHT - 340, 30, 20), (13920, HEIGHT - 140, 30, 20),
+            (14040, HEIGHT - 300, 30, 20), (14160, HEIGHT - 180, 30, 20), (14280, HEIGHT - 320, 30, 20),
+            (14400, HEIGHT - 240, 30, 20), (14520, HEIGHT - 360, 30, 20), (14640, HEIGHT - 160, 30, 20),
+            (14760, HEIGHT - 280, 30, 20), (14880, HEIGHT - 200, 30, 20), (15000, HEIGHT - 340, 30, 20),
+            # Plataformas extras para nível 30 (9 adicionais)
+            (15120, HEIGHT - 180, 30, 20), (15240, HEIGHT - 300, 30, 20), (15360, HEIGHT - 160, 30, 20),
+            (15480, HEIGHT - 320, 30, 20), (15600, HEIGHT - 200, 30, 20), (15720, HEIGHT - 340, 30, 20),
+            (15840, HEIGHT - 180, 30, 20), (15960, HEIGHT - 300, 30, 20), (16080, HEIGHT - 160, 30, 20)
+        ]
+        
+        for x, y, w, h in platforms:
+            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+            
+        # Posicionar jogador na primeira plataforma
+        first_platform = platforms[0]
+        self.player.x = first_platform[0] + 10
+        self.player.y = first_platform[1] - self.player.height
+        self.player.rect.x = self.player.x
+        self.player.rect.y = self.player.y
+        self.player.vel_y = 0
+        self.player.on_ground = True
+            
+        # Adicionar aranhas (1 por plataforma - seguindo padrão do nível 20)
+        for i, platform in enumerate(platforms):
+            if i % 1 == 0:
+                top_limit = platform[1] - 55
+                bottom_limit = platform[1] - 30
+                spider = Spider(platform[0] + platform[2]//2, top_limit, top_limit, bottom_limit, self.spider_images)
+                self.spiders.append(spider)
+        
+        # Nível 30 corresponde ao nível 20 - morcegos são gerados dinamicamente pelo sistema
+        # Não adicionar morcegos estáticos aqui
+            
+        # Adicionar plataforma embaixo da bandeira
+        final_x = 16200
+        self.platforms.append(Platform(final_x, HEIGHT - 55, 12, 20, self.platform_texture))
+        self.flag = Flag(final_x + 20, HEIGHT - 155)
+        
     def draw_ocean_background(self):
         """Desenhar fundo do mar"""
         # Determinar qual fundo usar baseado no estado do jogo
@@ -3260,33 +4225,63 @@ class Game:
                 self.player.just_landed = False
                 delattr(self.player, 'landed_platform_id')
                 
-            # Sistema de pássaros
-            # Spawn de novos pássaros
-            self.bird_spawn_timer += 1
-            if self.bird_spawn_timer >= self.bird_spawn_interval:
-                # Spawnar múltiplos pássaros baseado no nível
-                import random
-                for i in range(self.birds_per_spawn):
-                    bird_y = random.randint(HEIGHT // 4, HEIGHT - 150)
-                    bird_x = WIDTH + self.camera_x + 50 + (i * 100)  # Espaçar pássaros
-                    bird_images = (self.bird_img1, self.bird_img2) if hasattr(self, 'bird_img1') else None
-                    self.birds.append(Bird(bird_x, bird_y, bird_images))
-                self.bird_spawn_timer = 0
+            # Sistema de pássaros e morcegos
+            if self.current_level <= 20:
+                # Spawn de novos pássaros (níveis 1-20)
+                self.bird_spawn_timer += 1
+                if self.bird_spawn_timer >= self.bird_spawn_interval:
+                    # Spawnar múltiplos pássaros baseado no nível
+                    import random
+                    for i in range(self.birds_per_spawn):
+                        bird_y = random.randint(HEIGHT // 4, HEIGHT - 150)
+                        # Spawn sempre à direita da tela visível, independente da posição da câmera
+                        bird_x = self.camera_x + WIDTH + 50 + (i * 100)  # Espaçar pássaros
+                        bird_images = (self.bird_img1, self.bird_img2) if hasattr(self, 'bird_img1') else None
+                        self.birds.append(Bird(bird_x, bird_y, bird_images))
+                    self.bird_spawn_timer = 0
+            else:
+                # Spawn de novos morcegos (níveis 21-30)
+                self.bat_spawn_timer += 1
+                if self.bat_spawn_timer >= self.bat_spawn_interval:
+                    # Spawnar múltiplos morcegos baseado no nível
+                    import random
+                    for i in range(self.bats_per_spawn):
+                        bat_y = random.randint(HEIGHT // 4, HEIGHT - 150)
+                        # Spawn sempre à direita da tela visível, independente da posição da câmera
+                        bat_x = self.camera_x + WIDTH + 50 + (i * 100)  # Espaçar morcegos
+                        bat_images = (self.bat_img1, self.bat_img2, self.bat_img3) if hasattr(self, 'bat_img1') else None
+                        self.bats.append(Bat(bat_x, bat_y, bat_images))
+                    self.bat_spawn_timer = 0
             
-            # Atualizar pássaros com culling (remover objetos muito distantes da câmera)
-            visible_birds = []
-            for bird in self.birds:
-                if bird.update():
-                    # Culling: manter apenas pássaros próximos à área visível
-                    if bird.x > self.camera_x - 200 and bird.x < self.camera_x + WIDTH + 200:
-                        visible_birds.append(bird)
-            self.birds = visible_birds
+            # Atualizar pássaros e morcegos com culling (remover objetos muito distantes da câmera)
+            if self.current_level <= 20:
+                visible_birds = []
+                for bird in self.birds:
+                    if bird.update():
+                        # Culling: manter apenas pássaros próximos à área visível
+                        if bird.x > self.camera_x - 200 and bird.x < self.camera_x + WIDTH + 200:
+                            visible_birds.append(bird)
+                self.birds = visible_birds
+            else:
+                visible_bats = []
+                for bat in self.bats:
+                    if bat.update():
+                        # Culling: manter apenas morcegos próximos à área visível
+                        if bat.x > self.camera_x - 200 and bat.x < self.camera_x + WIDTH + 200:
+                            visible_bats.append(bat)
+                self.bats = visible_bats
             
-            # Atualizar tartarugas com culling
-            for turtle in self.turtles:
-                # Culling: só atualizar tartarugas próximas à área visível
-                if turtle.x > self.camera_x - 100 and turtle.x < self.camera_x + WIDTH + 100:
-                    turtle.update()
+            # Atualizar tartarugas e aranhas com culling
+            if self.current_level <= 20:
+                for turtle in self.turtles:
+                    # Culling: só atualizar tartarugas próximas à área visível
+                    if turtle.x > self.camera_x - 100 and turtle.x < self.camera_x + WIDTH + 100:
+                        turtle.update()
+            else:
+                for spider in self.spiders:
+                    # Culling: só atualizar aranhas próximas à área visível
+                    if spider.x > self.camera_x - 100 and spider.x < self.camera_x + WIDTH + 100:
+                        spider.update()
             
             # Atualizar explosões com pool
             active_explosions = []
@@ -3298,113 +4293,221 @@ class Game:
                     self.return_explosion_to_pool(explosion)
             self.explosions = active_explosions
             
-            # Verificar colisão entre tiros e pássaros
-            for bullet in self.player.bullets[:]:
+            # Verificar colisão entre tiros e pássaros/morcegos
+            if self.current_level <= 20:
+                for bullet in self.player.bullets[:]:
+                    for bird in self.birds[:]:
+                        if bullet.rect.colliderect(bird.rect):
+                            # Tiro acertou pássaro
+                            self.player.bullets.remove(bullet)
+                            self.birds.remove(bird)
+                            # Criar explosão usando pool
+                            explosion = self.get_pooled_explosion(bird.x, bird.y, self.explosion_image)
+                            self.explosions.append(explosion)
+                            # Retornar bala ao pool
+                            self.return_bullet_to_pool(bullet)
+                            # Tocar som de explosão
+                            self.play_sound_effect('explosion')
+                            # Adicionar pontos
+                            self.score += 50
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                            break
+            else:
+                for bullet in self.player.bullets[:]:
+                    for bat in self.bats[:]:
+                        if bullet.rect.colliderect(bat.rect):
+                            # Tiro acertou morcego
+                            self.player.bullets.remove(bullet)
+                            self.bats.remove(bat)
+                            # Criar explosão usando pool
+                            explosion = self.get_pooled_explosion(bat.x, bat.y, self.explosion_image)
+                            self.explosions.append(explosion)
+                            # Retornar bala ao pool
+                            self.return_bullet_to_pool(bullet)
+                            # Tocar som de explosão
+                            self.play_sound_effect('explosion')
+                            # Adicionar pontos
+                            self.score += 50
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                            break
+            
+            # Verificar colisão entre tiros e tartarugas/aranhas
+            if self.current_level <= 20:
+                for bullet in self.player.bullets[:]:
+                    for turtle in self.turtles[:]:
+                        if bullet.rect.colliderect(turtle.rect):
+                            # Tiro acertou tartaruga
+                            self.player.bullets.remove(bullet)
+                            self.turtles.remove(turtle)
+                            # Criar explosão usando pool
+                            explosion = self.get_pooled_explosion(turtle.x, turtle.y, self.explosion_image)
+                            self.explosions.append(explosion)
+                            # Retornar bala ao pool
+                            self.return_bullet_to_pool(bullet)
+                            # Tocar som de explosão
+                            self.play_sound_effect('explosion')
+                            # Adicionar pontos
+                            self.score += 60
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                            break
+            else:
+                for bullet in self.player.bullets[:]:
+                    for spider in self.spiders[:]:
+                        if bullet.rect.colliderect(spider.rect):
+                            # Tiro acertou aranha
+                            self.player.bullets.remove(bullet)
+                            self.spiders.remove(spider)
+                            # Criar explosão usando pool
+                            explosion = self.get_pooled_explosion(spider.x, spider.y, self.explosion_image)
+                            self.explosions.append(explosion)
+                            # Retornar bala ao pool
+                            self.return_bullet_to_pool(bullet)
+                            # Tocar som de explosão
+                            self.play_sound_effect('explosion')
+                            # Adicionar pontos
+                            self.score += 60
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                            break
+            
+            # Verificar colisão e esquiva com pássaros e morcegos
+            if self.current_level <= 20:
                 for bird in self.birds[:]:
-                    if bullet.rect.colliderect(bird.rect):
-                        # Tiro acertou pássaro
-                        self.player.bullets.remove(bullet)
-                        self.birds.remove(bird)
-                        # Criar explosão usando pool
-                        explosion = self.get_pooled_explosion(bird.x, bird.y, self.explosion_image)
-                        self.explosions.append(explosion)
-                        # Retornar bala ao pool
-                        self.return_bullet_to_pool(bullet)
-                        # Tocar som de explosão
-                        self.play_sound_effect('explosion')
-                        # Adicionar pontos
-                        self.score += 50
+                    # Verificar se pássaro passou perto do jogador (esquiva)
+                    distance_x = abs(bird.x - self.player.x)
+                    distance_y = abs(bird.y - self.player.y)
+                    
+                    # Se pássaro passou perto (dentro de 40 pixels) e já passou do jogador
+                    if (distance_x < 40 and distance_y < 50 and 
+                        bird.x < self.player.x and bird.id not in self.birds_dodged):
+                        self.birds_dodged.add(bird.id)
+                        self.score += 10  # Pontos por esquivar
                         # Verificar se merece vida extra
                         self.check_extra_life()
-                        break
-            
-            # Verificar colisão entre tiros e tartarugas
-            for bullet in self.player.bullets[:]:
-                for turtle in self.turtles[:]:
-                    if bullet.rect.colliderect(turtle.rect):
-                        # Tiro acertou tartaruga
-                        self.player.bullets.remove(bullet)
-                        self.turtles.remove(turtle)
-                        # Criar explosão usando pool
-                        explosion = self.get_pooled_explosion(turtle.x, turtle.y, self.explosion_image)
-                        self.explosions.append(explosion)
-                        # Retornar bala ao pool
-                        self.return_bullet_to_pool(bullet)
-                        # Tocar som de explosão
-                        self.play_sound_effect('explosion')
-                        # Adicionar pontos
-                        self.score += 60
-                        # Verificar se merece vida extra
-                        self.check_extra_life()
-                        break
-            
-            # Verificar colisão e esquiva com pássaros
-            for bird in self.birds[:]:
-                # Verificar se pássaro passou perto do jogador (esquiva)
-                distance_x = abs(bird.x - self.player.x)
-                distance_y = abs(bird.y - self.player.y)
-                
-                # Se pássaro passou perto (dentro de 40 pixels) e já passou do jogador
-                if (distance_x < 40 and distance_y < 50 and 
-                    bird.x < self.player.x and bird.id not in self.birds_dodged):
-                    self.birds_dodged.add(bird.id)
-                    self.score += 10  # Pontos por esquivar
-                    # Verificar se merece vida extra
-                    self.check_extra_life()
-                
-                # Verificar colisão direta
-                if self.player.rect.colliderect(bird.rect):
-                    if self.player.is_invulnerable:
-                        # Jogador invulnerável: explodir inimigo sem causar dano
-                        self.explosions.append(Explosion(bird.x, bird.y, self.explosion_image))
-                        self.birds.remove(bird)
-                        self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
-                        # Verificar se merece vida extra
-                        self.check_extra_life()
-                    else:
-                        # Colidiu com pássaro, ativar animação de hit
-                        if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
-                            self.player.take_hit()
-                            # Criar explosão na posição do pássaro
+                    
+                    # Verificar colisão direta
+                    if self.player.rect.colliderect(bird.rect):
+                        if self.player.is_invulnerable:
+                            # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(Explosion(bird.x, bird.y, self.explosion_image))
                             self.birds.remove(bird)
-                            self.lives -= 1
-                            if self.lives <= 0:
-                                # Sem vidas, game over - verificar se entra no ranking
-                                if self.ranking_manager.is_high_score(self.score):
-                                    self.state = GameState.ENTER_NAME
-                                else:
-                                    self.state = GameState.GAME_OVER
-                            # Não reiniciar o nível imediatamente, deixar o jogador continuar
-                    break
-            
-            # Verificar colisão com tartarugas
-            for turtle in self.turtles[:]:
-                # Verificar colisão direta
-                if self.player.rect.colliderect(turtle.rect):
-                    if self.player.is_invulnerable:
-                        # Jogador invulnerável: explodir inimigo sem causar dano
-                        self.explosions.append(Explosion(turtle.x, turtle.y, self.explosion_image))
-                        self.turtles.remove(turtle)
-                        self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
+                            self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                        else:
+                            # Colidiu com pássaro, ativar animação de hit
+                            if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
+                                self.player.take_hit()
+                                # Criar explosão na posição do pássaro
+                                self.explosions.append(Explosion(bird.x, bird.y, self.explosion_image))
+                                self.birds.remove(bird)
+                                self.lives -= 1
+                                if self.lives <= 0:
+                                    # Sem vidas, game over - verificar se entra no ranking
+                                    if self.ranking_manager.is_high_score(self.score):
+                                        self.state = GameState.ENTER_NAME
+                                    else:
+                                        self.state = GameState.GAME_OVER
+                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                        break
+            else:
+                for bat in self.bats[:]:
+                    # Verificar se morcego passou perto do jogador (esquiva)
+                    distance_x = abs(bat.x - self.player.x)
+                    distance_y = abs(bat.y - self.player.y)
+                    
+                    # Se morcego passou perto (dentro de 40 pixels) e já passou do jogador
+                    if (distance_x < 40 and distance_y < 50 and 
+                        bat.x < self.player.x and bat.id not in self.birds_dodged):
+                        self.birds_dodged.add(bat.id)
+                        self.score += 15  # Pontos por esquivar morcego (mais difícil)
                         # Verificar se merece vida extra
                         self.check_extra_life()
-                    else:
-                        # Colidiu com tartaruga, ativar animação de hit
-                        if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
-                            self.player.take_hit()
-                            # Criar explosão na posição da tartaruga
+                    
+                    # Verificar colisão direta
+                    if self.player.rect.colliderect(bat.rect):
+                        if self.player.is_invulnerable:
+                            # Jogador invulnerável: explodir inimigo sem causar dano
+                            self.explosions.append(Explosion(bat.x, bat.y, self.explosion_image))
+                            self.bats.remove(bat)
+                            self.score += 25  # Pontos bônus por destruir morcego durante invulnerabilidade
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                        else:
+                            # Colidiu com morcego, ativar animação de hit
+                            if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
+                                self.player.take_hit()
+                                # Criar explosão na posição do morcego
+                                self.explosions.append(Explosion(bat.x, bat.y, self.explosion_image))
+                                self.bats.remove(bat)
+                                self.lives -= 1
+                                if self.lives <= 0:
+                                    # Sem vidas, game over - verificar se entra no ranking
+                                    if self.ranking_manager.is_high_score(self.score):
+                                        self.state = GameState.ENTER_NAME
+                                    else:
+                                        self.state = GameState.GAME_OVER
+                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                        break
+            
+            # Verificar colisão com tartarugas e aranhas
+            if self.current_level <= 20:
+                for turtle in self.turtles[:]:
+                    # Verificar colisão direta
+                    if self.player.rect.colliderect(turtle.rect):
+                        if self.player.is_invulnerable:
+                            # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(Explosion(turtle.x, turtle.y, self.explosion_image))
                             self.turtles.remove(turtle)
-                            self.lives -= 1
-                            if self.lives <= 0:
-                                # Sem vidas, game over - verificar se entra no ranking
-                                if self.ranking_manager.is_high_score(self.score):
-                                    self.state = GameState.ENTER_NAME
-                                else:
-                                    self.state = GameState.GAME_OVER
-                            # Não reiniciar o nível imediatamente, deixar o jogador continuar
-                    break
+                            self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                        else:
+                            # Colidiu com tartaruga, ativar animação de hit
+                            if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
+                                self.player.take_hit()
+                                # Criar explosão na posição da tartaruga
+                                self.explosions.append(Explosion(turtle.x, turtle.y, self.explosion_image))
+                                self.turtles.remove(turtle)
+                                self.lives -= 1
+                                if self.lives <= 0:
+                                    # Sem vidas, game over - verificar se entra no ranking
+                                    if self.ranking_manager.is_high_score(self.score):
+                                        self.state = GameState.ENTER_NAME
+                                    else:
+                                        self.state = GameState.GAME_OVER
+                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                        break
+            else:
+                for spider in self.spiders[:]:
+                    # Verificar colisão direta
+                    if self.player.rect.colliderect(spider.rect):
+                        if self.player.is_invulnerable:
+                            # Jogador invulnerável: explodir inimigo sem causar dano
+                            self.explosions.append(Explosion(spider.x, spider.y, self.explosion_image))
+                            self.spiders.remove(spider)
+                            self.score += 25  # Pontos bônus por destruir aranha durante invulnerabilidade
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                        else:
+                            # Colidiu com aranha, ativar animação de hit
+                            if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
+                                self.player.take_hit()
+                                # Criar explosão na posição da aranha
+                                self.explosions.append(Explosion(spider.x, spider.y, self.explosion_image))
+                                self.spiders.remove(spider)
+                                self.lives -= 1
+                                if self.lives <= 0:
+                                    # Sem vidas, game over - verificar se entra no ranking
+                                    if self.ranking_manager.is_high_score(self.score):
+                                        self.state = GameState.ENTER_NAME
+                                    else:
+                                        self.state = GameState.GAME_OVER
+                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                        break
             
             # Verificar se tocou a bandeira
             if self.flag and self.player.rect.colliderect(self.flag.rect):
@@ -3534,31 +4637,57 @@ class Game:
                     # Restaurar posição original
                     self.flag.x = original_x
             
-            # Desenhar pássaros com offset da câmera
-            for bird in self.birds:
-                bird_x = bird.x - self.camera_x
-                if bird_x > -50 and bird_x < WIDTH:  # Só desenhar se visível
-                    # Salvar posição original do pássaro
-                    original_bird_x = bird.x
-                    # Ajustar posição para câmera
-                    bird.x = bird_x
-                    # Chamar método draw do pássaro
-                    bird.draw(self.screen)
-                    # Restaurar posição original
-                    bird.x = original_bird_x
+            # Desenhar pássaros e morcegos com offset da câmera
+            if self.current_level <= 20:
+                for bird in self.birds:
+                    bird_x = bird.x - self.camera_x
+                    if bird_x > -50 and bird_x < WIDTH:  # Só desenhar se visível
+                        # Salvar posição original do pássaro
+                        original_bird_x = bird.x
+                        # Ajustar posição para câmera
+                        bird.x = bird_x
+                        # Chamar método draw do pássaro
+                        bird.draw(self.screen)
+                        # Restaurar posição original
+                        bird.x = original_bird_x
+            else:
+                for bat in self.bats:
+                    bat_x = bat.x - self.camera_x
+                    if bat_x > -50 and bat_x < WIDTH:  # Só desenhar se visível
+                        # Salvar posição original do morcego
+                        original_bat_x = bat.x
+                        # Ajustar posição para câmera
+                        bat.x = bat_x
+                        # Chamar método draw do morcego
+                        bat.draw(self.screen)
+                        # Restaurar posição original
+                        bat.x = original_bat_x
             
-            # Desenhar tartarugas com offset da câmera
-            for turtle in self.turtles:
-                turtle_x = turtle.x - self.camera_x
-                if turtle_x > -50 and turtle_x < WIDTH:  # Só desenhar se visível
-                    # Salvar posição original da tartaruga
-                    original_turtle_x = turtle.x
-                    # Ajustar posição para câmera
-                    turtle.x = turtle_x
-                    # Chamar método draw da tartaruga
-                    turtle.draw(self.screen)
-                    # Restaurar posição original
-                    turtle.x = original_turtle_x
+            # Desenhar tartarugas e aranhas com offset da câmera
+            if self.current_level <= 20:
+                for turtle in self.turtles:
+                    turtle_x = turtle.x - self.camera_x
+                    if turtle_x > -50 and turtle_x < WIDTH:  # Só desenhar se visível
+                        # Salvar posição original da tartaruga
+                        original_turtle_x = turtle.x
+                        # Ajustar posição para câmera
+                        turtle.x = turtle_x
+                        # Chamar método draw da tartaruga
+                        turtle.draw(self.screen)
+                        # Restaurar posição original
+                        turtle.x = original_turtle_x
+            else:
+                for spider in self.spiders:
+                    spider_x = spider.x - self.camera_x
+                    if spider_x > -50 and spider_x < WIDTH:  # Só desenhar se visível
+                        # Salvar posição original da aranha
+                        original_spider_x = spider.x
+                        # Ajustar posição para câmera
+                        spider.x = spider_x
+                        # Chamar método draw da aranha
+                        spider.draw(self.screen)
+                        # Restaurar posição original
+                        spider.x = original_spider_x
             
             # Desenhar explosões com offset da câmera
             for explosion in self.explosions:
