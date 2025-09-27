@@ -1245,6 +1245,16 @@ class Game:
             self.play_level_music(self.current_level)
         else:
             self.init_level()
+    
+    def get_background_for_level(self, level):
+        """Retorna o arquivo de fundo apropriado para o nível"""
+        if 1 <= level <= 10:
+            return "imagens/fundo3.png"
+        elif 11 <= level <= 20:
+            return "imagens/fundo5.png"
+        else:
+            # Fallback para níveis fora do range esperado
+            return "imagens/fundo6.png"
         
     def load_images(self):
         """Carregar todas as imagens do jogo usando sistema de cache"""
@@ -1252,8 +1262,12 @@ class Game:
             # Inicializar cache de recursos
             cache = ResourceCache()
             
-            # Carregar fundo usando cache
-            self.background_img = cache.get_image("imagens/fundo6.png", (WIDTH, HEIGHT))
+            # Carregar fundo baseado no nível atual (apenas para gameplay)
+            background_file = self.get_background_for_level(self.current_level)
+            self.background_img = cache.get_image(background_file, (WIDTH, HEIGHT))
+            
+            # Carregar fundo fixo para menus, recordes, etc.
+            self.menu_background_img = cache.get_image("imagens/fundo6.png", (WIDTH, HEIGHT))
             
             # Carregar textura de plataforma usando cache
             self.platform_texture = cache.get_image("imagens/texturas/platform2.png", (20, 20))
@@ -1546,6 +1560,15 @@ class Game:
         
         # Atualizar dificuldade dos pássaros para o nível atual
         self.update_bird_difficulty()
+        
+        # Atualizar fundo baseado no nível atual
+        cache = ResourceCache()
+        background_file = self.get_background_for_level(self.current_level)
+        self.background_img = cache.get_image(background_file, (WIDTH, HEIGHT))
+        
+        # Garantir que o fundo do menu permanece inalterado
+        if not hasattr(self, 'menu_background_img') or self.menu_background_img is None:
+            self.menu_background_img = cache.get_image("imagens/fundo6.png", (WIDTH, HEIGHT))
         
         # Pool de objetos para performance
         if not hasattr(self, 'bullet_pool'):
@@ -2838,9 +2861,17 @@ class Game:
         
     def draw_ocean_background(self):
         """Desenhar fundo do mar"""
-        if self.background_img:
+        # Determinar qual fundo usar baseado no estado do jogo
+        if self.state == GameState.PLAYING:
+            # Durante o jogo, usar fundo baseado no nível
+            background_to_use = self.background_img
+        else:
+            # Em menus, recordes, etc., usar fundo fixo
+            background_to_use = getattr(self, 'menu_background_img', self.background_img)
+        
+        if background_to_use:
             # Usar imagem de fundo
-            self.screen.blit(self.background_img, (0, 0))
+            self.screen.blit(background_to_use, (0, 0))
         else:
             # Fallback para gradiente se a imagem não carregar
             for y in range(HEIGHT):
