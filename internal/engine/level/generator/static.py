@@ -6,7 +6,7 @@ from internal.resources.cache import ResourceCache
 
 
 class StaticLevelGenerator:
-    def create_level_1(self):
+    def create_level_1(game):
         """Nível 1 - Fácil (20 plataformas)"""
         platforms = [
             (100, HEIGHT - 150, 120, 20),
@@ -31,27 +31,18 @@ class StaticLevelGenerator:
             (3900, HEIGHT - 140, 120, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
-
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.drawPlatforms(game, platforms)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
         last_platform = platforms[-1]  # Última plataforma da lista
         final_x = last_platform[0] + last_platform[2] + 100  # x + width + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 120, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 120, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 50, HEIGHT - 300)
+        game.flag = Flag(final_x + 50, HEIGHT - 300)
 
-    def create_level_2(self):
+    def create_level_2(game):
         """Nível 2 - Médio (30 plataformas)"""
         platforms = [
             (120, HEIGHT - 180, 100, 20),
@@ -86,25 +77,17 @@ class StaticLevelGenerator:
             (4760, HEIGHT - 240, 100, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
-        self.platforms.append(
-            Platform(4940, HEIGHT - 200, 100, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(4940, HEIGHT - 200, 100, 20, game.platform_texture)
         )
-        self.flag = Flag(4960, HEIGHT - 300)
+        game.flag = Flag(4960, HEIGHT - 300)
 
-    def create_level_3(self):
+    def create_level_3(game):
         """Nível 3 - Médio-Difícil (40 plataformas) - Corrigido para pulos possíveis"""
         platforms = [
             (100, HEIGHT - 200, 80, 20),
@@ -149,28 +132,20 @@ class StaticLevelGenerator:
             (5560, HEIGHT - 280, 80, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
-        self.platforms.append(
-            Platform(5740, HEIGHT - 240, 80, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(5740, HEIGHT - 240, 80, 20, game.platform_texture)
         )
-        self.flag = Flag(5760, HEIGHT - 340)
+        game.flag = Flag(5760, HEIGHT - 340)
 
-    def create_level_4(self):
+    def create_level_4(game):
         """Nível 4 - Difícil (50 plataformas) - Versão corrigida sem plataformas extras"""
         # Limpar plataformas existentes para garantir que não há duplicatas
-        self.platforms.clear()
+        game.platforms.clear()
 
         platforms = [
             (80, HEIGHT - 220, 70, 20),
@@ -222,30 +197,22 @@ class StaticLevelGenerator:
         ]
 
         # Adicionar apenas as 50 plataformas definidas
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar APENAS a plataforma da bandeira (não há outras plataformas após esta)
-        self.platforms.append(
-            Platform(5540, HEIGHT - 200, 80, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(5540, HEIGHT - 200, 80, 20, game.platform_texture)
         )
-        self.flag = Flag(5560, HEIGHT - 300)
+        game.flag = Flag(5560, HEIGHT - 300)
 
         # Debug: Imprimir número total de plataformas para verificação
         print(
-            f"Nível 4 criado com {len(self.platforms)} plataformas (47 + 1 da bandeira = 48 total)"
+            f"Nível 4 criado com {len(game.platforms)} plataformas (47 + 1 da bandeira = 48 total)"
         )
 
-    def create_level_8(self):
+    def create_level_8(game):
         """Nível 8 - Progressão (55 plataformas)"""
         platforms = []
         x_pos = 90
@@ -254,26 +221,18 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 38, 20))
             x_pos += 105
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 42, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 42, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_9(self):
+    def create_level_9(game):
         """Nível 9 - Insano (60 plataformas) - Layout manual"""
         platforms = [
             (40, HEIGHT - 280, 50, 20),
@@ -340,25 +299,17 @@ class StaticLevelGenerator:
             (5530, HEIGHT - 280, 50, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
-        self.platforms.append(
-            Platform(5710, HEIGHT - 200, 50, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(5710, HEIGHT - 200, 50, 20, game.platform_texture)
         )
-        self.flag = Flag(5730, HEIGHT - 300)
+        game.flag = Flag(5730, HEIGHT - 300)
 
-    def create_level_10(self):
+    def create_level_10(game):
         """Nível 10 - Impossível (65 plataformas) - Layout manual"""
         platforms = [
             (30, HEIGHT - 300, 45, 20),
@@ -429,25 +380,17 @@ class StaticLevelGenerator:
             (5555, HEIGHT - 300, 45, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
-        self.platforms.append(
-            Platform(5735, HEIGHT - 200, 45, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(5735, HEIGHT - 200, 45, 20, game.platform_texture)
         )
-        self.flag = Flag(5755, HEIGHT - 300)
+        game.flag = Flag(5755, HEIGHT - 300)
 
-    def create_level_11(self):
+    def create_level_11(game):
         """Nível 11 - Progressão (70 plataformas)"""
         platforms = []
         x_pos = 70
@@ -456,17 +399,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 40, 20))
             x_pos += 110
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 4 plataformas)
         for i in range(4, len(platforms), 4):
@@ -477,18 +412,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 40, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 40, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_12(self):
+    def create_level_12(game):
         """Nível 12 - Progressão (75 plataformas)"""
         platforms = []
         x_pos = 60
@@ -497,17 +432,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 38, 20))
             x_pos += 105
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 3 plataformas)
         for i in range(3, len(platforms), 3):
@@ -518,18 +445,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 38, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 38, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_13(self):
+    def create_level_13(game):
         """Nível 13 - Progressão (80 plataformas)"""
         platforms = []
         x_pos = 50
@@ -538,17 +465,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 36, 20))
             x_pos += 100
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 3 plataformas)
         for i in range(3, len(platforms), 3):
@@ -559,18 +478,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 36, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 36, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_14(self):
+    def create_level_14(game):
         """Nível 14 - Progressão (85 plataformas)"""
         platforms = []
         x_pos = 40
@@ -579,17 +498,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 34, 20))
             x_pos += 95
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 2 plataformas)
         for i in range(2, len(platforms), 2):
@@ -600,18 +511,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 34, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 34, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_15(self):
+    def create_level_15(game):
         """Nível 15 - Progressão (90 plataformas)"""
         platforms = []
         x_pos = 30
@@ -620,17 +531,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 32, 20))
             x_pos += 90
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 2 plataformas)
         for i in range(2, len(platforms), 2):
@@ -641,18 +544,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 32, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 32, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_16(self):
+    def create_level_16(game):
         """Nível 16 - Progressão (95 plataformas)"""
         platforms = []
         x_pos = 20
@@ -661,17 +564,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 30, 20))
             x_pos += 85
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 2 plataformas)
         for i in range(2, len(platforms), 2):
@@ -682,18 +577,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 30, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 30, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_17(self):
+    def create_level_17(game):
         """Nível 17 - Progressão (100 plataformas)"""
         platforms = []
         x_pos = 10
@@ -702,17 +597,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 28, 20))
             x_pos += 80
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 2 plataformas)
         for i in range(1, len(platforms), 2):
@@ -723,18 +610,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 28, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 28, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_18(self):
+    def create_level_18(game):
         """Nível 18 - Progressão (105 plataformas)"""
         platforms = []
         x_pos = 5
@@ -743,17 +630,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 26, 20))
             x_pos += 75
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 2 plataformas)
         for i in range(1, len(platforms), 2):
@@ -764,18 +643,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 26, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 26, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_19(self):
+    def create_level_19(game):
         """Nível 19 - Progressão (110 plataformas)"""
         platforms = []
         x_pos = 0
@@ -784,17 +663,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 24, 20))
             x_pos += 70
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada plataforma)
         for i in range(len(platforms)):
@@ -804,18 +675,18 @@ class StaticLevelGenerator:
                 platform[1] - 30,
                 platform[0],
                 platform[0] + platform[2],
-                self.turtle_images,
+                game.turtle_images,
             )
-            self.turtles.append(turtle)
+            game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 24, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 24, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_20(self):
+    def create_level_20(game):
         """Nível 20 - Progressão Final (120 plataformas)"""
         platforms = []
         x_pos = 0
@@ -824,17 +695,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 22, 20))
             x_pos += 65
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada plataforma)
         for i in range(len(platforms)):
@@ -844,18 +707,18 @@ class StaticLevelGenerator:
                 platform[1] - 30,
                 platform[0],
                 platform[0] + platform[2],
-                self.turtle_images,
+                game.turtle_images,
             )
-            self.turtles.append(turtle)
+            game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 22, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 22, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_5(self):
+    def create_level_5(game):
         """Nível 5 - Muito Difícil (60 plataformas)"""
         platforms = [
             (60, HEIGHT - 250, 60, 20),
@@ -921,25 +784,17 @@ class StaticLevelGenerator:
             (6660, HEIGHT - 460, 60, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
-        self.platforms.append(
-            Platform(6840, HEIGHT - 240, 60, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(6840, HEIGHT - 240, 60, 20, game.platform_texture)
         )
-        self.flag = Flag(6860, HEIGHT - 340)
+        game.flag = Flag(6860, HEIGHT - 340)
 
-    def create_level_6(self):
+    def create_level_6(game):
         """Nível 6 - Progressão (65 plataformas)"""
         platforms = [
             (80, HEIGHT - 240, 60, 20),
@@ -1010,25 +865,17 @@ class StaticLevelGenerator:
             (7880, HEIGHT - 340, 60, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
-        self.platforms.append(
-            Platform(8060, HEIGHT - 200, 60, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(8060, HEIGHT - 200, 60, 20, game.platform_texture)
         )
-        self.flag = Flag(8080, HEIGHT - 300)
+        game.flag = Flag(8080, HEIGHT - 300)
 
-    def create_level_7(self):
+    def create_level_7(game):
         """Nível 7 - Progressão (28 plataformas) - Gaps moderados com saltos factíveis"""
         platforms = [
             (140, HEIGHT - 220, 90, 20),
@@ -1061,28 +908,20 @@ class StaticLevelGenerator:
             (4720, HEIGHT - 260, 90, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
         # Calcular posição final baseada na última plataforma
         last_platform = platforms[-1]
         final_x = last_platform[0] + 200  # 200 pixels após a última plataforma
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 180, 90, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 180, 90, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 280)
+        game.flag = Flag(final_x + 20, HEIGHT - 280)
 
-    def create_level_8(self):
+    def create_level_8(game):
         """Nível 8 - Progressão (30 plataformas) - Gaps maiores mas ainda factíveis"""
         platforms = [
             (160, HEIGHT - 240, 85, 20),
@@ -1117,26 +956,18 @@ class StaticLevelGenerator:
             (5660, HEIGHT - 260, 85, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 5850
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 85, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 85, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_9(self):
+    def create_level_9(game):
         """Nível 9 - Progressão (32 plataformas) - Gaps desafiadores mas possíveis"""
         platforms = [
             (180, HEIGHT - 260, 80, 20),
@@ -1173,26 +1004,18 @@ class StaticLevelGenerator:
             (6380, HEIGHT - 320, 80, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 6570
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 80, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 80, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_10(self):
+    def create_level_10(game):
         """Nível 10 - Progressão (34 plataformas) - Máxima dificuldade com saltos no limite"""
         platforms = [
             (200, HEIGHT - 280, 75, 20),
@@ -1231,26 +1054,18 @@ class StaticLevelGenerator:
             (7130, HEIGHT - 320, 75, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 7320
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 75, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 75, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_11(self):
+    def create_level_11(game):
         """Nível 11 - Reinício com tartarugas (30 plataformas)"""
         platforms = []
         x_pos = 100
@@ -1259,17 +1074,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 80, 20))
             x_pos += 120 + (i % 2) * 40
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 10 plataformas)
         for i in range(10, len(platforms), 10):
@@ -1280,18 +1087,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 200, 80, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 200, 80, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 300)
+        game.flag = Flag(final_x + 20, HEIGHT - 300)
 
-    def create_level_12(self):
+    def create_level_12(game):
         """Nível 12 - Progressão com tartarugas (39 plataformas)"""
         platforms = []
         x_pos = 90
@@ -1300,17 +1107,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 75, 20))
             x_pos += 115 + (i % 3) * 35
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 9 plataformas)
         for i in range(9, len(platforms), 9):
@@ -1321,18 +1120,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 190, 75, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 190, 75, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 290)
+        game.flag = Flag(final_x + 20, HEIGHT - 290)
 
-    def create_level_13(self):
+    def create_level_13(game):
         """Nível 13 - Progressão com tartarugas (48 plataformas)"""
         platforms = []
         x_pos = 80
@@ -1341,17 +1140,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 70, 20))
             x_pos += 110 + (i % 4) * 30
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 8 plataformas)
         for i in range(8, len(platforms), 8):
@@ -1362,18 +1153,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 180, 70, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 180, 70, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 280)
+        game.flag = Flag(final_x + 20, HEIGHT - 280)
 
-    def create_level_14(self):
+    def create_level_14(game):
         """Nível 14 - Progressão com tartarugas (57 plataformas)"""
         platforms = []
         x_pos = 70
@@ -1382,17 +1173,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 65, 20))
             x_pos += 105 + (i % 5) * 25
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 7 plataformas)
         for i in range(7, len(platforms), 7):
@@ -1403,18 +1186,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 170, 65, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 170, 65, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 270)
+        game.flag = Flag(final_x + 20, HEIGHT - 270)
 
-    def create_level_15(self):
+    def create_level_15(game):
         """Nível 15 - Progressão com tartarugas (66 plataformas)"""
         platforms = []
         x_pos = 60
@@ -1423,17 +1206,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 60, 20))
             x_pos += 100 + (i % 6) * 20
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 6 plataformas)
         for i in range(6, len(platforms), 6):
@@ -1444,18 +1219,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 160, 60, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 160, 60, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 260)
+        game.flag = Flag(final_x + 20, HEIGHT - 260)
 
-    def create_level_16(self):
+    def create_level_16(game):
         """Nível 16 - Progressão com tartarugas (75 plataformas)"""
         platforms = []
         x_pos = 50
@@ -1464,17 +1239,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 55, 20))
             x_pos += 95 + (i % 7) * 15
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 5 plataformas)
         for i in range(5, len(platforms), 5):
@@ -1485,18 +1252,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 150, 55, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 150, 55, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 250)
+        game.flag = Flag(final_x + 20, HEIGHT - 250)
 
-    def create_level_17(self):
+    def create_level_17(game):
         """Nível 17 - Progressão com tartarugas (84 plataformas)"""
         platforms = []
         x_pos = 40
@@ -1505,17 +1272,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 50, 20))
             x_pos += 90 + (i % 8) * 10
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 4 plataformas)
         for i in range(4, len(platforms), 4):
@@ -1526,18 +1285,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 140, 50, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 140, 50, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 240)
+        game.flag = Flag(final_x + 20, HEIGHT - 240)
 
-    def create_level_18(self):
+    def create_level_18(game):
         """Nível 18 - Progressão com tartarugas (93 plataformas)"""
         platforms = []
         x_pos = 30
@@ -1546,17 +1305,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 45, 20))
             x_pos += 85 + (i % 9) * 5
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 3 plataformas)
         for i in range(3, len(platforms), 3):
@@ -1567,18 +1318,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 130, 45, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 130, 45, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 230)
+        game.flag = Flag(final_x + 20, HEIGHT - 230)
 
-    def create_level_19(self):
+    def create_level_19(game):
         """Nível 19 - Progressão com tartarugas (102 plataformas)"""
         platforms = []
         x_pos = 20
@@ -1587,17 +1338,9 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 40, 20))
             x_pos += 80 + (i % 10) * 0
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 2 plataformas)
         for i in range(2, len(platforms), 2):
@@ -1608,18 +1351,18 @@ class StaticLevelGenerator:
                     platform[1] - 30,
                     platform[0],
                     platform[0] + platform[2],
-                    self.turtle_images,
+                    game.turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 120, 40, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 120, 40, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 220)
+        game.flag = Flag(final_x + 20, HEIGHT - 220)
 
-    def create_level_20(self):
+    def create_level_20(game):
         """Nível 20 - Máxima dificuldade com tartarugas (110 plataformas)"""
         platforms = []
         x_pos = 10
@@ -1628,20 +1371,12 @@ class StaticLevelGenerator:
             platforms.append((x_pos, y_pos, 35, 20))
             x_pos += 75
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (máxima quantidade - 1 por plataforma)
-        turtle_images = self.turtle_images if hasattr(self, "turtle_images") else None
+        turtle_images = game.turtle_images if hasattr(game, "turtle_images") else None
 
         for i, platform in enumerate(platforms):
             if i % 1 == 0:  # Uma tartaruga por plataforma
@@ -1652,16 +1387,16 @@ class StaticLevelGenerator:
                     platform[0] + platform[2],
                     turtle_images,
                 )
-                self.turtles.append(turtle)
+                game.turtles.append(turtle)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = x_pos + 100
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 110, 35, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 110, 35, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 210)
+        game.flag = Flag(final_x + 20, HEIGHT - 210)
 
-    def create_level_21(self):
+    def create_level_21(game):
         """Nível 21 - Início dos morcegos e aranhas (111 plataformas) - Padrão aleatório"""
         platforms = [
             (10, HEIGHT - 100, 30, 20),
@@ -1779,17 +1514,9 @@ class StaticLevelGenerator:
             (13440, HEIGHT - 160, 30, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar aranhas (1 a cada 4 plataformas - padrão da fase 11)
         for i in range(4, len(platforms), 4):
@@ -1802,18 +1529,18 @@ class StaticLevelGenerator:
                     top_limit,
                     top_limit,
                     bottom_limit,
-                    self.spider_images,
+                    game.spider_images,
                 )
-                self.spiders.append(spider)
+                game.spiders.append(spider)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 13560
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        game.flag = Flag(final_x + 20, HEIGHT - 200)
 
-    def create_level_22(self):
+    def create_level_22(game):
         """Nível 22 - Progressão com morcegos e aranhas (112 plataformas) - Padrão manual como fase 21"""
         platforms = [
             (10, HEIGHT - 100, 30, 20),
@@ -1941,17 +1668,9 @@ class StaticLevelGenerator:
             (14640, HEIGHT - 160, 30, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar aranhas (1 a cada 3 plataformas - padrão da fase 12)
         for i in range(3, len(platforms), 3):
@@ -1964,18 +1683,18 @@ class StaticLevelGenerator:
                     top_limit,
                     top_limit,
                     bottom_limit,
-                    self.spider_images,
+                    game.spider_images,
                 )
-                self.spiders.append(spider)
+                game.spiders.append(spider)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 14760
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        game.flag = Flag(final_x + 20, HEIGHT - 200)
 
-    def create_level_23(self):
+    def create_level_23(game):
         """Nível 23 - Mais aranhas (113 plataformas) - Padrão manual como fase 21"""
         platforms = [
             (10, HEIGHT - 100, 30, 20),
@@ -2105,17 +1824,9 @@ class StaticLevelGenerator:
             (14880, HEIGHT - 200, 30, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar aranhas (1 a cada 4 plataformas - seguindo padrão do nível 13)
         for i in range(4, len(platforms), 4):  # Começar do índice 4 (5ª plataforma)
@@ -2128,18 +1839,18 @@ class StaticLevelGenerator:
                     top_limit,
                     top_limit,
                     bottom_limit,
-                    self.spider_images,
+                    game.spider_images,
                 )
-                self.spiders.append(spider)
+                game.spiders.append(spider)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 15000
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        game.flag = Flag(final_x + 20, HEIGHT - 200)
 
-    def create_level_24(self):
+    def create_level_24(game):
         """Nível 24 - Dificuldade crescente (114 plataformas) - Padrão manual como fase 21"""
         platforms = [
             (10, HEIGHT - 100, 30, 20),
@@ -2270,17 +1981,9 @@ class StaticLevelGenerator:
             (15000, HEIGHT - 340, 30, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão da fase 14)
         for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
@@ -2293,18 +1996,18 @@ class StaticLevelGenerator:
                     top_limit,
                     top_limit,
                     bottom_limit,
-                    self.spider_images,
+                    game.spider_images,
                 )
-                self.spiders.append(spider)
+                game.spiders.append(spider)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 15120
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        game.flag = Flag(final_x + 20, HEIGHT - 200)
 
-    def create_level_25(self):
+    def create_level_25(game):
         """Nível 25 - Máxima dificuldade (115 plataformas) - Padrão manual como fase 21"""
         platforms = [
             (10, HEIGHT - 100, 30, 20),
@@ -2436,17 +2139,9 @@ class StaticLevelGenerator:
             (15120, HEIGHT - 180, 30, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão da fase 15)
         for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
@@ -2459,18 +2154,18 @@ class StaticLevelGenerator:
                     top_limit,
                     top_limit,
                     bottom_limit,
-                    self.spider_images,
+                    game.spider_images,
                 )
-                self.spiders.append(spider)
+                game.spiders.append(spider)
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 15240
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        game.flag = Flag(final_x + 20, HEIGHT - 200)
 
-    def create_level_26(self):
+    def create_level_26(game):
         """Nível 26 - Introdução dos morcegos (116 plataformas) - Padrão manual como fase 21"""
         platforms = [
             (10, HEIGHT - 100, 30, 20),
@@ -2603,17 +2298,9 @@ class StaticLevelGenerator:
             (15240, HEIGHT - 300, 30, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar aranhas (1 a cada 3 plataformas - seguindo padrão da fase 16)
         for i in range(3, len(platforms), 3):
@@ -2626,20 +2313,20 @@ class StaticLevelGenerator:
                     top_limit,
                     top_limit,
                     bottom_limit,
-                    self.spider_images,
+                    game.spider_images,
                 )
-                self.spiders.append(spider)
+                game.spiders.append(spider)
 
         # Nível 26 corresponde ao nível 16 - morcegos são gerados dinamicamente pelo sistema
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 15360
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 200)
+        game.flag = Flag(final_x + 20, HEIGHT - 200)
 
-    def create_level_27(self):
+    def create_level_27(game):
         """Nível 27 - Mais morcegos (117 plataformas) - Padrão escadinha como nível 21"""
         # Padrão manual de plataformas seguindo o mesmo layout da fase 21 com extensões
         platforms = [
@@ -2778,17 +2465,9 @@ class StaticLevelGenerator:
             (15720, HEIGHT - 340, 30, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão do nível 17)
         for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
@@ -2801,21 +2480,21 @@ class StaticLevelGenerator:
                     top_limit,
                     top_limit,
                     bottom_limit,
-                    self.spider_images,
+                    game.spider_images,
                 )
-                self.spiders.append(spider)
+                game.spiders.append(spider)
 
         # Nível 27 corresponde ao nível 17 - morcegos são gerados dinamicamente pelo sistema
         # Não adicionar morcegos estáticos aqui
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 15840
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 70, 18, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 70, 18, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 170)
+        game.flag = Flag(final_x + 20, HEIGHT - 170)
 
-    def create_level_28(self):
+    def create_level_28(game):
         """Nível 28 - Combinação intensa (118 plataformas) - Padrão escadinha como nível 21"""
         # Padrão manual de plataformas seguindo o mesmo layout da fase 21 com extensões
         platforms = [
@@ -2955,17 +2634,9 @@ class StaticLevelGenerator:
             (15840, HEIGHT - 180, 30, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão do nível 18)
         for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
@@ -2978,21 +2649,21 @@ class StaticLevelGenerator:
                     top_limit,
                     top_limit,
                     bottom_limit,
-                    self.spider_images,
+                    game.spider_images,
                 )
-                self.spiders.append(spider)
+                game.spiders.append(spider)
 
         # Nível 28 corresponde ao nível 18 - morcegos são gerados dinamicamente pelo sistema
         # Não adicionar morcegos estáticos aqui
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 15960
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 65, 16, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 65, 16, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 165)
+        game.flag = Flag(final_x + 20, HEIGHT - 165)
 
-    def create_level_29(self):
+    def create_level_29(game):
         """Nível 29 - Quase impossível (119 plataformas) - Padrão escadinha como nível 21"""
         # Padrão manual de plataformas seguindo o mesmo layout da fase 21 com extensões
         platforms = [
@@ -3133,17 +2804,9 @@ class StaticLevelGenerator:
             (15960, HEIGHT - 300, 30, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
+        StaticLevelGenerator.drawPlatforms(game, platforms)
 
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar aranhas (1 por plataforma - seguindo padrão do nível 19)
         for i, platform in enumerate(platforms):
@@ -3155,21 +2818,21 @@ class StaticLevelGenerator:
                     top_limit,
                     top_limit,
                     bottom_limit,
-                    self.spider_images,
+                    game.spider_images,
                 )
-                self.spiders.append(spider)
+                game.spiders.append(spider)
 
         # Nível 29 corresponde ao nível 19 - morcegos são gerados dinamicamente pelo sistema
         # Não adicionar morcegos estáticos aqui
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 16080
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 60, 14, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 60, 14, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 160)
+        game.flag = Flag(final_x + 20, HEIGHT - 160)
 
-    def create_level_30(self):
+    def create_level_30(game):
         """Nível 30 - FINAL BOSS (120 plataformas) - Padrão escadinha como nível 21"""
         # Padrão manual de plataformas seguindo o mesmo layout da fase 21 com extensões
         platforms = [
@@ -3311,17 +2974,8 @@ class StaticLevelGenerator:
             (16080, HEIGHT - 160, 30, 20),
         ]
 
-        for x, y, w, h in platforms:
-            self.platforms.append(Platform(x, y, w, h, self.platform_texture))
-
-        # Posicionar jogador na primeira plataforma
-        first_platform = platforms[0]
-        self.player.x = first_platform[0] + 10
-        self.player.y = first_platform[1] - self.player.height
-        self.player.rect.x = self.player.x
-        self.player.rect.y = self.player.y
-        self.player.vel_y = 0
-        self.player.on_ground = True
+        StaticLevelGenerator.drawPlatforms(game, platforms)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar aranhas (1 por plataforma - seguindo padrão do nível 20)
         for i, platform in enumerate(platforms):
@@ -3333,16 +2987,35 @@ class StaticLevelGenerator:
                     top_limit,
                     top_limit,
                     bottom_limit,
-                    self.spider_images,
+                    game.spider_images,
                 )
-                self.spiders.append(spider)
+                game.spiders.append(spider)
 
         # Nível 30 corresponde ao nível 20 - morcegos são gerados dinamicamente pelo sistema
         # Não adicionar morcegos estáticos aqui
 
         # Adicionar plataforma embaixo da bandeira
         final_x = 16200
-        self.platforms.append(
-            Platform(final_x, HEIGHT - 55, 12, 20, self.platform_texture)
+        game.platforms.append(
+            Platform(final_x, HEIGHT - 55, 12, 20, game.platform_texture)
         )
-        self.flag = Flag(final_x + 20, HEIGHT - 155)
+        game.flag = Flag(final_x + 20, HEIGHT - 155)
+
+    @staticmethod
+    def putPlayerInFirstPlatform(game):
+        # Posicionar jogador na primeira plataforma
+        first_platform = game.platforms[0]
+        game.player.x = first_platform.x + 10
+        game.player.y = first_platform.y - game.player.height
+        game.player.rect.x = game.player.x
+        game.player.rect.y = game.player.y
+        game.player.vel_y = 0
+        game.player.on_ground = True
+
+    @staticmethod
+    def drawPlatforms(game, platforms, texture):
+        if not texture:
+            texture = game.platform_texture
+
+        for x, y, w, h in platforms:
+            game.platforms.append(Platform(x, y, w, h, texture))
