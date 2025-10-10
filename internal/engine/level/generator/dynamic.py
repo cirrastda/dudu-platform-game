@@ -13,6 +13,25 @@ class DynamicLevelGenerator:
     """Gerador procedural de níveis para criar fases variadas e interessantes"""
 
     @staticmethod
+    def get_platforms_stairway(
+        initial_x, total_platforms, platform_width, x_factor, y_factor, top_limit
+    ):
+        """Gera padrão de escada com variações - mais desafiador"""
+        platforms = []
+        x_pos = initial_x
+        initial_y = HEIGHT - 150
+        y_pos = initial_y
+
+        for i in range(total_platforms):
+            platforms.append((x_pos, y_pos, platform_width, 20))
+            x_pos += x_factor
+            y_pos -= y_factor
+            if (y_pos < top_limit):
+                y_pos = initial_y
+
+        return platforms
+
+    @staticmethod
     def generate_staircase_pattern(
         start_x, start_y, num_platforms, direction=1, step_size=160, height_variation=80
     ):
@@ -316,17 +335,7 @@ class DynamicLevelGenerator:
     def create_procedural_level(self, level):
         """Cria níveis com layouts manuais específicos"""
         # Usar layouts manuais específicos para cada fase
-        if level == 7:
-            self.create_level_7()
-        elif level == 8:
-            self.create_level_8()
-        elif level == 9:
-            self.create_level_9()
-        elif level == 10:
-            self.create_level_10()
-        else:
-            # Para fases 11+, usar um padrão mais complexo mas ainda manual
-            self.create_advanced_level(level)
+        self.create_advanced_level(level)
 
         # Adicionar tartarugas apenas a partir da fase 11
         if level >= 11:

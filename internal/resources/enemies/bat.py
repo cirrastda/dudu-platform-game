@@ -24,7 +24,7 @@ class Bat:
         self.animation_frame = 0
         self.animation_speed = 8  # Velocidade de animação similar aos pássaros
 
-    def update(self):
+    def update(self, camera_x=0):
         # Mover morcego na direção atual
         self.x += self.speed * self.direction
         self.rect.x = self.x
@@ -32,8 +32,8 @@ class Bat:
         # Atualizar animação
         self.animation_frame += 1
 
-        # Remover se saiu da tela (com margem)
-        if self.x < -100 or self.x > 2000:
+        # Remover se saiu da tela (com margem) - relativo à câmera
+        if self.x < camera_x - 300 or self.x > camera_x + 1400:
             return False
         return True
 

@@ -20,6 +20,7 @@ from internal.engine.sound.mixer import Mixer
 from internal.engine.sound.effects import SoundEffects
 from internal.resources.image import Image
 from internal.engine.joystick import Joystick
+from internal.engine.info import Info
 
 # Carregar configurações
 ENV_CONFIG = load_env_config()
@@ -80,8 +81,8 @@ class Game:
         self.birds_dodged = set()  # Para rastrear pássaros já esquivados
 
         # Sistema de vidas
-        self.lives = 3
-        self.max_lives = 3
+        self.lives = self.get_initial_lives()
+        self.max_lives = self.get_initial_lives()
 
         # Sistema de vidas extras por pontuação
         self.extra_life_milestones = [1000, 5000, 10000]  # Marcos iniciais
@@ -163,10 +164,18 @@ class Game:
             self.birds_dodged = set()
             self.lives = self.max_lives
             self.player_name = ""
-            self.init_level()
+            Level.init_level(self)
             self.music.play_level_music(self, self.current_level)
         else:
-            self.init_level()
+            Level.init_level(self)
+
+    def get_initial_lives(self):
+        """Obter o número inicial de vidas baseado na configuração"""
+        if ENV_CONFIG.get("environment") == "development" and "lives" in ENV_CONFIG:
+            if ENV_CONFIG.get("lives").isdigit() and int(ENV_CONFIG.get("lives")) > 0:
+                return int(ENV_CONFIG["lives"])
+
+        return DEFAULT_INITIAL_LIVES  # Valor padrão se não houver configuração válida
 
     def check_extra_life(self):
         """Verificar se o jogador merece uma vida extra baseada na pontuação"""
@@ -209,45 +218,6 @@ class Game:
         else:
             self.birds_per_spawn = Level.get_birds_per_spawn(self.current_level)
             self.bird_spawn_interval = Level.get_bird_spawn_interval(self.current_level)
-
-    def init_level(self):
-        """Inicializar o nível atual"""
-        self.player = Player(50, HEIGHT - 200)
-        self.platforms = []
-        self.flag = None
-        self.camera_x = 0
-        # Reinicializar sistema de pássaros
-        self.birds = []
-        self.bird_spawn_timer = 0
-        # Reinicializar sistema de morcegos
-        self.bats = []
-        self.bat_spawn_timer = 0
-        # Reinicializar sistema de tartarugas
-        self.turtles = []
-        # Reinicializar sistema de aranhas
-        self.spiders = []
-        # Reinicializar explosões
-        self.explosions = []
-
-        # Atualizar dificuldade dos pássaros para o nível atual
-        self.update_bird_difficulty()
-        self.background_img = Level.draw_level_bg(self, self.current_level)
-
-        # Garantir que o fundo do menu permanece inalterado
-        if not hasattr(self, "menu_background_img") or self.menu_background_img is None:
-            self.menu_background_img = cache.get_image(
-                "imagens/fundo6.png", (WIDTH, HEIGHT)
-            )
-
-        # Pool de objetos para performance
-        if not hasattr(self, "bullet_pool"):
-            self.bullet_pool = []
-        if not hasattr(self, "explosion_pool"):
-            self.explosion_pool = []
-        # Não resetar platforms_jumped aqui para manter pontuação entre níveis
-
-        # Criar plataformas baseadas no nível
-        Level.create_level_platforms(self, self.current_level)
 
     def get_pooled_bullet(self, x, y, direction=1, image=None):
         """Obter bala do pool ou criar nova se necessário"""
@@ -391,7 +361,7 @@ class Game:
                             self.player_name = ""
                             self.game_over_selected = 0  # Reset menu selection
                             self.state = GameState.PLAYING
-                            self.init_level()
+                            Level.init_level(self)
                             # Tocar música do nível atual
                             self.music.play_level_music(self, self.current_level)
                         elif self.game_over_selected == 1:  # Recordes
@@ -440,7 +410,9 @@ class Game:
                     self.lives = self.max_lives  # Resetar vidas
                     self.player_name = ""  # Resetar nome
                     self.state = GameState.PLAYING
-                    self.init_level()  # Inicializar o nível para posicionar jogador corretamente
+                    Level.init_level(
+                        self
+                    )  # Inicializar o nível para posicionar jogador corretamente
                     # Tocar música do nível atual
                     self.music.play_level_music(self, self.current_level)
                 elif (
@@ -453,7 +425,7 @@ class Game:
                         self.previous_state_before_ranking = None
                     else:
                         self.state = GameState.GAME_OVER  # Fallback
-                    self.init_level()
+                    Level.init_level(self)
                 elif event.key == pygame.K_ESCAPE:
                     return False
 
@@ -535,7 +507,7 @@ class Game:
                                 self.player_name = ""
                                 self.game_over_selected = 0
                                 self.state = GameState.PLAYING
-                                self.init_level()
+                                Level.init_level(self)
                                 # Tocar música do nível atual
                                 self.music.play_level_music(self, self.current_level)
                             elif self.game_over_selected == 1:  # Recordes
@@ -602,7 +574,7 @@ class Game:
                             self.lives = self.max_lives
                             self.player_name = ""
                             self.state = GameState.PLAYING
-                            self.init_level()
+                            Level.init_level(self)
                     # Botão B para voltar do ranking
                     elif (
                         event.button == 1 and self.state == GameState.SHOW_RANKING
@@ -711,7 +683,7 @@ class Game:
             self.lives = self.max_lives
             self.player_name = ""
             self.state = GameState.PLAYING
-            self.init_level()
+            Level.init_level(self)
             # Tocar música do nível atual
             self.music.play_level_music(self, self.current_level)
         elif selected_option == "Recordes":
@@ -769,7 +741,7 @@ class Game:
                         self.state = GameState.GAME_OVER
                 else:
                     # Ainda tem vidas, reiniciar nível atual
-                    self.init_level()
+                    Level.init_level(self)
                     # Tocar música do nível atual
                     self.music.play_level_music(self, self.current_level)
 
@@ -810,7 +782,7 @@ class Game:
                         )
                         self.birds.append(Bird(bird_x, bird_y, bird_images))
                     self.bird_spawn_timer = 0
-            else:
+            elif self.current_level <= 30:
                 # Spawn de novos morcegos (níveis 21-30)
                 self.bat_spawn_timer += 1
                 if self.bat_spawn_timer >= self.bat_spawn_interval:
@@ -846,7 +818,7 @@ class Game:
             else:
                 visible_bats = []
                 for bat in self.bats:
-                    if bat.update():
+                    if bat.update(self.camera_x):
                         # Culling: manter apenas morcegos próximos à área visível
                         if (
                             bat.x > self.camera_x - 200
@@ -1143,7 +1115,7 @@ class Game:
             if self.flag and self.player.rect.colliderect(self.flag.rect):
                 if self.current_level < self.max_levels:
                     self.current_level += 1
-                    self.init_level()
+                    Level.init_level(self)
                     # Tocar música do novo nível
                     self.music.play_level_music(self, self.current_level)
                 else:
@@ -1382,12 +1354,7 @@ class Game:
             self.player.x = original_x
 
             # Desenhar UI (sem offset da câmera)
-            level_text = self.font.render(f"Nível: {self.current_level}", True, WHITE)
-            score_text = self.font.render(f"Pontuação: {self.score}", True, WHITE)
-            lives_text = self.font.render(f"Vidas: {self.lives}", True, WHITE)
-            self.screen.blit(level_text, (10, 10))
-            self.screen.blit(score_text, (10, 50))
-            self.screen.blit(lives_text, (10, 90))
+            Info.display(self, self.screen, self.font, YELLOW)
 
         elif self.state == GameState.GAME_OVER:
             # Usar fundo do cenário

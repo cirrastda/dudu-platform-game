@@ -4,6 +4,8 @@ from internal.resources.platform import Platform
 from internal.resources.flag import Flag
 from internal.resources.cache import ResourceCache
 from internal.engine.level.generator.static import StaticLevelGenerator
+from internal.resources.player import Player
+from internal.resources.enemies.turtle import Turtle
 
 
 class Level:
@@ -155,3 +157,52 @@ class Level:
             StaticLevelGenerator.create_level_29(self)
         elif level == 30:
             StaticLevelGenerator.create_level_30(self)
+
+    def init_level(game):
+        """Inicializar o nível atual"""
+        game.player = Player(50, HEIGHT - 200)
+        game.platforms = []
+        game.flag = None
+        game.camera_x = 0
+        # Reinicializar sistema de pássaros
+        game.birds = []
+        game.bird_spawn_timer = 0
+        # Reinicializar sistema de morcegos
+        game.bats = []
+        game.bat_spawn_timer = 0
+        # Reinicializar sistema de tartarugas
+        game.turtles = []
+        # Reinicializar sistema de aranhas
+        game.spiders = []
+        # Reinicializar explosões
+        game.explosions = []
+
+        # Atualizar dificuldade dos pássaros para o nível atual
+        game.update_bird_difficulty()
+        game.background_img = Level.draw_level_bg(game, game.current_level)
+
+        # Garantir que o fundo do menu permanece inalterado
+        if not hasattr(game, "menu_background_img") or game.menu_background_img is None:
+            game.menu_background_img = cache.get_image(
+                "imagens/fundo6.png", (WIDTH, HEIGHT)
+            )
+
+        # Pool de objetos para performance
+        if not hasattr(game, "bullet_pool"):
+            game.bullet_pool = []
+        if not hasattr(game, "explosion_pool"):
+            game.explosion_pool = []
+        # Não resetar platforms_jumped aqui para manter pontuação entre níveis
+
+        # Criar plataformas baseadas no nível
+        Level.create_level_platforms(game, game.current_level)
+
+    def drawTurtle(game, platform):
+        turtle = Turtle(
+            platform[0],
+            platform[1] - 30,
+            platform[0],
+            platform[0] + platform[2],
+            game.turtle_images,
+        )
+        game.turtles.append(turtle)

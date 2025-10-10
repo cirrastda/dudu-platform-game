@@ -1,11 +1,16 @@
 import pygame
+from internal.engine.level.enemy import LevelEnemy
 from internal.utils.constants import *
 from internal.resources.platform import Platform
 from internal.resources.flag import Flag
 from internal.resources.cache import ResourceCache
+from internal.resources.enemies.turtle import Turtle
 
 
 class StaticLevelGenerator:
+    limit_platform_y = HEIGHT - 50
+    limit_platform_yTop = 100
+
     def create_level_1(game):
         """Nível 1 - Fácil (20 plataformas)"""
         platforms = [
@@ -33,14 +38,7 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.drawPlatforms(game, platforms)
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar plataforma embaixo da bandeira
-        last_platform = platforms[-1]  # Última plataforma da lista
-        final_x = last_platform[0] + last_platform[2] + 100  # x + width + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 120, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 50, HEIGHT - 300)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_2(game):
         """Nível 2 - Médio (30 plataformas)"""
@@ -81,11 +79,7 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar plataforma embaixo da bandeira
-        game.platforms.append(
-            Platform(4940, HEIGHT - 200, 100, 20, game.platform_texture)
-        )
-        game.flag = Flag(4960, HEIGHT - 300)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_3(game):
         """Nível 3 - Médio-Difícil (40 plataformas) - Corrigido para pulos possíveis"""
@@ -136,11 +130,7 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar plataforma embaixo da bandeira
-        game.platforms.append(
-            Platform(5740, HEIGHT - 240, 80, 20, game.platform_texture)
-        )
-        game.flag = Flag(5760, HEIGHT - 340)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_4(game):
         """Nível 4 - Difícil (50 plataformas) - Versão corrigida sem plataformas extras"""
@@ -201,522 +191,7 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar APENAS a plataforma da bandeira (não há outras plataformas após esta)
-        game.platforms.append(
-            Platform(5540, HEIGHT - 200, 80, 20, game.platform_texture)
-        )
-        game.flag = Flag(5560, HEIGHT - 300)
-
-        # Debug: Imprimir número total de plataformas para verificação
-        print(
-            f"Nível 4 criado com {len(game.platforms)} plataformas (47 + 1 da bandeira = 48 total)"
-        )
-
-    def create_level_8(game):
-        """Nível 8 - Progressão (55 plataformas)"""
-        platforms = []
-        x_pos = 90
-        for i in range(55):
-            y_pos = HEIGHT - (85 + (i % 11) * 48 + (i // 11) * 38)
-            platforms.append((x_pos, y_pos, 38, 20))
-            x_pos += 105
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 42, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
-
-    def create_level_9(game):
-        """Nível 9 - Insano (60 plataformas) - Layout manual"""
-        platforms = [
-            (40, HEIGHT - 280, 50, 20),
-            (130, HEIGHT - 380, 50, 20),
-            (220, HEIGHT - 120, 50, 20),
-            (310, HEIGHT - 420, 50, 20),
-            (400, HEIGHT - 180, 50, 20),
-            (490, HEIGHT - 80, 50, 20),
-            (580, HEIGHT - 360, 50, 20),
-            (670, HEIGHT - 140, 50, 20),
-            (760, HEIGHT - 440, 50, 20),
-            (850, HEIGHT - 100, 50, 20),
-            (940, HEIGHT - 340, 50, 20),
-            (1030, HEIGHT - 160, 50, 20),
-            (1120, HEIGHT - 400, 50, 20),
-            (1210, HEIGHT - 80, 50, 20),
-            (1300, HEIGHT - 320, 50, 20),
-            (1390, HEIGHT - 140, 50, 20),
-            (1480, HEIGHT - 380, 50, 20),
-            (1570, HEIGHT - 120, 50, 20),
-            (1660, HEIGHT - 360, 50, 20),
-            (1750, HEIGHT - 200, 50, 20),
-            (1840, HEIGHT - 100, 50, 20),
-            (1930, HEIGHT - 420, 50, 20),
-            (2020, HEIGHT - 160, 50, 20),
-            (2110, HEIGHT - 340, 50, 20),
-            (2200, HEIGHT - 80, 50, 20),
-            (2290, HEIGHT - 400, 50, 20),
-            (2380, HEIGHT - 140, 50, 20),
-            (2470, HEIGHT - 380, 50, 20),
-            (2560, HEIGHT - 180, 50, 20),
-            (2650, HEIGHT - 100, 50, 20),
-            (2740, HEIGHT - 360, 50, 20),
-            (2830, HEIGHT - 220, 50, 20),
-            (2920, HEIGHT - 120, 50, 20),
-            (3010, HEIGHT - 420, 50, 20),
-            (3100, HEIGHT - 160, 50, 20),
-            (3190, HEIGHT - 340, 50, 20),
-            (3280, HEIGHT - 80, 50, 20),
-            (3370, HEIGHT - 400, 50, 20),
-            (3460, HEIGHT - 140, 50, 20),
-            (3550, HEIGHT - 380, 50, 20),
-            (3640, HEIGHT - 180, 50, 20),
-            (3730, HEIGHT - 100, 50, 20),
-            (3820, HEIGHT - 360, 50, 20),
-            (3910, HEIGHT - 220, 50, 20),
-            (4000, HEIGHT - 120, 50, 20),
-            (4090, HEIGHT - 420, 50, 20),
-            (4180, HEIGHT - 160, 50, 20),
-            (4270, HEIGHT - 340, 50, 20),
-            (4360, HEIGHT - 140, 50, 20),
-            (4450, HEIGHT - 400, 50, 20),
-            (4540, HEIGHT - 180, 50, 20),
-            (4630, HEIGHT - 320, 50, 20),
-            (4720, HEIGHT - 140, 50, 20),
-            (4810, HEIGHT - 380, 50, 20),
-            (4900, HEIGHT - 180, 50, 20),
-            (4990, HEIGHT - 300, 50, 20),
-            (5080, HEIGHT - 120, 50, 20),
-            (5170, HEIGHT - 380, 50, 20),
-            (5260, HEIGHT - 200, 50, 20),
-            (5350, HEIGHT - 340, 50, 20),
-            (5440, HEIGHT - 160, 50, 20),
-            (5530, HEIGHT - 280, 50, 20),
-        ]
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar plataforma embaixo da bandeira
-        game.platforms.append(
-            Platform(5710, HEIGHT - 200, 50, 20, game.platform_texture)
-        )
-        game.flag = Flag(5730, HEIGHT - 300)
-
-    def create_level_10(game):
-        """Nível 10 - Impossível (65 plataformas) - Layout manual"""
-        platforms = [
-            (30, HEIGHT - 300, 45, 20),
-            (115, HEIGHT - 400, 45, 20),
-            (200, HEIGHT - 100, 45, 20),
-            (285, HEIGHT - 440, 45, 20),
-            (370, HEIGHT - 160, 45, 20),
-            (455, HEIGHT - 60, 45, 20),
-            (540, HEIGHT - 380, 45, 20),
-            (625, HEIGHT - 120, 45, 20),
-            (710, HEIGHT - 460, 45, 20),
-            (795, HEIGHT - 80, 45, 20),
-            (880, HEIGHT - 360, 45, 20),
-            (965, HEIGHT - 140, 45, 20),
-            (1050, HEIGHT - 420, 45, 20),
-            (1135, HEIGHT - 60, 45, 20),
-            (1220, HEIGHT - 340, 45, 20),
-            (1305, HEIGHT - 120, 45, 20),
-            (1390, HEIGHT - 400, 45, 20),
-            (1475, HEIGHT - 100, 45, 20),
-            (1560, HEIGHT - 380, 45, 20),
-            (1645, HEIGHT - 180, 45, 20),
-            (1730, HEIGHT - 80, 45, 20),
-            (1815, HEIGHT - 440, 45, 20),
-            (1900, HEIGHT - 140, 45, 20),
-            (1985, HEIGHT - 360, 45, 20),
-            (2070, HEIGHT - 60, 45, 20),
-            (2155, HEIGHT - 420, 45, 20),
-            (2240, HEIGHT - 120, 45, 20),
-            (2325, HEIGHT - 400, 45, 20),
-            (2410, HEIGHT - 160, 45, 20),
-            (2495, HEIGHT - 80, 45, 20),
-            (2580, HEIGHT - 380, 45, 20),
-            (2665, HEIGHT - 200, 45, 20),
-            (2750, HEIGHT - 100, 45, 20),
-            (2835, HEIGHT - 440, 45, 20),
-            (2920, HEIGHT - 140, 45, 20),
-            (3005, HEIGHT - 360, 45, 20),
-            (3090, HEIGHT - 60, 45, 20),
-            (3175, HEIGHT - 420, 45, 20),
-            (3260, HEIGHT - 120, 45, 20),
-            (3345, HEIGHT - 400, 45, 20),
-            (3430, HEIGHT - 160, 45, 20),
-            (3515, HEIGHT - 80, 45, 20),
-            (3600, HEIGHT - 380, 45, 20),
-            (3685, HEIGHT - 200, 45, 20),
-            (3770, HEIGHT - 100, 45, 20),
-            (3855, HEIGHT - 440, 45, 20),
-            (3940, HEIGHT - 140, 45, 20),
-            (4025, HEIGHT - 360, 45, 20),
-            (4110, HEIGHT - 120, 45, 20),
-            (4195, HEIGHT - 420, 45, 20),
-            (4280, HEIGHT - 160, 45, 20),
-            (4365, HEIGHT - 340, 45, 20),
-            (4450, HEIGHT - 120, 45, 20),
-            (4535, HEIGHT - 400, 45, 20),
-            (4620, HEIGHT - 160, 45, 20),
-            (4705, HEIGHT - 320, 45, 20),
-            (4790, HEIGHT - 120, 45, 20),
-            (4875, HEIGHT - 400, 45, 20),
-            (4960, HEIGHT - 160, 45, 20),
-            (5045, HEIGHT - 320, 45, 20),
-            (5130, HEIGHT - 100, 45, 20),
-            (5215, HEIGHT - 400, 45, 20),
-            (5300, HEIGHT - 180, 45, 20),
-            (5385, HEIGHT - 360, 45, 20),
-            (5470, HEIGHT - 140, 45, 20),
-            (5555, HEIGHT - 300, 45, 20),
-        ]
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar plataforma embaixo da bandeira
-        game.platforms.append(
-            Platform(5735, HEIGHT - 200, 45, 20, game.platform_texture)
-        )
-        game.flag = Flag(5755, HEIGHT - 300)
-
-    def create_level_11(game):
-        """Nível 11 - Progressão (70 plataformas)"""
-        platforms = []
-        x_pos = 70
-        for i in range(70):
-            y_pos = HEIGHT - (100 + (i % 14) * 35 + (i // 14) * 50)
-            platforms.append((x_pos, y_pos, 40, 20))
-            x_pos += 110
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar tartarugas (1 a cada 4 plataformas)
-        for i in range(4, len(platforms), 4):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 40, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
-
-    def create_level_12(game):
-        """Nível 12 - Progressão (75 plataformas)"""
-        platforms = []
-        x_pos = 60
-        for i in range(75):
-            y_pos = HEIGHT - (110 + (i % 15) * 32 + (i // 15) * 55)
-            platforms.append((x_pos, y_pos, 38, 20))
-            x_pos += 105
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar tartarugas (1 a cada 3 plataformas)
-        for i in range(3, len(platforms), 3):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 38, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
-
-    def create_level_13(game):
-        """Nível 13 - Progressão (80 plataformas)"""
-        platforms = []
-        x_pos = 50
-        for i in range(80):
-            y_pos = HEIGHT - (115 + (i % 16) * 30 + (i // 16) * 60)
-            platforms.append((x_pos, y_pos, 36, 20))
-            x_pos += 100
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar tartarugas (1 a cada 3 plataformas)
-        for i in range(3, len(platforms), 3):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 36, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
-
-    def create_level_14(game):
-        """Nível 14 - Progressão (85 plataformas)"""
-        platforms = []
-        x_pos = 40
-        for i in range(85):
-            y_pos = HEIGHT - (120 + (i % 17) * 28 + (i // 17) * 65)
-            platforms.append((x_pos, y_pos, 34, 20))
-            x_pos += 95
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar tartarugas (1 a cada 2 plataformas)
-        for i in range(2, len(platforms), 2):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 34, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
-
-    def create_level_15(game):
-        """Nível 15 - Progressão (90 plataformas)"""
-        platforms = []
-        x_pos = 30
-        for i in range(90):
-            y_pos = HEIGHT - (125 + (i % 18) * 26 + (i // 18) * 70)
-            platforms.append((x_pos, y_pos, 32, 20))
-            x_pos += 90
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar tartarugas (1 a cada 2 plataformas)
-        for i in range(2, len(platforms), 2):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 32, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
-
-    def create_level_16(game):
-        """Nível 16 - Progressão (95 plataformas)"""
-        platforms = []
-        x_pos = 20
-        for i in range(95):
-            y_pos = HEIGHT - (130 + (i % 19) * 24 + (i // 19) * 75)
-            platforms.append((x_pos, y_pos, 30, 20))
-            x_pos += 85
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar tartarugas (1 a cada 2 plataformas)
-        for i in range(2, len(platforms), 2):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 30, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
-
-    def create_level_17(game):
-        """Nível 17 - Progressão (100 plataformas)"""
-        platforms = []
-        x_pos = 10
-        for i in range(100):
-            y_pos = HEIGHT - (135 + (i % 20) * 22 + (i // 20) * 80)
-            platforms.append((x_pos, y_pos, 28, 20))
-            x_pos += 80
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar tartarugas (1 a cada 2 plataformas)
-        for i in range(1, len(platforms), 2):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 28, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
-
-    def create_level_18(game):
-        """Nível 18 - Progressão (105 plataformas)"""
-        platforms = []
-        x_pos = 5
-        for i in range(105):
-            y_pos = HEIGHT - (140 + (i % 21) * 20 + (i // 21) * 85)
-            platforms.append((x_pos, y_pos, 26, 20))
-            x_pos += 75
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar tartarugas (1 a cada 2 plataformas)
-        for i in range(1, len(platforms), 2):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 26, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
-
-    def create_level_19(game):
-        """Nível 19 - Progressão (110 plataformas)"""
-        platforms = []
-        x_pos = 0
-        for i in range(110):
-            y_pos = HEIGHT - (145 + (i % 22) * 18 + (i // 22) * 90)
-            platforms.append((x_pos, y_pos, 24, 20))
-            x_pos += 70
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar tartarugas (1 a cada plataforma)
-        for i in range(len(platforms)):
-            platform = platforms[i]
-            turtle = Turtle(
-                platform[0],
-                platform[1] - 30,
-                platform[0],
-                platform[0] + platform[2],
-                game.turtle_images,
-            )
-            game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 24, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
-
-    def create_level_20(game):
-        """Nível 20 - Progressão Final (120 plataformas)"""
-        platforms = []
-        x_pos = 0
-        for i in range(120):
-            y_pos = HEIGHT - (150 + (i % 24) * 16 + (i // 24) * 95)
-            platforms.append((x_pos, y_pos, 22, 20))
-            x_pos += 65
-
-        StaticLevelGenerator.drawPlatforms(game, platforms)
-
-        StaticLevelGenerator.putPlayerInFirstPlatform(game)
-
-        # Adicionar tartarugas (1 a cada plataforma)
-        for i in range(len(platforms)):
-            platform = platforms[i]
-            turtle = Turtle(
-                platform[0],
-                platform[1] - 30,
-                platform[0],
-                platform[0] + platform[2],
-                game.turtle_images,
-            )
-            game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 22, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_5(game):
         """Nível 5 - Muito Difícil (60 plataformas)"""
@@ -788,11 +263,7 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar plataforma embaixo da bandeira
-        game.platforms.append(
-            Platform(6840, HEIGHT - 240, 60, 20, game.platform_texture)
-        )
-        game.flag = Flag(6860, HEIGHT - 340)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_6(game):
         """Nível 6 - Progressão (65 plataformas)"""
@@ -869,208 +340,344 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar plataforma embaixo da bandeira
-        game.platforms.append(
-            Platform(8060, HEIGHT - 200, 60, 20, game.platform_texture)
-        )
-        game.flag = Flag(8080, HEIGHT - 300)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_7(game):
-        """Nível 7 - Progressão (28 plataformas) - Gaps moderados com saltos factíveis"""
+        """Nível 7 - Progressão (68 plataformas)"""
         platforms = [
-            (140, HEIGHT - 220, 90, 20),
-            (300, HEIGHT - 300, 90, 20),
-            (470, HEIGHT - 160, 90, 20),
-            (640, HEIGHT - 280, 90, 20),
-            (810, HEIGHT - 200, 90, 20),
-            (980, HEIGHT - 340, 90, 20),
-            (1150, HEIGHT - 140, 90, 20),
-            (1320, HEIGHT - 260, 90, 20),
-            (1490, HEIGHT - 320, 90, 20),
-            (1660, HEIGHT - 180, 90, 20),
-            (1830, HEIGHT - 240, 90, 20),
-            (2000, HEIGHT - 300, 90, 20),
-            (2170, HEIGHT - 160, 90, 20),
-            (2340, HEIGHT - 280, 90, 20),
-            (2510, HEIGHT - 220, 90, 20),
-            (2680, HEIGHT - 340, 90, 20),
-            (2850, HEIGHT - 180, 90, 20),
-            (3020, HEIGHT - 260, 90, 20),
-            (3190, HEIGHT - 300, 90, 20),
-            (3360, HEIGHT - 140, 90, 20),
-            (3530, HEIGHT - 240, 90, 20),
-            (3700, HEIGHT - 320, 90, 20),
-            (3870, HEIGHT - 200, 90, 20),
-            (4040, HEIGHT - 280, 90, 20),
-            (4210, HEIGHT - 160, 90, 20),
-            (4380, HEIGHT - 300, 90, 20),
-            (4550, HEIGHT - 220, 90, 20),
-            (4720, HEIGHT - 260, 90, 20),
+            (140, HEIGHT - 220, 60, 20),
+            (300, HEIGHT - 300, 60, 20),
+            (470, HEIGHT - 160, 60, 20),
+            (640, HEIGHT - 280, 60, 20),
+            (810, HEIGHT - 200, 60, 20),
+            (980, HEIGHT - 340, 60, 20),
+            (1150, HEIGHT - 140, 60, 20),
+            (1320, HEIGHT - 260, 60, 20),
+            (1490, HEIGHT - 320, 60, 20),
+            (1660, HEIGHT - 180, 60, 20),
+            (1830, HEIGHT - 240, 60, 20),
+            (2000, HEIGHT - 300, 60, 20),
+            (2170, HEIGHT - 160, 60, 20),
+            (2340, HEIGHT - 280, 60, 20),
+            (2510, HEIGHT - 220, 60, 20),
+            (2680, HEIGHT - 340, 60, 20),
+            (2850, HEIGHT - 180, 60, 20),
+            (3020, HEIGHT - 260, 60, 20),
+            (3190, HEIGHT - 300, 60, 20),
+            (3360, HEIGHT - 140, 60, 20),
+            (3530, HEIGHT - 240, 60, 20),
+            (3700, HEIGHT - 320, 60, 20),
+            (3870, HEIGHT - 200, 60, 20),
+            (4040, HEIGHT - 280, 60, 20),
+            (4210, HEIGHT - 160, 60, 20),
+            (4380, HEIGHT - 300, 60, 20),
+            (4550, HEIGHT - 220, 60, 20),
+            (4720, HEIGHT - 260, 60, 20),
+            (4890, HEIGHT - 340, 60, 20),
+            (5060, HEIGHT - 180, 60, 20),
+            (5230, HEIGHT - 240, 60, 20),
+            (5400, HEIGHT - 300, 60, 20),
+            (5570, HEIGHT - 160, 60, 20),
+            (5740, HEIGHT - 280, 60, 20),
+            (5910, HEIGHT - 220, 60, 20),
+            (6080, HEIGHT - 340, 60, 20),
+            (6250, HEIGHT - 140, 60, 20),
+            (6420, HEIGHT - 260, 60, 20),
+            (6590, HEIGHT - 320, 60, 20),
+            (6760, HEIGHT - 180, 60, 20),
+            (6930, HEIGHT - 240, 60, 20),
+            (7100, HEIGHT - 300, 60, 20),
+            (7270, HEIGHT - 160, 60, 20),
+            (7440, HEIGHT - 280, 60, 20),
+            (7610, HEIGHT - 220, 60, 20),
+            (7780, HEIGHT - 340, 60, 20),
+            (7950, HEIGHT - 180, 60, 20),
+            (8120, HEIGHT - 260, 60, 20),
+            (8290, HEIGHT - 320, 60, 20),
+            (8460, HEIGHT - 140, 60, 20),
+            (8630, HEIGHT - 240, 60, 20),
+            (8800, HEIGHT - 300, 60, 20),
+            (8970, HEIGHT - 160, 60, 20),
+            (9140, HEIGHT - 280, 60, 20),
+            (9310, HEIGHT - 220, 60, 20),
+            (9480, HEIGHT - 340, 60, 20),
+            (9650, HEIGHT - 180, 60, 20),
+            (9820, HEIGHT - 260, 60, 20),
+            (9990, HEIGHT - 320, 60, 20),
+            (10160, HEIGHT - 140, 60, 20),
+            (10330, HEIGHT - 240, 60, 20),
+            (10500, HEIGHT - 300, 60, 20),
+            (10670, HEIGHT - 160, 60, 20),
+            (10840, HEIGHT - 280, 60, 20),
+            (11010, HEIGHT - 220, 60, 20),
+            (11180, HEIGHT - 340, 60, 20),
+            (11350, HEIGHT - 180, 60, 20),
+            (11520, HEIGHT - 260, 60, 20),
+            (11690, HEIGHT - 320, 60, 20),
         ]
 
         StaticLevelGenerator.drawPlatforms(game, platforms)
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar plataforma embaixo da bandeira
-        # Calcular posição final baseada na última plataforma
-        last_platform = platforms[-1]
-        final_x = last_platform[0] + 200  # 200 pixels após a última plataforma
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 180, 90, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 280)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_8(game):
-        """Nível 8 - Progressão (30 plataformas) - Gaps maiores mas ainda factíveis"""
+        """Nível 8 - Progressão (70 plataformas)"""
         platforms = [
-            (160, HEIGHT - 240, 85, 20),
-            (340, HEIGHT - 320, 85, 20),
-            (530, HEIGHT - 160, 85, 20),
-            (720, HEIGHT - 280, 85, 20),
-            (910, HEIGHT - 200, 85, 20),
-            (1100, HEIGHT - 340, 85, 20),
-            (1290, HEIGHT - 140, 85, 20),
-            (1480, HEIGHT - 260, 85, 20),
-            (1670, HEIGHT - 320, 85, 20),
-            (1860, HEIGHT - 180, 85, 20),
-            (2050, HEIGHT - 300, 85, 20),
-            (2240, HEIGHT - 220, 85, 20),
-            (2430, HEIGHT - 340, 85, 20),
-            (2620, HEIGHT - 160, 85, 20),
-            (2810, HEIGHT - 280, 85, 20),
-            (3000, HEIGHT - 240, 85, 20),
-            (3190, HEIGHT - 320, 85, 20),
-            (3380, HEIGHT - 180, 85, 20),
-            (3570, HEIGHT - 300, 85, 20),
-            (3760, HEIGHT - 140, 85, 20),
-            (3950, HEIGHT - 260, 85, 20),
-            (4140, HEIGHT - 320, 85, 20),
-            (4330, HEIGHT - 200, 85, 20),
-            (4520, HEIGHT - 280, 85, 20),
-            (4710, HEIGHT - 160, 85, 20),
-            (4900, HEIGHT - 300, 85, 20),
-            (5090, HEIGHT - 240, 85, 20),
-            (5280, HEIGHT - 320, 85, 20),
-            (5470, HEIGHT - 180, 85, 20),
-            (5660, HEIGHT - 260, 85, 20),
+            (160, HEIGHT - 240, 60, 20),
+            (340, HEIGHT - 320, 60, 20),
+            (530, HEIGHT - 160, 60, 20),
+            (720, HEIGHT - 280, 60, 20),
+            (910, HEIGHT - 200, 60, 20),
+            (1100, HEIGHT - 340, 60, 20),
+            (1290, HEIGHT - 140, 60, 20),
+            (1480, HEIGHT - 260, 60, 20),
+            (1670, HEIGHT - 320, 60, 20),
+            (1860, HEIGHT - 180, 60, 20),
+            (2050, HEIGHT - 300, 60, 20),
+            (2240, HEIGHT - 220, 60, 20),
+            (2430, HEIGHT - 340, 60, 20),
+            (2620, HEIGHT - 160, 60, 20),
+            (2810, HEIGHT - 280, 60, 20),
+            (3000, HEIGHT - 240, 60, 20),
+            (3190, HEIGHT - 320, 60, 20),
+            (3380, HEIGHT - 180, 60, 20),
+            (3570, HEIGHT - 300, 60, 20),
+            (3760, HEIGHT - 140, 60, 20),
+            (3950, HEIGHT - 260, 60, 20),
+            (4140, HEIGHT - 320, 60, 20),
+            (4330, HEIGHT - 200, 60, 20),
+            (4520, HEIGHT - 280, 60, 20),
+            (4710, HEIGHT - 160, 60, 20),
+            (4900, HEIGHT - 300, 60, 20),
+            (5090, HEIGHT - 240, 60, 20),
+            (5280, HEIGHT - 320, 60, 20),
+            (5470, HEIGHT - 180, 60, 20),
+            (5660, HEIGHT - 260, 60, 20),
+            (5850, HEIGHT - 340, 60, 20),
+            (6040, HEIGHT - 160, 60, 20),
+            (6230, HEIGHT - 280, 60, 20),
+            (6420, HEIGHT - 220, 60, 20),
+            (6610, HEIGHT - 300, 60, 20),
+            (6800, HEIGHT - 140, 60, 20),
+            (6990, HEIGHT - 260, 60, 20),
+            (7180, HEIGHT - 320, 60, 20),
+            (7370, HEIGHT - 180, 60, 20),
+            (7560, HEIGHT - 240, 60, 20),
+            (7750, HEIGHT - 340, 60, 20),
+            (7940, HEIGHT - 160, 60, 20),
+            (8130, HEIGHT - 280, 60, 20),
+            (8320, HEIGHT - 200, 60, 20),
+            (8510, HEIGHT - 320, 60, 20),
+            (8700, HEIGHT - 140, 60, 20),
+            (8890, HEIGHT - 260, 60, 20),
+            (9080, HEIGHT - 300, 60, 20),
+            (9270, HEIGHT - 180, 60, 20),
+            (9460, HEIGHT - 240, 60, 20),
+            (9650, HEIGHT - 340, 60, 20),
+            (9840, HEIGHT - 160, 60, 20),
+            (10030, HEIGHT - 280, 60, 20),
+            (10220, HEIGHT - 220, 60, 20),
+            (10410, HEIGHT - 300, 60, 20),
+            (10600, HEIGHT - 140, 60, 20),
+            (10790, HEIGHT - 260, 60, 20),
+            (10980, HEIGHT - 320, 60, 20),
+            (11170, HEIGHT - 180, 60, 20),
+            (11360, HEIGHT - 240, 60, 20),
+            (11550, HEIGHT - 340, 60, 20),
+            (11740, HEIGHT - 160, 60, 20),
+            (11930, HEIGHT - 280, 60, 20),
+            (12120, HEIGHT - 200, 60, 20),
+            (12310, HEIGHT - 320, 60, 20),
+            (12500, HEIGHT - 140, 60, 20),
+            (12690, HEIGHT - 260, 60, 20),
+            (12880, HEIGHT - 300, 60, 20),
+            (13070, HEIGHT - 180, 60, 20),
+            (13260, HEIGHT - 240, 60, 20),
+            (13450, HEIGHT - 340, 60, 20),
         ]
 
         StaticLevelGenerator.drawPlatforms(game, platforms)
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 5850
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 85, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_9(game):
-        """Nível 9 - Progressão (32 plataformas) - Gaps desafiadores mas possíveis"""
+        """Nível 9 - Progressão (70 plataformas) - Gaps desafiadores mas possíveis"""
         platforms = [
-            (180, HEIGHT - 260, 80, 20),
-            (380, HEIGHT - 340, 80, 20),
-            (580, HEIGHT - 160, 80, 20),
-            (780, HEIGHT - 300, 80, 20),
-            (980, HEIGHT - 200, 80, 20),
-            (1180, HEIGHT - 340, 80, 20),
-            (1380, HEIGHT - 140, 80, 20),
-            (1580, HEIGHT - 280, 80, 20),
-            (1780, HEIGHT - 320, 80, 20),
-            (1980, HEIGHT - 180, 80, 20),
-            (2180, HEIGHT - 300, 80, 20),
-            (2380, HEIGHT - 240, 80, 20),
-            (2580, HEIGHT - 340, 80, 20),
-            (2780, HEIGHT - 160, 80, 20),
-            (2980, HEIGHT - 280, 80, 20),
-            (3180, HEIGHT - 260, 80, 20),
-            (3380, HEIGHT - 320, 80, 20),
-            (3580, HEIGHT - 180, 80, 20),
-            (3780, HEIGHT - 300, 80, 20),
-            (3980, HEIGHT - 140, 80, 20),
-            (4180, HEIGHT - 280, 80, 20),
-            (4380, HEIGHT - 320, 80, 20),
-            (4580, HEIGHT - 200, 80, 20),
-            (4780, HEIGHT - 300, 80, 20),
-            (4980, HEIGHT - 160, 80, 20),
-            (5180, HEIGHT - 320, 80, 20),
-            (5380, HEIGHT - 240, 80, 20),
-            (5580, HEIGHT - 300, 80, 20),
-            (5780, HEIGHT - 180, 80, 20),
-            (5980, HEIGHT - 280, 80, 20),
-            (6180, HEIGHT - 260, 80, 20),
-            (6380, HEIGHT - 320, 80, 20),
+            (180, HEIGHT - 260, 60, 20),
+            (380, HEIGHT - 340, 60, 20),
+            (580, HEIGHT - 160, 60, 20),
+            (780, HEIGHT - 300, 60, 20),
+            (980, HEIGHT - 200, 60, 20),
+            (1180, HEIGHT - 340, 60, 20),
+            (1380, HEIGHT - 140, 60, 20),
+            (1580, HEIGHT - 280, 60, 20),
+            (1780, HEIGHT - 320, 60, 20),
+            (1980, HEIGHT - 180, 60, 20),
+            (2180, HEIGHT - 300, 60, 20),
+            (2380, HEIGHT - 240, 60, 20),
+            (2580, HEIGHT - 340, 60, 20),
+            (2780, HEIGHT - 160, 60, 20),
+            (2980, HEIGHT - 280, 60, 20),
+            (3180, HEIGHT - 260, 60, 20),
+            (3380, HEIGHT - 320, 60, 20),
+            (3580, HEIGHT - 180, 60, 20),
+            (3780, HEIGHT - 300, 60, 20),
+            (3980, HEIGHT - 140, 60, 20),
+            (4180, HEIGHT - 280, 60, 20),
+            (4380, HEIGHT - 320, 60, 20),
+            (4580, HEIGHT - 200, 60, 20),
+            (4780, HEIGHT - 300, 60, 20),
+            (4980, HEIGHT - 160, 60, 20),
+            (5180, HEIGHT - 320, 60, 20),
+            (5380, HEIGHT - 240, 60, 20),
+            (5580, HEIGHT - 300, 60, 20),
+            (5780, HEIGHT - 180, 60, 20),
+            (5980, HEIGHT - 280, 60, 20),
+            (6180, HEIGHT - 260, 60, 20),
+            (6380, HEIGHT - 320, 60, 20),
+            (6580, HEIGHT - 180, 60, 20),
+            (6780, HEIGHT - 300, 60, 20),
+            (6980, HEIGHT - 240, 60, 20),
+            (7180, HEIGHT - 340, 60, 20),
+            (7380, HEIGHT - 160, 60, 20),
+            (7580, HEIGHT - 280, 60, 20),
+            (7780, HEIGHT - 320, 60, 20),
+            (7980, HEIGHT - 200, 60, 20),
+            (8180, HEIGHT - 300, 60, 20),
+            (8380, HEIGHT - 140, 60, 20),
+            (8580, HEIGHT - 280, 60, 20),
+            (8780, HEIGHT - 260, 60, 20),
+            (8980, HEIGHT - 340, 60, 20),
+            (9180, HEIGHT - 180, 60, 20),
+            (9380, HEIGHT - 320, 60, 20),
+            (9580, HEIGHT - 240, 60, 20),
+            (9780, HEIGHT - 300, 60, 20),
+            (9980, HEIGHT - 160, 60, 20),
+            (10180, HEIGHT - 280, 60, 20),
+            (10380, HEIGHT - 320, 60, 20),
+            (10580, HEIGHT - 200, 60, 20),
+            (10780, HEIGHT - 340, 60, 20),
+            (10980, HEIGHT - 140, 60, 20),
+            (11180, HEIGHT - 280, 60, 20),
+            (11380, HEIGHT - 260, 60, 20),
+            (11580, HEIGHT - 320, 60, 20),
+            (11780, HEIGHT - 180, 60, 20),
+            (11980, HEIGHT - 300, 60, 20),
+            (12180, HEIGHT - 240, 60, 20),
+            (12380, HEIGHT - 340, 60, 20),
+            (12580, HEIGHT - 160, 60, 20),
+            (12780, HEIGHT - 280, 60, 20),
+            (12980, HEIGHT - 320, 60, 20),
+            (13180, HEIGHT - 200, 60, 20),
+            (13380, HEIGHT - 300, 60, 20),
+            (13580, HEIGHT - 140, 60, 20),
+            (13780, HEIGHT - 280, 60, 20),
+            (13980, HEIGHT - 260, 60, 20),
+            (14180, HEIGHT - 340, 60, 20),
         ]
 
         StaticLevelGenerator.drawPlatforms(game, platforms)
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 6570
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 80, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_10(game):
-        """Nível 10 - Progressão (34 plataformas) - Máxima dificuldade com saltos no limite"""
+        """Nível 10 - Progressão (70 plataformas) - Máxima dificuldade com saltos no limite"""
         platforms = [
-            (200, HEIGHT - 280, 75, 20),
-            (410, HEIGHT - 360, 75, 20),
-            (620, HEIGHT - 160, 75, 20),
-            (830, HEIGHT - 320, 75, 20),
-            (1040, HEIGHT - 200, 75, 20),
-            (1250, HEIGHT - 340, 75, 20),
-            (1460, HEIGHT - 140, 75, 20),
-            (1670, HEIGHT - 300, 75, 20),
-            (1880, HEIGHT - 260, 75, 20),
-            (2090, HEIGHT - 340, 75, 20),
-            (2300, HEIGHT - 180, 75, 20),
-            (2510, HEIGHT - 320, 75, 20),
-            (2720, HEIGHT - 240, 75, 20),
-            (2930, HEIGHT - 360, 75, 20),
-            (3140, HEIGHT - 160, 75, 20),
-            (3350, HEIGHT - 300, 75, 20),
-            (3560, HEIGHT - 280, 75, 20),
-            (3770, HEIGHT - 340, 75, 20),
-            (3980, HEIGHT - 180, 75, 20),
-            (4190, HEIGHT - 320, 75, 20),
-            (4400, HEIGHT - 140, 75, 20),
-            (4610, HEIGHT - 300, 75, 20),
-            (4820, HEIGHT - 260, 75, 20),
-            (5030, HEIGHT - 340, 75, 20),
-            (5240, HEIGHT - 200, 75, 20),
-            (5450, HEIGHT - 320, 75, 20),
-            (5660, HEIGHT - 160, 75, 20),
-            (5870, HEIGHT - 300, 75, 20),
-            (6080, HEIGHT - 240, 75, 20),
-            (6290, HEIGHT - 340, 75, 20),
-            (6500, HEIGHT - 180, 75, 20),
-            (6710, HEIGHT - 300, 75, 20),
-            (6920, HEIGHT - 260, 75, 20),
-            (7130, HEIGHT - 320, 75, 20),
+            (200, HEIGHT - 280, 60, 20),
+            (410, HEIGHT - 360, 60, 20),
+            (620, HEIGHT - 160, 60, 20),
+            (830, HEIGHT - 320, 60, 20),
+            (1040, HEIGHT - 200, 60, 20),
+            (1250, HEIGHT - 340, 60, 20),
+            (1460, HEIGHT - 140, 60, 20),
+            (1670, HEIGHT - 300, 60, 20),
+            (1880, HEIGHT - 260, 60, 20),
+            (2090, HEIGHT - 340, 60, 20),
+            (2300, HEIGHT - 180, 60, 20),
+            (2510, HEIGHT - 320, 60, 20),
+            (2720, HEIGHT - 240, 60, 20),
+            (2930, HEIGHT - 360, 60, 20),
+            (3140, HEIGHT - 160, 60, 20),
+            (3350, HEIGHT - 300, 60, 20),
+            (3560, HEIGHT - 280, 60, 20),
+            (3770, HEIGHT - 340, 60, 20),
+            (3980, HEIGHT - 180, 60, 20),
+            (4190, HEIGHT - 320, 60, 20),
+            (4400, HEIGHT - 140, 60, 20),
+            (4610, HEIGHT - 300, 60, 20),
+            (4820, HEIGHT - 260, 60, 20),
+            (5030, HEIGHT - 340, 60, 20),
+            (5240, HEIGHT - 200, 60, 20),
+            (5450, HEIGHT - 320, 60, 20),
+            (5660, HEIGHT - 160, 60, 20),
+            (5870, HEIGHT - 300, 60, 20),
+            (6080, HEIGHT - 240, 60, 20),
+            (6290, HEIGHT - 340, 60, 20),
+            (6500, HEIGHT - 180, 60, 20),
+            (6710, HEIGHT - 300, 60, 20),
+            (6920, HEIGHT - 260, 60, 20),
+            (7130, HEIGHT - 320, 60, 20),
+            (7340, HEIGHT - 180, 60, 20),
+            (7550, HEIGHT - 340, 60, 20),
+            (7760, HEIGHT - 240, 60, 20),
+            (7970, HEIGHT - 360, 60, 20),
+            (8180, HEIGHT - 160, 60, 20),
+            (8390, HEIGHT - 300, 60, 20),
+            (8600, HEIGHT - 280, 60, 20),
+            (8810, HEIGHT - 340, 60, 20),
+            (9020, HEIGHT - 200, 60, 20),
+            (9230, HEIGHT - 320, 60, 20),
+            (9440, HEIGHT - 140, 60, 20),
+            (9650, HEIGHT - 300, 60, 20),
+            (9860, HEIGHT - 260, 60, 20),
+            (10070, HEIGHT - 340, 60, 20),
+            (10280, HEIGHT - 180, 60, 20),
+            (10490, HEIGHT - 320, 60, 20),
+            (10700, HEIGHT - 240, 60, 20),
+            (10910, HEIGHT - 360, 60, 20),
+            (11120, HEIGHT - 160, 60, 20),
+            (11330, HEIGHT - 300, 60, 20),
+            (11540, HEIGHT - 280, 60, 20),
+            (11750, HEIGHT - 340, 60, 20),
+            (11960, HEIGHT - 200, 60, 20),
+            (12170, HEIGHT - 320, 60, 20),
+            (12380, HEIGHT - 140, 60, 20),
+            (12590, HEIGHT - 300, 60, 20),
+            (12800, HEIGHT - 260, 60, 20),
+            (13010, HEIGHT - 340, 60, 20),
+            (13220, HEIGHT - 180, 60, 20),
+            (13430, HEIGHT - 320, 60, 20),
+            (13640, HEIGHT - 240, 60, 20),
+            (13850, HEIGHT - 360, 60, 20),
+            (14060, HEIGHT - 160, 60, 20),
+            (14270, HEIGHT - 300, 60, 20),
+            (14480, HEIGHT - 280, 60, 20),
+            (14690, HEIGHT - 340, 60, 20),
+            (14900, HEIGHT - 200, 60, 20),
         ]
 
         StaticLevelGenerator.drawPlatforms(game, platforms)
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 7320
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 75, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_11(game):
         """Nível 11 - Reinício com tartarugas (30 plataformas)"""
         platforms = []
         x_pos = 100
-        for i in range(30):
-            y_pos = HEIGHT - (200 + (i % 5) * 80 + (i // 5) * 20)
+        initial_y = HEIGHT - 150
+        y_pos = initial_y
+        for i in range(31):
+            y_pos -= 100
+            if y_pos < StaticLevelGenerator.limit_platform_yTop:
+                y_pos = initial_y
             platforms.append((x_pos, y_pos, 80, 20))
             x_pos += 120 + (i % 2) * 40
 
@@ -1079,31 +686,20 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 10 plataformas)
-        for i in range(10, len(platforms), 10):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
+        StaticLevelGenerator.drawTurtles(game, platforms, 10)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 200, 80, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 300)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_12(game):
         """Nível 12 - Progressão com tartarugas (39 plataformas)"""
         platforms = []
         x_pos = 90
+        initial_y = HEIGHT - 120
+        y_pos = initial_y
         for i in range(39):
-            y_pos = HEIGHT - (190 + (i % 6) * 75 + (i // 6) * 25)
+            y_pos -= 110
+            if y_pos < StaticLevelGenerator.limit_platform_yTop:
+                y_pos = initial_y
             platforms.append((x_pos, y_pos, 75, 20))
             x_pos += 115 + (i % 3) * 35
 
@@ -1112,31 +708,20 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 9 plataformas)
-        for i in range(9, len(platforms), 9):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
+        StaticLevelGenerator.drawTurtles(game, platforms, 9)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 190, 75, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 290)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_13(game):
         """Nível 13 - Progressão com tartarugas (48 plataformas)"""
         platforms = []
         x_pos = 80
-        for i in range(48):
-            y_pos = HEIGHT - (180 + (i % 7) * 70 + (i // 7) * 30)
+        initial_y = HEIGHT - 110
+        y_pos = initial_y
+        for i in range(49):
+            y_pos -= 115
+            if y_pos < StaticLevelGenerator.limit_platform_yTop:
+                y_pos = initial_y
             platforms.append((x_pos, y_pos, 70, 20))
             x_pos += 110 + (i % 4) * 30
 
@@ -1145,31 +730,20 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 8 plataformas)
-        for i in range(8, len(platforms), 8):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
+        StaticLevelGenerator.drawTurtles(game, platforms, 8)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 180, 70, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 280)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_14(game):
-        """Nível 14 - Progressão com tartarugas (57 plataformas)"""
+        """Nível 14 - Progressão com tartarugas (58 plataformas)"""
         platforms = []
         x_pos = 70
-        for i in range(57):
-            y_pos = HEIGHT - (170 + (i % 8) * 65 + (i // 8) * 35)
+        initial_y = HEIGHT - 100
+        y_pos = initial_y
+        for i in range(58):
+            y_pos -= 115
+            if y_pos < StaticLevelGenerator.limit_platform_yTop:
+                y_pos = initial_y
             platforms.append((x_pos, y_pos, 65, 20))
             x_pos += 105 + (i % 5) * 25
 
@@ -1178,31 +752,20 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 7 plataformas)
-        for i in range(7, len(platforms), 7):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
+        StaticLevelGenerator.drawTurtles(game, platforms, 7)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 170, 65, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 270)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_15(game):
         """Nível 15 - Progressão com tartarugas (66 plataformas)"""
         platforms = []
         x_pos = 60
-        for i in range(66):
-            y_pos = HEIGHT - (160 + (i % 9) * 60 + (i // 9) * 40)
+        initial_y = HEIGHT - 90
+        y_pos = initial_y
+        for i in range(67):
+            y_pos -= 119
+            if y_pos < StaticLevelGenerator.limit_platform_yTop:
+                y_pos = initial_y
             platforms.append((x_pos, y_pos, 60, 20))
             x_pos += 100 + (i % 6) * 20
 
@@ -1211,31 +774,20 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 6 plataformas)
-        for i in range(6, len(platforms), 6):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
+        StaticLevelGenerator.drawTurtles(game, platforms, 6)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 160, 60, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 260)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_16(game):
         """Nível 16 - Progressão com tartarugas (75 plataformas)"""
         platforms = []
         x_pos = 50
-        for i in range(75):
-            y_pos = HEIGHT - (150 + (i % 10) * 55 + (i // 10) * 45)
+        initial_y = HEIGHT - 120
+        y_pos = initial_y
+        for i in range(76):
+            y_pos -= 125
+            if y_pos < StaticLevelGenerator.limit_platform_yTop:
+                y_pos = initial_y
             platforms.append((x_pos, y_pos, 55, 20))
             x_pos += 95 + (i % 7) * 15
 
@@ -1244,31 +796,20 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 5 plataformas)
-        for i in range(5, len(platforms), 5):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
+        StaticLevelGenerator.drawTurtles(game, platforms, 5)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 150, 55, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 250)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_17(game):
         """Nível 17 - Progressão com tartarugas (84 plataformas)"""
         platforms = []
         x_pos = 40
+        initial_y = HEIGHT - 120
+        y_pos = initial_y
         for i in range(84):
-            y_pos = HEIGHT - (140 + (i % 11) * 50 + (i // 11) * 50)
+            y_pos -= 125
+            if y_pos < StaticLevelGenerator.limit_platform_yTop:
+                y_pos = initial_y
             platforms.append((x_pos, y_pos, 50, 20))
             x_pos += 90 + (i % 8) * 10
 
@@ -1277,31 +818,20 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 4 plataformas)
-        for i in range(4, len(platforms), 4):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
+        StaticLevelGenerator.drawTurtles(game, platforms, 4)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 140, 50, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 240)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_18(game):
         """Nível 18 - Progressão com tartarugas (93 plataformas)"""
         platforms = []
         x_pos = 30
+        initial_y = HEIGHT - 120
+        y_pos = initial_y
         for i in range(93):
-            y_pos = HEIGHT - (130 + (i % 12) * 45 + (i // 12) * 55)
+            y_pos -= 125
+            if y_pos < StaticLevelGenerator.limit_platform_yTop:
+                y_pos = initial_y
             platforms.append((x_pos, y_pos, 45, 20))
             x_pos += 85 + (i % 9) * 5
 
@@ -1310,31 +840,20 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (1 a cada 3 plataformas)
-        for i in range(3, len(platforms), 3):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
+        StaticLevelGenerator.drawTurtles(game, platforms, 3)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 130, 45, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 230)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_19(game):
         """Nível 19 - Progressão com tartarugas (102 plataformas)"""
         platforms = []
         x_pos = 20
+        initial_y = HEIGHT - 120
+        y_pos = initial_y
         for i in range(102):
-            y_pos = HEIGHT - (120 + (i % 13) * 40 + (i // 13) * 60)
+            y_pos -= 125
+            if y_pos < StaticLevelGenerator.limit_platform_yTop:
+                y_pos = initial_y
             platforms.append((x_pos, y_pos, 40, 20))
             x_pos += 80 + (i % 10) * 0
 
@@ -1342,32 +861,21 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar tartarugas (1 a cada 2 plataformas)
-        for i in range(2, len(platforms), 2):
-            if i < len(platforms):
-                platform = platforms[i]
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    game.turtle_images,
-                )
-                game.turtles.append(turtle)
+        # Adicionar tartarugas (1 a cada 3 plataformas)
+        StaticLevelGenerator.drawTurtles(game, platforms, 3)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 120, 40, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 220)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_20(game):
         """Nível 20 - Máxima dificuldade com tartarugas (110 plataformas)"""
         platforms = []
         x_pos = 10
-        for i in range(110):
-            y_pos = HEIGHT - (110 + (i % 15) * 35 + (i // 15) * 65)
+        initial_y = HEIGHT - 120
+        y_pos = initial_y
+        for i in range(111):
+            y_pos -= 125
+            if y_pos < StaticLevelGenerator.limit_platform_yTop:
+                y_pos = initial_y
             platforms.append((x_pos, y_pos, 35, 20))
             x_pos += 75
 
@@ -1376,25 +884,9 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         # Adicionar tartarugas (máxima quantidade - 1 por plataforma)
-        turtle_images = game.turtle_images if hasattr(game, "turtle_images") else None
+        StaticLevelGenerator.drawTurtles(game, platforms, 2)
 
-        for i, platform in enumerate(platforms):
-            if i % 1 == 0:  # Uma tartaruga por plataforma
-                turtle = Turtle(
-                    platform[0],
-                    platform[1] - 30,
-                    platform[0],
-                    platform[0] + platform[2],
-                    turtle_images,
-                )
-                game.turtles.append(turtle)
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = x_pos + 100
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 110, 35, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 210)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_21(game):
         """Nível 21 - Início dos morcegos e aranhas (111 plataformas) - Padrão aleatório"""
@@ -1518,27 +1010,10 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar aranhas (1 a cada 4 plataformas - padrão da fase 11)
-        for i in range(4, len(platforms), 4):
-            if i < len(platforms):
-                platform = platforms[i]
-                top_limit = platform[1] - 100
-                bottom_limit = platform[1] - 30
-                spider = Spider(
-                    platform[0] + platform[2] // 2,
-                    top_limit,
-                    top_limit,
-                    bottom_limit,
-                    game.spider_images,
-                )
-                game.spiders.append(spider)
+        # Adicionar aranhas (1 a cada 7 plataformas - padrão da fase 11)
+        StaticLevelGenerator.drawSpiders(game, platforms, 7)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 13560
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 200)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_22(game):
         """Nível 22 - Progressão com morcegos e aranhas (112 plataformas) - Padrão manual como fase 21"""
@@ -1672,27 +1147,10 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar aranhas (1 a cada 3 plataformas - padrão da fase 12)
-        for i in range(3, len(platforms), 3):
-            if i < len(platforms):
-                platform = platforms[i]
-                top_limit = platform[1] - 100
-                bottom_limit = platform[1] - 30
-                spider = Spider(
-                    platform[0] + platform[2] // 2,
-                    top_limit,
-                    top_limit,
-                    bottom_limit,
-                    game.spider_images,
-                )
-                game.spiders.append(spider)
+        # Adicionar aranhas (1 a cada 6 plataformas - padrão da fase 12)
+        StaticLevelGenerator.drawSpiders(game, platforms, 6)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 14760
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 200)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_23(game):
         """Nível 23 - Mais aranhas (113 plataformas) - Padrão manual como fase 21"""
@@ -1828,27 +1286,10 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar aranhas (1 a cada 4 plataformas - seguindo padrão do nível 13)
-        for i in range(4, len(platforms), 4):  # Começar do índice 4 (5ª plataforma)
-            if i < len(platforms):
-                platform = platforms[i]
-                top_limit = platform[1] - 100
-                bottom_limit = platform[1] - 30
-                spider = Spider(
-                    platform[0] + platform[2] // 2,
-                    top_limit,
-                    top_limit,
-                    bottom_limit,
-                    game.spider_images,
-                )
-                game.spiders.append(spider)
+        # Adicionar aranhas (1 a cada 5 plataformas - seguindo padrão do nível 13)
+        StaticLevelGenerator.drawSpiders(game, platforms, 5)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 15000
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 200)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_24(game):
         """Nível 24 - Dificuldade crescente (114 plataformas) - Padrão manual como fase 21"""
@@ -1985,27 +1426,10 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão da fase 14)
-        for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
-            if i < len(platforms):
-                platform = platforms[i]
-                top_limit = platform[1] - 100
-                bottom_limit = platform[1] - 30
-                spider = Spider(
-                    platform[0] + platform[2] // 2,
-                    top_limit,
-                    top_limit,
-                    bottom_limit,
-                    game.spider_images,
-                )
-                game.spiders.append(spider)
+        # Adicionar aranhas (1 a cada 5 plataformas - seguindo padrão da fase 14)
+        StaticLevelGenerator.drawSpiders(game, platforms, 5)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 15120
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 200)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_25(game):
         """Nível 25 - Máxima dificuldade (115 plataformas) - Padrão manual como fase 21"""
@@ -2143,27 +1567,10 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão da fase 15)
-        for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
-            if i < len(platforms):
-                platform = platforms[i]
-                top_limit = platform[1] - 100
-                bottom_limit = platform[1] - 30
-                spider = Spider(
-                    platform[0] + platform[2] // 2,
-                    top_limit,
-                    top_limit,
-                    bottom_limit,
-                    game.spider_images,
-                )
-                game.spiders.append(spider)
+        # Adicionar aranhas (1 a cada 4 plataformas - seguindo padrão da fase 15)
+        StaticLevelGenerator.drawSpiders(game, platforms, 4)
 
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 15240
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 200)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_26(game):
         """Nível 26 - Introdução dos morcegos (116 plataformas) - Padrão manual como fase 21"""
@@ -2302,29 +1709,10 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar aranhas (1 a cada 3 plataformas - seguindo padrão da fase 16)
-        for i in range(3, len(platforms), 3):
-            if i < len(platforms):
-                platform = platforms[i]
-                top_limit = platform[1] - 100
-                bottom_limit = platform[1] - 30
-                spider = Spider(
-                    platform[0] + platform[2] // 2,
-                    top_limit,
-                    top_limit,
-                    bottom_limit,
-                    game.spider_images,
-                )
-                game.spiders.append(spider)
+        # Adicionar aranhas (1 a cada 4 plataformas - seguindo padrão da fase 16)
+        StaticLevelGenerator.drawSpiders(game, platforms, 4)
 
-        # Nível 26 corresponde ao nível 16 - morcegos são gerados dinamicamente pelo sistema
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 15360
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 100, 30, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 200)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_27(game):
         """Nível 27 - Mais morcegos (117 plataformas) - Padrão escadinha como nível 21"""
@@ -2469,30 +1857,10 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão do nível 17)
-        for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
-            if i < len(platforms):
-                platform = platforms[i]
-                top_limit = platform[1] - 70
-                bottom_limit = platform[1] - 30
-                spider = Spider(
-                    platform[0] + platform[2] // 2,
-                    top_limit,
-                    top_limit,
-                    bottom_limit,
-                    game.spider_images,
-                )
-                game.spiders.append(spider)
+        # Adicionar aranhas (1 a cada 3 plataformas - seguindo padrão do nível 17)
+        StaticLevelGenerator.drawSpiders(game, platforms, 3)
 
-        # Nível 27 corresponde ao nível 17 - morcegos são gerados dinamicamente pelo sistema
-        # Não adicionar morcegos estáticos aqui
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 15840
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 70, 18, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 170)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_28(game):
         """Nível 28 - Combinação intensa (118 plataformas) - Padrão escadinha como nível 21"""
@@ -2638,30 +2006,9 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar aranhas (1 a cada 2 plataformas - seguindo padrão do nível 18)
-        for i in range(2, len(platforms), 2):  # Começar do índice 2 (3ª plataforma)
-            if i < len(platforms):
-                platform = platforms[i]
-                top_limit = platform[1] - 65
-                bottom_limit = platform[1] - 30
-                spider = Spider(
-                    platform[0] + platform[2] // 2,
-                    top_limit,
-                    top_limit,
-                    bottom_limit,
-                    game.spider_images,
-                )
-                game.spiders.append(spider)
+        StaticLevelGenerator.drawSpiders(game, platforms, 3)
 
-        # Nível 28 corresponde ao nível 18 - morcegos são gerados dinamicamente pelo sistema
-        # Não adicionar morcegos estáticos aqui
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 15960
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 65, 16, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 165)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_29(game):
         """Nível 29 - Quase impossível (119 plataformas) - Padrão escadinha como nível 21"""
@@ -2808,29 +2155,10 @@ class StaticLevelGenerator:
 
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar aranhas (1 por plataforma - seguindo padrão do nível 19)
-        for i, platform in enumerate(platforms):
-            if i % 1 == 0:
-                top_limit = platform[1] - 60
-                bottom_limit = platform[1] - 30
-                spider = Spider(
-                    platform[0] + platform[2] // 2,
-                    top_limit,
-                    top_limit,
-                    bottom_limit,
-                    game.spider_images,
-                )
-                game.spiders.append(spider)
+        # Adicionar aranhas (3 por plataforma - seguindo padrão do nível 19)
+        StaticLevelGenerator.drawSpiders(game, platforms, 3)
 
-        # Nível 29 corresponde ao nível 19 - morcegos são gerados dinamicamente pelo sistema
-        # Não adicionar morcegos estáticos aqui
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 16080
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 60, 14, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 160)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_30(game):
         """Nível 30 - FINAL BOSS (120 plataformas) - Padrão escadinha como nível 21"""
@@ -2977,29 +2305,10 @@ class StaticLevelGenerator:
         StaticLevelGenerator.drawPlatforms(game, platforms)
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
-        # Adicionar aranhas (1 por plataforma - seguindo padrão do nível 20)
-        for i, platform in enumerate(platforms):
-            if i % 1 == 0:
-                top_limit = platform[1] - 55
-                bottom_limit = platform[1] - 30
-                spider = Spider(
-                    platform[0] + platform[2] // 2,
-                    top_limit,
-                    top_limit,
-                    bottom_limit,
-                    game.spider_images,
-                )
-                game.spiders.append(spider)
+        # Adicionar aranhas (2 por plataforma - seguindo padrão do nível 20)
+        StaticLevelGenerator.drawSpiders(game, platforms, 2)
 
-        # Nível 30 corresponde ao nível 20 - morcegos são gerados dinamicamente pelo sistema
-        # Não adicionar morcegos estáticos aqui
-
-        # Adicionar plataforma embaixo da bandeira
-        final_x = 16200
-        game.platforms.append(
-            Platform(final_x, HEIGHT - 55, 12, 20, game.platform_texture)
-        )
-        game.flag = Flag(final_x + 20, HEIGHT - 155)
+        StaticLevelGenerator.drawFlag(game, platforms)
 
     @staticmethod
     def putPlayerInFirstPlatform(game):
@@ -3013,9 +2322,43 @@ class StaticLevelGenerator:
         game.player.on_ground = True
 
     @staticmethod
-    def drawPlatforms(game, platforms, texture):
+    def drawPlatforms(game, platforms, texture=None):
         if not texture:
             texture = game.platform_texture
 
         for x, y, w, h in platforms:
             game.platforms.append(Platform(x, y, w, h, texture))
+
+    @staticmethod
+    def drawFlag(game, platforms):
+        last_platform = platforms[-1]  # Última plataforma da lista
+        previous_platform = platforms[-2]  # Penúltima plataforma da lista
+        x_gap = last_platform[0] - previous_platform[0]
+        y_gap = last_platform[1] - previous_platform[1]
+
+        final_x = last_platform[0] + x_gap  # x + width + 100
+        final_y = last_platform[1] + y_gap  # y + gap
+        if final_y > StaticLevelGenerator.limit_platform_y:
+            final_y = last_platform[1] - y_gap  # y - gap
+        if y_gap < 0 and final_y < StaticLevelGenerator.limit_platform_yTop:
+            final_y = last_platform[1] - y_gap
+
+        platform_width = last_platform[2]
+        game.platforms.append(
+            Platform(final_x, final_y, platform_width, 20, game.platform_texture)
+        )
+        game.flag = Flag(final_x + (platform_width / 2) - 20, final_y - 100)
+
+    @staticmethod
+    def drawSpiders(game, platforms, factor):
+        for i in range(factor, len(platforms), factor):
+            if i < len(platforms):
+                platform = platforms[i]
+                LevelEnemy.drawSpider(game, platform)
+
+    @staticmethod
+    def drawTurtles(game, platforms, factor):
+        for i in range(factor, len(platforms), factor):
+            if i < len(platforms):
+                platform = platforms[i]
+                LevelEnemy.drawTurtle(game, platform)
