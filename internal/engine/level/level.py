@@ -6,6 +6,7 @@ from internal.resources.cache import ResourceCache
 from internal.engine.level.generator.static import StaticLevelGenerator
 from internal.resources.player import Player
 from internal.resources.enemies.turtle import Turtle
+from internal.resources.extra_life import ExtraLife
 
 
 class Level:
@@ -220,6 +221,74 @@ class Level:
 
         # Criar plataformas baseadas no nível
         Level.create_level_platforms(game, game.current_level)
+
+        # Resetar e posicionar item de vida extra
+        game.extra_lives = []
+        # Não reposicionar vida extra se já foi coletada neste nível
+        if not hasattr(game, "collected_extra_life_levels") or (
+            game.current_level not in game.collected_extra_life_levels
+        ):
+            Level.place_extra_life(game)
+
+    def place_extra_life(game):
+        """Posiciona um item de vida em uma plataforma, exigindo um salto para alcançar"""
+        if not hasattr(game, "platforms") or not game.platforms:
+            return
+
+        # Ordenar plataformas por posição X
+        platforms_sorted = sorted(game.platforms, key=lambda p: p.x)
+
+        # Calcular o meio da fase em X
+        min_x = platforms_sorted[0].x
+        max_x = max(p.x + p.width for p in platforms_sorted)
+        mid_x = (min_x + max_x) / 2
+
+        # Escolher o vão cujo centro esteja mais próximo do meio da fase
+        best = None  # (a, b, gap_left, gap_width, distance)
+        for i in range(len(platforms_sorted) - 1):
+            a = platforms_sorted[i]
+            b = platforms_sorted[i + 1]
+            gap_left = a.x + a.width
+            gap_right = b.x
+            gap_width = gap_right - gap_left
+            if gap_width >= 60:
+                center_x = gap_left + gap_width / 2
+                distance = abs(center_x - mid_x)
+                if best is None or distance < best[4]:
+                    best = (a, b, gap_left, gap_width, distance)
+
+        if best is not None:
+            a, b, gap_left, gap_width, _ = best
+            vertical_base = min(a.y, b.y)
+            item_x = int(gap_left + gap_width / 2 - 12)
+            # Aumentar dificuldade: maior distância vertical das plataformas
+            extra_offset = int(140 + min(60, gap_width * 0.25))
+            item_y = int(vertical_base - extra_offset)
+            # Garantir que não saia muito do topo
+            if item_y < 80:
+                item_y = 80
+            # Garantir pelo menos 120px acima da plataforma mais alta do par
+            highest_platform_y = min(a.y, b.y)
+            if highest_platform_y - item_y < 120:
+                item_y = highest_platform_y - 120
+                if item_y < 80:
+                    item_y = 80
+            item_image = getattr(game, "extra_life_img", None)
+            game.extra_lives.append(ExtraLife(item_x, item_y, image=item_image))
+            placed = True
+        else:
+            placed = False
+
+        if not placed:
+            # Fallback: posicionar acima de uma plataforma central
+            idx = max(1, min(len(platforms_sorted) // 2, len(platforms_sorted) - 2))
+            platform = platforms_sorted[idx]
+            item_x = int(platform.x + platform.width // 2 - 12)
+            item_y = int(platform.y - 140)
+            if item_y < 80:
+                item_y = 80
+            item_image = getattr(game, "extra_life_img", None)
+            game.extra_lives.append(ExtraLife(item_x, item_y, image=item_image))
 
     def drawTurtle(game, platform):
         turtle = Turtle(
