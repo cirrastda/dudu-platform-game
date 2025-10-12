@@ -32,6 +32,9 @@ class Image:
             self.platform_texture_city = cache.get_image(
                 "imagens/texturas/metal.jpg", (20, 20)
             )
+            # Textura padrão para a plataforma da bandeira
+            # Usa a mesma textura das plataformas comuns por padrão
+            self.platform_texture_flag = self.platform_texture
 
             # Carregar imagens dos pássaros usando cache
             self.bird_img1 = cache.get_image("imagens/inimigos/bird1.png", (40, 30))
