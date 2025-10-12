@@ -2,6 +2,7 @@ import pygame
 from internal.utils.constants import *
 from internal.utils.functions import *
 from internal.resources.cache import ResourceCache
+from internal.engine.screen import Screen
 from internal.engine.ranking import RankingManager
 from internal.engine.state import GameState
 from internal.resources.player import Player
@@ -30,7 +31,7 @@ ENV_CONFIG = load_env_config()
 
 class Game:
     def __init__(self):
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        Screen.init(self)
         pygame.display.set_caption("Jump and Hit")
         self.clock = pygame.time.Clock()
         self.state = GameState.SPLASH
@@ -150,7 +151,9 @@ class Game:
 
         # Inicializar variáveis de robôs (níveis 31-40)
         self.robots = []
-        self.orphan_missiles = []  # Mísseis de robôs mortos que continuam visíveis mas sem hitbox
+        self.orphan_missiles = (
+            []
+        )  # Mísseis de robôs mortos que continuam visíveis mas sem hitbox
 
         # Ajustar dificuldade baseada no nível
         self.birds_per_spawn = Level.get_birds_per_spawn(self.current_level)
@@ -832,7 +835,9 @@ class Game:
                             if hasattr(self, "airplane_img1")
                             else None
                         )
-                        self.airplanes.append(Airplane(airplane_x, airplane_y, airplane_images))
+                        self.airplanes.append(
+                            Airplane(airplane_x, airplane_y, airplane_images)
+                        )
                     self.airplane_spawn_timer = 0
 
             # Atualizar pássaros, morcegos e aviões com culling (remover objetos muito distantes da câmera)
@@ -923,7 +928,9 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 100  # Aviões valem mais pontos por serem maiores
+                            self.score += (
+                                100  # Aviões valem mais pontos por serem maiores
+                            )
                             # Verificar se merece vida extra
                             self.check_extra_life()
                             break
@@ -1035,7 +1042,9 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 80  # Robôs valem mais pontos por serem mais difíceis
+                            self.score += (
+                                80  # Robôs valem mais pontos por serem mais difíceis
+                            )
                             # Verificar se merece vida extra
                             self.check_extra_life()
                             break
@@ -1057,7 +1066,9 @@ class Game:
                                 self.check_extra_life()
                             else:
                                 # Colidiu com míssil, ativar animação de hit
-                                if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
+                                if (
+                                    not self.player.is_hit
+                                ):  # Só aplicar hit se não estiver já em estado de hit
                                     self.player.take_hit()
                                     # Criar explosão na posição do míssil
                                     explosion = self.get_pooled_explosion(
@@ -1068,7 +1079,9 @@ class Game:
                                     self.lives -= 1
                                     if self.lives <= 0:
                                         # Sem vidas, game over - verificar se entra no ranking
-                                        if self.ranking_manager.is_high_score(self.score):
+                                        if self.ranking_manager.is_high_score(
+                                            self.score
+                                        ):
                                             self.state = GameState.ENTER_NAME
                                         else:
                                             self.state = GameState.GAME_OVER
@@ -1219,7 +1232,9 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição do avião
                                 self.explosions.append(
-                                    Explosion(airplane.x, airplane.y, self.explosion_image)
+                                    Explosion(
+                                        airplane.x, airplane.y, self.explosion_image
+                                    )
                                 )
                                 self.airplanes.remove(airplane)
                                 self.lives -= 1
@@ -1523,7 +1538,9 @@ class Game:
             else:
                 for airplane in self.airplanes:
                     airplane_x = airplane.x - self.camera_x
-                    if airplane_x > -60 and airplane_x < WIDTH:  # Só desenhar se visível (aviões são maiores)
+                    if (
+                        airplane_x > -60 and airplane_x < WIDTH
+                    ):  # Só desenhar se visível (aviões são maiores)
                         # Salvar posição original do avião
                         original_airplane_x = airplane.x
                         # Ajustar posição para câmera
@@ -1572,11 +1589,13 @@ class Game:
                         robot.draw(self.screen)
                         # Restaurar posição original
                         robot.x = original_robot_x
-                        
+
                         # Desenhar mísseis do robô com offset da câmera
                         for missile in robot.missiles:
                             missile_x = missile.x - self.camera_x
-                            if missile_x > -20 and missile_x < WIDTH + 20:  # Só desenhar se visível
+                            if (
+                                missile_x > -20 and missile_x < WIDTH + 20
+                            ):  # Só desenhar se visível
                                 # Salvar posição original do míssil
                                 original_missile_x = missile.x
                                 # Ajustar posição para câmera
@@ -1589,7 +1608,9 @@ class Game:
                 # Desenhar mísseis órfãos (de robôs mortos) com offset da câmera
                 for missile in self.orphan_missiles:
                     missile_x = missile.x - self.camera_x
-                    if missile_x > -20 and missile_x < WIDTH + 20:  # Só desenhar se visível
+                    if (
+                        missile_x > -20 and missile_x < WIDTH + 20
+                    ):  # Só desenhar se visível
                         # Salvar posição original do míssil
                         original_missile_x = missile.x
                         # Ajustar posição para câmera
