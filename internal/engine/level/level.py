@@ -86,6 +86,8 @@ class Level:
             return "imagens/fundo5.png"
         elif 21 <= level <= 30:
             return "imagens/fundo7.png"
+        elif 31 <= level <= 40:
+            return "imagens/fundoMundo4.2.jpg"
         else:
             # Fallback para níveis fora do range esperado
             return "imagens/fundo6.png"
@@ -157,6 +159,26 @@ class Level:
             StaticLevelGenerator.create_level_29(self)
         elif level == 30:
             StaticLevelGenerator.create_level_30(self)
+        elif level == 31:
+            StaticLevelGenerator.create_level_31(self)
+        elif level == 32:
+            StaticLevelGenerator.create_level_32(self)
+        elif level == 33:
+            StaticLevelGenerator.create_level_33(self)
+        elif level == 34:
+            StaticLevelGenerator.create_level_34(self)
+        elif level == 35:
+            StaticLevelGenerator.create_level_35(self)
+        elif level == 36:
+            StaticLevelGenerator.create_level_36(self)
+        elif level == 37:
+            StaticLevelGenerator.create_level_37(self)
+        elif level == 38:
+            StaticLevelGenerator.create_level_38(self)
+        elif level == 39:
+            StaticLevelGenerator.create_level_39(self)
+        elif level == 40:
+            StaticLevelGenerator.create_level_40(self)
 
     def init_level(game):
         """Inicializar o nível atual"""
@@ -174,6 +196,8 @@ class Level:
         game.turtles = []
         # Reinicializar sistema de aranhas
         game.spiders = []
+        # Reinicializar sistema de robôs
+        game.robots = []
         # Reinicializar explosões
         game.explosions = []
 

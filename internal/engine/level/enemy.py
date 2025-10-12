@@ -1,5 +1,7 @@
 from internal.resources.enemies.turtle import Turtle
 from internal.resources.enemies.spider import Spider
+from internal.resources.enemies.robot import Robot
+from internal.resources.enemies.airplane import Airplane
 
 
 class LevelEnemy:
@@ -24,3 +26,28 @@ class LevelEnemy:
             game.spider_images,
         )
         game.spiders.append(spider)
+
+    def drawRobot(game, platform):
+        robot = Robot(
+            platform[0],
+            platform[1] - 57,
+            platform[0],
+            platform[0] + platform[2] - 57,  # Subtrair largura do robô (57px)
+            game.robot_images,
+            game.missile_images,
+        )
+        game.robots.append(robot)
+
+    def drawAirplanes(game, platforms, factor):
+        for i in range(factor, len(platforms), factor):
+            if i < len(platforms):
+                platform = platforms[i]
+                LevelEnemy.drawAirplane(game, platform)
+
+    def drawAirplane(game, platform):
+        airplane = Airplane(
+            platform[0] + platform[2] + 100,  # Spawnar à direita da plataforma
+            platform[1] - 80,  # Altura acima da plataforma
+            game.airplane_images,
+        )
+        game.airplanes.append(airplane)

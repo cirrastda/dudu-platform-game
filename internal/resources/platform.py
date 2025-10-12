@@ -67,3 +67,9 @@ class Platform:
             # Fallback para cor sólida
             pygame.draw.rect(screen, BROWN, self.rect)
             pygame.draw.rect(screen, BLACK, self.rect, 2)
+
+    def get_platform_texture(game, level):
+        if level <= 30:
+            return game.image_manager.platform_texture
+        elif level <= 40:
+            return game.image_manager.platform_texture_city

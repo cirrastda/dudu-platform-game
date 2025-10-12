@@ -29,6 +29,9 @@ class Image:
             self.platform_texture = cache.get_image(
                 "imagens/texturas/platform2.png", (20, 20)
             )
+            self.platform_texture_city = cache.get_image(
+                "imagens/texturas/metal.jpg", (20, 20)
+            )
 
             # Carregar imagens dos pássaros usando cache
             self.bird_img1 = cache.get_image("imagens/inimigos/bird1.png", (40, 30))
@@ -38,6 +41,11 @@ class Image:
             self.bat_img1 = cache.get_image("imagens/inimigos/bat1.png", (40, 30))
             self.bat_img2 = cache.get_image("imagens/inimigos/bat2.png", (40, 30))
             self.bat_img3 = cache.get_image("imagens/inimigos/bat3.png", (40, 30))
+
+            # Carregar imagens dos aviões usando cache
+            self.airplane_img1 = cache.get_image("imagens/inimigos/airplane1.png", (50, 30))
+            self.airplane_img2 = cache.get_image("imagens/inimigos/airplane2.png", (50, 30))
+            self.airplane_img3 = cache.get_image("imagens/inimigos/airplane3.png", (50, 30))
 
             # Carregar imagens das tartarugas usando cache
             try:
@@ -94,6 +102,77 @@ class Image:
             except pygame.error as e:
                 print(f"Erro ao carregar imagens das aranhas: {e}")
                 self.spider_images = None
+
+            # Carregar imagens dos robôs usando cache
+            try:
+                # Imagens de movimento
+                self.robot_right1 = cache.get_image(
+                    "imagens/inimigos/robot-right1.png", (57, 57)
+                )
+                self.robot_right2 = cache.get_image(
+                    "imagens/inimigos/robot-right2.png", (57, 57)
+                )
+                self.robot_right3 = cache.get_image(
+                    "imagens/inimigos/robot-right3.png", (57, 57)
+                )
+                self.robot_left1 = cache.get_image(
+                    "imagens/inimigos/robot-left1.png", (57, 57)
+                )
+                self.robot_left2 = cache.get_image(
+                    "imagens/inimigos/robot-left2.png", (57, 57)
+                )
+                self.robot_left3 = cache.get_image(
+                    "imagens/inimigos/robot-left3.png", (57, 57)
+                )
+                
+                # Imagens de tiro
+                self.robot_shot_right1 = cache.get_image(
+                    "imagens/inimigos/robot-shot-right1.png", (57, 57)
+                )
+                self.robot_shot_right2 = cache.get_image(
+                    "imagens/inimigos/robot-shot-right2.png", (57, 57)
+                )
+                self.robot_shot_right3 = cache.get_image(
+                    "imagens/inimigos/robot-shot-right3.png", (57, 57)
+                )
+                self.robot_shot_left1 = cache.get_image(
+                    "imagens/inimigos/robot-shot-left1.png", (57, 57)
+                )
+                self.robot_shot_left2 = cache.get_image(
+                    "imagens/inimigos/robot-shot-left2.png", (57, 57)
+                )
+                self.robot_shot_left3 = cache.get_image(
+                    "imagens/inimigos/robot-shot-left3.png", (57, 57)
+                )
+
+                # Organizar imagens em dicionário para facilitar o uso
+                self.robot_images = {
+                    "left": [self.robot_left1, self.robot_left2, self.robot_left3],
+                    "right": [self.robot_right1, self.robot_right2, self.robot_right3],
+                    "shot_left": [self.robot_shot_left1, self.robot_shot_left2, self.robot_shot_left3],
+                    "shot_right": [self.robot_shot_right1, self.robot_shot_right2, self.robot_shot_right3],
+                }
+            except pygame.error as e:
+                print(f"Erro ao carregar imagens dos robôs: {e}")
+                self.robot_images = None
+
+            # Carregar imagens dos mísseis usando cache
+            try:
+                self.missile_right = cache.get_image(
+                    "imagens/elementos/missil-right.png", (20, 8)
+                )
+                self.missile_left = cache.get_image(
+                    "imagens/elementos/missil-left.png", (20, 8)
+                )
+                
+                # Organizar imagens em dicionário para facilitar o uso
+                self.missile_images = {
+                    "right": self.missile_right,
+                    "left": self.missile_left,
+                }
+            except pygame.error as e:
+                print(f"Erro ao carregar imagens dos mísseis: {e}")
+                self.missile_images = None
 
             # Carregar imagem do tiro usando cache
             self.bullet_img = cache.get_image("imagens/elementos/tiro.png", (15, 8))

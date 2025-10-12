@@ -9,8 +9,10 @@ from internal.resources.platform import Platform
 from internal.resources.flag import Flag
 from internal.resources.enemies.bird import Bird
 from internal.resources.enemies.bat import Bat
+from internal.resources.enemies.airplane import Airplane
 from internal.resources.enemies.turtle import Turtle
 from internal.resources.enemies.spider import Spider
+from internal.resources.enemies.robot import Robot
 from internal.resources.bullet import Bullet
 from internal.resources.explosion import Explosion
 from internal.engine.level.level import Level
@@ -41,7 +43,7 @@ class Game:
             try:
                 self.current_level = int(ENV_CONFIG["initial-stage"])
                 # Validar se o nível está dentro do range válido
-                if self.current_level < 1 or self.current_level > 30:
+                if self.current_level < 1 or self.current_level > 40:
                     print(
                         f"Aviso: initial-stage {self.current_level} inválido. Usando nível 1."
                     )
@@ -60,7 +62,7 @@ class Game:
         self.ranking_manager = RankingManager()
         self.player_name = ""
         self.name_input_active = False
-        self.max_levels = 30
+        self.max_levels = 40
 
         Mixer.init(pygame)
 
@@ -139,6 +141,16 @@ class Game:
         self.bat_spawn_timer = 0
         self.bats_per_spawn = 1
         self.bat_spawn_interval = 180
+
+        # Inicializar variáveis de spawn de aviões (níveis 31+)
+        self.airplanes = []
+        self.airplane_spawn_timer = 0
+        self.airplanes_per_spawn = 1
+        self.airplane_spawn_interval = 150
+
+        # Inicializar variáveis de robôs (níveis 31-40)
+        self.robots = []
+        self.orphan_missiles = []  # Mísseis de robôs mortos que continuam visíveis mas sem hitbox
 
         # Ajustar dificuldade baseada no nível
         self.birds_per_spawn = Level.get_birds_per_spawn(self.current_level)
@@ -347,7 +359,7 @@ class Game:
                                     # Validar se o nível está dentro do range válido
                                     if (
                                         self.current_level < 1
-                                        or self.current_level > 20
+                                        or self.current_level > 40
                                     ):
                                         self.current_level = 1
                                 except (ValueError, TypeError):
@@ -398,7 +410,7 @@ class Game:
                         try:
                             self.current_level = int(ENV_CONFIG["initial-stage"])
                             # Validar se o nível está dentro do range válido
-                            if self.current_level < 1 or self.current_level > 20:
+                            if self.current_level < 1 or self.current_level > 40:
                                 self.current_level = 1
                         except (ValueError, TypeError):
                             self.current_level = 1
@@ -493,7 +505,7 @@ class Game:
                                         # Validar se o nível está dentro do range válido
                                         if (
                                             self.current_level < 1
-                                            or self.current_level > 20
+                                            or self.current_level > 40
                                         ):
                                             self.current_level = 1
                                     except (ValueError, TypeError):
@@ -561,7 +573,7 @@ class Game:
                                     # Validar se o nível está dentro do range válido
                                     if (
                                         self.current_level < 1
-                                        or self.current_level > 20
+                                        or self.current_level > 40
                                     ):
                                         self.current_level = 1
                                 except (ValueError, TypeError):
@@ -667,7 +679,7 @@ class Game:
                 try:
                     self.current_level = int(ENV_CONFIG["initial-stage"])
                     # Validar se o nível está dentro do range válido
-                    if self.current_level < 1 or self.current_level > 20:
+                    if self.current_level < 1 or self.current_level > 40:
                         print(
                             f"Aviso: initial-stage {self.current_level} inválido. Usando nível 1."
                         )
@@ -802,8 +814,28 @@ class Game:
                         )
                         self.bats.append(Bat(bat_x, bat_y, bat_images))
                     self.bat_spawn_timer = 0
+            else:
+                # Spawn de novos aviões (níveis 31+)
+                self.airplane_spawn_timer += 1
+                if self.airplane_spawn_timer >= self.airplane_spawn_interval:
+                    # Spawnar múltiplos aviões baseado no nível
+                    import random
 
-            # Atualizar pássaros e morcegos com culling (remover objetos muito distantes da câmera)
+                    for i in range(self.airplanes_per_spawn):
+                        airplane_y = random.randint(HEIGHT // 4, HEIGHT - 150)
+                        # Spawn sempre à direita da tela visível, independente da posição da câmera
+                        airplane_x = (
+                            self.camera_x + WIDTH + 50 + (i * 120)
+                        )  # Espaçar aviões um pouco mais
+                        airplane_images = (
+                            (self.airplane_img1, self.airplane_img2, self.airplane_img3)
+                            if hasattr(self, "airplane_img1")
+                            else None
+                        )
+                        self.airplanes.append(Airplane(airplane_x, airplane_y, airplane_images))
+                    self.airplane_spawn_timer = 0
+
+            # Atualizar pássaros, morcegos e aviões com culling (remover objetos muito distantes da câmera)
             if self.current_level <= 20:
                 visible_birds = []
                 for bird in self.birds:
@@ -815,7 +847,7 @@ class Game:
                         ):
                             visible_birds.append(bird)
                 self.birds = visible_birds
-            else:
+            elif self.current_level <= 30:
                 visible_bats = []
                 for bat in self.bats:
                     if bat.update(self.camera_x):
@@ -826,6 +858,17 @@ class Game:
                         ):
                             visible_bats.append(bat)
                 self.bats = visible_bats
+            else:
+                visible_airplanes = []
+                for airplane in self.airplanes:
+                    if airplane.update(self.camera_x):
+                        # Culling: manter apenas aviões próximos à área visível
+                        if (
+                            airplane.x > self.camera_x - 200
+                            and airplane.x < self.camera_x + WIDTH + 200
+                        ):
+                            visible_airplanes.append(airplane)
+                self.airplanes = visible_airplanes
 
             # Atualizar tartarugas e aranhas com culling
             if self.current_level <= 20:
@@ -845,6 +888,13 @@ class Game:
                     ):
                         spider.update()
 
+            # Atualizar robôs (níveis 31-40)
+            if 31 <= self.current_level <= 40:
+                for robot in self.robots:
+                    # Atualizar todos os robôs para manter o sistema de tiro ativo
+                    # passando a posição da câmera para remoção correta dos mísseis
+                    robot.update(self.camera_x)
+
             # Atualizar explosões com pool
             active_explosions = []
             for explosion in self.explosions:
@@ -855,7 +905,7 @@ class Game:
                     self.return_explosion_to_pool(explosion)
             self.explosions = active_explosions
 
-            # Verificar colisão entre tiros e pássaros/morcegos
+            # Verificar colisão entre tiros e pássaros/morcegos/aviões
             if self.current_level <= 20:
                 for bullet in self.player.bullets[:]:
                     for bird in self.birds[:]:
@@ -873,11 +923,11 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 50
+                            self.score += 100  # Aviões valem mais pontos por serem maiores
                             # Verificar se merece vida extra
                             self.check_extra_life()
                             break
-            else:
+            elif self.current_level <= 30:
                 for bullet in self.player.bullets[:]:
                     for bat in self.bats[:]:
                         if bullet.rect.colliderect(bat.rect):
@@ -887,6 +937,27 @@ class Game:
                             # Criar explosão usando pool
                             explosion = self.get_pooled_explosion(
                                 bat.x, bat.y, self.explosion_image
+                            )
+                            self.explosions.append(explosion)
+                            # Retornar bala ao pool
+                            self.return_bullet_to_pool(bullet)
+                            # Tocar som de explosão
+                            self.sound_effects.play_sound_effect("explosion")
+                            # Adicionar pontos
+                            self.score += 75  # Morcegos valem mais pontos
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                            break
+            else:
+                for bullet in self.player.bullets[:]:
+                    for airplane in self.airplanes[:]:
+                        if bullet.rect.colliderect(airplane.rect):
+                            # Tiro acertou avião
+                            self.player.bullets.remove(bullet)
+                            self.airplanes.remove(airplane)
+                            # Criar explosão usando pool
+                            explosion = self.get_pooled_explosion(
+                                airplane.x, airplane.y, self.explosion_image
                             )
                             self.explosions.append(explosion)
                             # Retornar bala ao pool
@@ -943,7 +1014,76 @@ class Game:
                             self.check_extra_life()
                             break
 
-            # Verificar colisão e esquiva com pássaros e morcegos
+            # Verificar colisão entre tiros do jogador e robôs (níveis 31-40)
+            if 31 <= self.current_level <= 40:
+                for bullet in self.player.bullets[:]:
+                    for robot in self.robots[:]:
+                        if bullet.rect.colliderect(robot.rect):
+                            # Tiro acertou robô
+                            self.player.bullets.remove(bullet)
+                            # Transferir mísseis ativos do robô para a lista de órfãos
+                            for missile in robot.missiles:
+                                self.orphan_missiles.append(missile)
+                            self.robots.remove(robot)
+                            # Criar explosão usando pool
+                            explosion = self.get_pooled_explosion(
+                                robot.x, robot.y, self.explosion_image
+                            )
+                            self.explosions.append(explosion)
+                            # Retornar bala ao pool
+                            self.return_bullet_to_pool(bullet)
+                            # Tocar som de explosão
+                            self.sound_effects.play_sound_effect("explosion")
+                            # Adicionar pontos
+                            self.score += 80  # Robôs valem mais pontos por serem mais difíceis
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                            break
+
+            # Verificar colisão entre mísseis dos robôs e jogador (níveis 31-40)
+            if 31 <= self.current_level <= 40:
+                for robot in self.robots[:]:
+                    for missile in robot.missiles[:]:
+                        if self.player.rect.colliderect(missile.rect):
+                            if self.player.is_invulnerable:
+                                # Jogador invulnerável: explodir míssil sem causar dano
+                                explosion = self.get_pooled_explosion(
+                                    missile.x, missile.y, self.explosion_image
+                                )
+                                self.explosions.append(explosion)
+                                robot.missiles.remove(missile)
+                                self.score += 15  # Pontos bônus por destruir míssil durante invulnerabilidade
+                                # Verificar se merece vida extra
+                                self.check_extra_life()
+                            else:
+                                # Colidiu com míssil, ativar animação de hit
+                                if not self.player.is_hit:  # Só aplicar hit se não estiver já em estado de hit
+                                    self.player.take_hit()
+                                    # Criar explosão na posição do míssil
+                                    explosion = self.get_pooled_explosion(
+                                        missile.x, missile.y, self.explosion_image
+                                    )
+                                    self.explosions.append(explosion)
+                                    robot.missiles.remove(missile)
+                                    self.lives -= 1
+                                    if self.lives <= 0:
+                                        # Sem vidas, game over - verificar se entra no ranking
+                                        if self.ranking_manager.is_high_score(self.score):
+                                            self.state = GameState.ENTER_NAME
+                                        else:
+                                            self.state = GameState.GAME_OVER
+                                    # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                            break
+
+            # Atualizar mísseis órfãos (de robôs mortos) - apenas visual, sem colisão
+            if 31 <= self.current_level <= 40:
+                active_orphan_missiles = []
+                for missile in self.orphan_missiles:
+                    if missile.update(self.camera_x):
+                        active_orphan_missiles.append(missile)
+                self.orphan_missiles = active_orphan_missiles
+
+            # Verificar colisão e esquiva com pássaros, morcegos e aviões
             if self.current_level <= 20:
                 for bird in self.birds[:]:
                     # Verificar se pássaro passou perto do jogador (esquiva)
@@ -993,7 +1133,7 @@ class Game:
                                         self.state = GameState.GAME_OVER
                                 # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
-            else:
+            elif self.current_level <= 30:
                 for bat in self.bats[:]:
                     # Verificar se morcego passou perto do jogador (esquiva)
                     distance_x = abs(bat.x - self.player.x)
@@ -1033,6 +1173,55 @@ class Game:
                                     Explosion(bat.x, bat.y, self.explosion_image)
                                 )
                                 self.bats.remove(bat)
+                                self.lives -= 1
+                                if self.lives <= 0:
+                                    # Sem vidas, game over - verificar se entra no ranking
+                                    if self.ranking_manager.is_high_score(self.score):
+                                        self.state = GameState.ENTER_NAME
+                                    else:
+                                        self.state = GameState.GAME_OVER
+                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                        break
+            else:
+                for airplane in self.airplanes[:]:
+                    # Verificar se avião passou perto do jogador (esquiva)
+                    distance_x = abs(airplane.x - self.player.x)
+                    distance_y = abs(airplane.y - self.player.y)
+
+                    # Se avião passou perto (dentro de 50 pixels) e já passou do jogador
+                    if (
+                        distance_x < 50
+                        and distance_y < 60
+                        and airplane.x < self.player.x
+                        and airplane.id not in self.birds_dodged
+                    ):
+                        self.birds_dodged.add(airplane.id)
+                        self.score += 20  # Pontos por esquivar avião (mais difícil)
+                        # Verificar se merece vida extra
+                        self.check_extra_life()
+
+                    # Verificar colisão direta
+                    if self.player.rect.colliderect(airplane.rect):
+                        if self.player.is_invulnerable:
+                            # Jogador invulnerável: explodir inimigo sem causar dano
+                            self.explosions.append(
+                                Explosion(airplane.x, airplane.y, self.explosion_image)
+                            )
+                            self.airplanes.remove(airplane)
+                            self.score += 30  # Pontos bônus por destruir avião durante invulnerabilidade
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                        else:
+                            # Colidiu com avião, ativar animação de hit
+                            if (
+                                not self.player.is_hit
+                            ):  # Só aplicar hit se não estiver já em estado de hit
+                                self.player.take_hit()
+                                # Criar explosão na posição do avião
+                                self.explosions.append(
+                                    Explosion(airplane.x, airplane.y, self.explosion_image)
+                                )
+                                self.airplanes.remove(airplane)
                                 self.lives -= 1
                                 if self.lives <= 0:
                                     # Sem vidas, game over - verificar se entra no ranking
@@ -1101,6 +1290,47 @@ class Game:
                                     Explosion(spider.x, spider.y, self.explosion_image)
                                 )
                                 self.spiders.remove(spider)
+                                self.lives -= 1
+                                if self.lives <= 0:
+                                    # Sem vidas, game over - verificar se entra no ranking
+                                    if self.ranking_manager.is_high_score(self.score):
+                                        self.state = GameState.ENTER_NAME
+                                    else:
+                                        self.state = GameState.GAME_OVER
+                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                        break
+
+            # Verificar colisão com robôs (níveis 31-40)
+            if 31 <= self.current_level <= 40:
+                for robot in self.robots[:]:
+                    # Verificar colisão direta
+                    if self.player.rect.colliderect(robot.rect):
+                        if self.player.is_invulnerable:
+                            # Jogador invulnerável: explodir inimigo sem causar dano
+                            self.explosions.append(
+                                Explosion(robot.x, robot.y, self.explosion_image)
+                            )
+                            # Transferir mísseis ativos do robô para a lista de órfãos
+                            for missile in robot.missiles:
+                                self.orphan_missiles.append(missile)
+                            self.robots.remove(robot)
+                            self.score += 35  # Pontos bônus por destruir robô durante invulnerabilidade
+                            # Verificar se merece vida extra
+                            self.check_extra_life()
+                        else:
+                            # Colidiu com robô, ativar animação de hit
+                            if (
+                                not self.player.is_hit
+                            ):  # Só aplicar hit se não estiver já em estado de hit
+                                self.player.take_hit()
+                                # Criar explosão na posição do robô
+                                self.explosions.append(
+                                    Explosion(robot.x, robot.y, self.explosion_image)
+                                )
+                                # Transferir mísseis ativos do robô para a lista de órfãos
+                                for missile in robot.missiles:
+                                    self.orphan_missiles.append(missile)
+                                self.robots.remove(robot)
                                 self.lives -= 1
                                 if self.lives <= 0:
                                     # Sem vidas, game over - verificar se entra no ranking
@@ -1265,7 +1495,7 @@ class Game:
                     # Restaurar posição original
                     self.flag.x = original_x
 
-            # Desenhar pássaros e morcegos com offset da câmera
+            # Desenhar pássaros, morcegos e aviões com offset da câmera
             if self.current_level <= 20:
                 for bird in self.birds:
                     bird_x = bird.x - self.camera_x
@@ -1278,7 +1508,7 @@ class Game:
                         bird.draw(self.screen)
                         # Restaurar posição original
                         bird.x = original_bird_x
-            else:
+            elif self.current_level <= 30:
                 for bat in self.bats:
                     bat_x = bat.x - self.camera_x
                     if bat_x > -50 and bat_x < WIDTH:  # Só desenhar se visível
@@ -1290,6 +1520,18 @@ class Game:
                         bat.draw(self.screen)
                         # Restaurar posição original
                         bat.x = original_bat_x
+            else:
+                for airplane in self.airplanes:
+                    airplane_x = airplane.x - self.camera_x
+                    if airplane_x > -60 and airplane_x < WIDTH:  # Só desenhar se visível (aviões são maiores)
+                        # Salvar posição original do avião
+                        original_airplane_x = airplane.x
+                        # Ajustar posição para câmera
+                        airplane.x = airplane_x
+                        # Chamar método draw do avião
+                        airplane.draw(self.screen)
+                        # Restaurar posição original
+                        airplane.x = original_airplane_x
 
             # Desenhar tartarugas e aranhas com offset da câmera
             if self.current_level <= 20:
@@ -1316,6 +1558,46 @@ class Game:
                         spider.draw(self.screen)
                         # Restaurar posição original
                         spider.x = original_spider_x
+
+            # Desenhar robôs e seus mísseis com offset da câmera (níveis 31-40)
+            if 31 <= self.current_level <= 40:
+                for robot in self.robots:
+                    robot_x = robot.x - self.camera_x
+                    if robot_x > -50 and robot_x < WIDTH:  # Só desenhar se visível
+                        # Salvar posição original do robô
+                        original_robot_x = robot.x
+                        # Ajustar posição para câmera
+                        robot.x = robot_x
+                        # Chamar método draw do robô (que também desenha os mísseis)
+                        robot.draw(self.screen)
+                        # Restaurar posição original
+                        robot.x = original_robot_x
+                        
+                        # Desenhar mísseis do robô com offset da câmera
+                        for missile in robot.missiles:
+                            missile_x = missile.x - self.camera_x
+                            if missile_x > -20 and missile_x < WIDTH + 20:  # Só desenhar se visível
+                                # Salvar posição original do míssil
+                                original_missile_x = missile.x
+                                # Ajustar posição para câmera
+                                missile.x = missile_x
+                                # Chamar método draw do míssil
+                                missile.draw(self.screen)
+                                # Restaurar posição original
+                                missile.x = original_missile_x
+
+                # Desenhar mísseis órfãos (de robôs mortos) com offset da câmera
+                for missile in self.orphan_missiles:
+                    missile_x = missile.x - self.camera_x
+                    if missile_x > -20 and missile_x < WIDTH + 20:  # Só desenhar se visível
+                        # Salvar posição original do míssil
+                        original_missile_x = missile.x
+                        # Ajustar posição para câmera
+                        missile.x = missile_x
+                        # Chamar método draw do míssil
+                        missile.draw(self.screen)
+                        # Restaurar posição original
+                        missile.x = original_missile_x
 
             # Desenhar explosões com offset da câmera
             for explosion in self.explosions:
