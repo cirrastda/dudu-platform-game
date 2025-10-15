@@ -88,6 +88,9 @@ class Level:
             return "imagens/fundo7.png"
         elif 31 <= level <= 40:
             return "imagens/fundoMundo4.2.jpg"
+        elif 41 <= level <= 50:
+            # Mundo espacial: usar fundo do espaço
+            return "imagens/fundoEspaco.png"
         else:
             # Fallback para níveis fora do range esperado
             return "imagens/fundo6.png"
@@ -179,6 +182,26 @@ class Level:
             StaticLevelGenerator.create_level_39(self)
         elif level == 40:
             StaticLevelGenerator.create_level_40(self)
+        elif level == 41:
+            StaticLevelGenerator.create_level_41(self)
+        elif level == 42:
+            StaticLevelGenerator.create_level_42(self)
+        elif level == 43:
+            StaticLevelGenerator.create_level_43(self)
+        elif level == 44:
+            StaticLevelGenerator.create_level_44(self)
+        elif level == 45:
+            StaticLevelGenerator.create_level_45(self)
+        elif level == 46:
+            StaticLevelGenerator.create_level_46(self)
+        elif level == 47:
+            StaticLevelGenerator.create_level_47(self)
+        elif level == 48:
+            StaticLevelGenerator.create_level_48(self)
+        elif level == 49:
+            StaticLevelGenerator.create_level_49(self)
+        elif level == 50:
+            StaticLevelGenerator.create_level_50(self)
 
     def init_level(game):
         """Inicializar o nível atual"""
@@ -198,8 +221,14 @@ class Level:
         game.spiders = []
         # Reinicializar sistema de robôs
         game.robots = []
+        # Reinicializar sistema de aliens (níveis 41-50)
+        game.aliens = []
+        game.orphan_lasers = []
         # Reinicializar explosões
         game.explosions = []
+        # Reinicializar sistema de flying-disk (níveis 41-50)
+        game.flying_disks = []
+        game.flying_disk_spawn_timer = 0
 
         # Atualizar dificuldade dos pássaros para o nível atual
         game.update_bird_difficulty()

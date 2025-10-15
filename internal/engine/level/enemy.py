@@ -1,6 +1,7 @@
 from internal.resources.enemies.turtle import Turtle
 from internal.resources.enemies.spider import Spider
 from internal.resources.enemies.robot import Robot
+from internal.resources.enemies.alien import Alien
 from internal.resources.enemies.airplane import Airplane
 
 
@@ -37,6 +38,16 @@ class LevelEnemy:
             game.missile_images,
         )
         game.robots.append(robot)
+
+    def drawAlien(game, platform):
+        alien = Alien(
+            platform[0],
+            platform[1] - 57,
+            platform[0],
+            platform[0] + platform[2] - 57,  # Subtrair largura do alien (57px)
+            game.alien_images,
+        )
+        game.aliens.append(alien)
 
     def drawAirplanes(game, platforms, factor):
         for i in range(factor, len(platforms), factor):
