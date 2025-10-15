@@ -32,6 +32,10 @@ class Image:
             self.platform_texture_city = cache.get_image(
                 "imagens/texturas/metal.jpg", (20, 20)
             )
+            # Textura espacial para níveis 41-50
+            self.platform_texture_space = cache.get_image(
+                "imagens/texturas/platform-space.png", (20, 20)
+            )
             # Textura padrão para a plataforma da bandeira
             # Usa a mesma textura das plataformas comuns por padrão
             self.platform_texture_flag = self.platform_texture
@@ -49,6 +53,16 @@ class Image:
             self.airplane_img1 = cache.get_image("imagens/inimigos/airplane1.png", (50, 30))
             self.airplane_img2 = cache.get_image("imagens/inimigos/airplane2.png", (50, 30))
             self.airplane_img3 = cache.get_image("imagens/inimigos/airplane3.png", (50, 30))
+
+            # Carregar imagens do flying-disk usando cache
+            try:
+                self.disk_img1 = cache.get_image("imagens/inimigos/disk1.png", (40, 40))
+                self.disk_img2 = cache.get_image("imagens/inimigos/disk2.png", (40, 40))
+                self.disk_img3 = cache.get_image("imagens/inimigos/disk3.png", (40, 40))
+                self.flying_disk_images = [self.disk_img1, self.disk_img2, self.disk_img3]
+            except pygame.error as e:
+                print(f"Erro ao carregar imagens do flying-disk: {e}")
+                self.flying_disk_images = None
 
             # Carregar imagens das tartarugas usando cache
             try:
@@ -158,6 +172,78 @@ class Image:
             except pygame.error as e:
                 print(f"Erro ao carregar imagens dos robôs: {e}")
                 self.robot_images = None
+
+            # Carregar imagens dos aliens usando cache
+            try:
+                # Imagens de movimento (esquerda e direita)
+                self.alien_left1 = cache.get_image(
+                    "imagens/inimigos/alien-left1.png", (57, 57)
+                )
+                self.alien_left2 = cache.get_image(
+                    "imagens/inimigos/alien-left2.png", (57, 57)
+                )
+                self.alien_left3 = cache.get_image(
+                    "imagens/inimigos/alien-left3.png", (57, 57)
+                )
+                self.alien_left4 = cache.get_image(
+                    "imagens/inimigos/alien-left4.png", (57, 57)
+                )
+                self.alien_left5 = cache.get_image(
+                    "imagens/inimigos/alien-left5.png", (57, 57)
+                )
+
+                self.alien_right1 = cache.get_image(
+                    "imagens/inimigos/alien-right1.png", (57, 57)
+                )
+                self.alien_right2 = cache.get_image(
+                    "imagens/inimigos/alien-right2.png", (57, 57)
+                )
+                self.alien_right3 = cache.get_image(
+                    "imagens/inimigos/alien-right3.png", (57, 57)
+                )
+                self.alien_right4 = cache.get_image(
+                    "imagens/inimigos/alien-right4.png", (57, 57)
+                )
+                self.alien_right5 = cache.get_image(
+                    "imagens/inimigos/alien-right5.png", (57, 57)
+                )
+
+                # Imagens de tiro (apenas virado para a esquerda)
+                self.alien_shot_left1 = cache.get_image(
+                    "imagens/inimigos/alien-shot-left1.png", (57, 57)
+                )
+                self.alien_shot_left2 = cache.get_image(
+                    "imagens/inimigos/alien-shot-left2.png", (57, 57)
+                )
+                self.alien_shot_left3 = cache.get_image(
+                    "imagens/inimigos/alien-shot-left3.png", (57, 57)
+                )
+
+                # Organizar imagens em dicionário para facilitar o uso
+                self.alien_images = {
+                    "left": [
+                        self.alien_left1,
+                        self.alien_left2,
+                        self.alien_left3,
+                        self.alien_left4,
+                        self.alien_left5,
+                    ],
+                    "right": [
+                        self.alien_right1,
+                        self.alien_right2,
+                        self.alien_right3,
+                        self.alien_right4,
+                        self.alien_right5,
+                    ],
+                    "shot_left": [
+                        self.alien_shot_left1,
+                        self.alien_shot_left2,
+                        self.alien_shot_left3,
+                    ],
+                }
+            except pygame.error as e:
+                print(f"Erro ao carregar imagens dos aliens: {e}")
+                self.alien_images = None
 
             # Carregar imagens dos mísseis usando cache
             try:

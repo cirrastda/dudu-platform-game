@@ -49,6 +49,20 @@ class LevelMusic:
             music_index = (level - 35) % len(background_music_fourth_world_part2)
             self.level_music_list[level] = background_music_fourth_world_part2[music_index]
 
+        # Configurar trilhas sonoras para níveis 41-50
+        # Fases 41-42: space1.mp3
+        self.level_music_list[41] = "musicas/space1.mp3"
+        self.level_music_list[42] = "musicas/space1.mp3"
+
+        # Fases 43-50: alternar entre space2.mp3 e space3.mp3
+        background_music_space = [
+            "musicas/space2.mp3",
+            "musicas/space3.mp3",
+        ]
+        for level in range(43, 51):
+            music_index = (level - 43) % len(background_music_space)
+            self.level_music_list[level] = background_music_space[music_index]
+
         return self.level_music_list
 
     def get_level_music(self, level):

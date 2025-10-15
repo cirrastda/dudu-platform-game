@@ -3724,6 +3724,191 @@ class StaticLevelGenerator:
         StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_city)
 
     @staticmethod
+    def create_level_41(game):
+        """Nível 41 - Início dos flying-disks (plataformas dinâmicas)"""
+        platforms = []
+        x = 10
+        heights = [
+            HEIGHT - 180,
+            HEIGHT - 320,
+            HEIGHT - 140,
+            HEIGHT - 280,
+            HEIGHT - 360,
+            HEIGHT - 200,
+            HEIGHT - 340,
+            HEIGHT - 160,
+            HEIGHT - 300,
+            HEIGHT - 120,
+        ]
+        for i in range(110):
+            y = heights[i % len(heights)]
+            platforms.append((x, y, 150, 20))
+            x += 165 if i % 2 == 0 else 155
+
+        StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        # Adicionar aliens nas plataformas (níveis 41-50)
+        StaticLevelGenerator.drawAliens(game, platforms, 4)
+        StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_space)
+
+    @staticmethod
+    def create_level_42(game):
+        """Nível 42 - Flying-disks com gaps mais agressivos"""
+        platforms = []
+        x = 10
+        heights = [
+            HEIGHT - 200,
+            HEIGHT - 340,
+            HEIGHT - 160,
+            HEIGHT - 300,
+            HEIGHT - 120,
+            HEIGHT - 280,
+            HEIGHT - 360,
+            HEIGHT - 180,
+            HEIGHT - 320,
+            HEIGHT - 140,
+        ]
+        for i in range(115):
+            y = heights[i % len(heights)]
+            platforms.append((x, y, 150, 20))
+            x += 170 if i % 3 == 0 else 150
+
+        StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        StaticLevelGenerator.drawAliens(game, platforms, 4)
+        StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_space)
+
+    @staticmethod
+    def create_level_43(game):
+        """Nível 43 - Flying-disks com plataformas alternando alturas"""
+        platforms = []
+        x = 10
+        heights = [HEIGHT - 180, HEIGHT - 260, HEIGHT - 340, HEIGHT - 220]
+        for i in range(120):
+            y = heights[i % len(heights)]
+            platforms.append((x, y, 150, 20))
+            x += 160 if i % 2 == 0 else 170
+
+        StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        StaticLevelGenerator.drawAliens(game, platforms, 4)
+        StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_space)
+
+    @staticmethod
+    def create_level_44(game):
+        """Nível 44 - Flying-disks com trechos longos e variações"""
+        platforms = []
+        x = 10
+        heights = [HEIGHT - 140, HEIGHT - 280, HEIGHT - 360, HEIGHT - 220, HEIGHT - 300]
+        for i in range(120):
+            y = heights[i % len(heights)]
+            platforms.append((x, y, 150, 20))
+            x += 165
+
+        StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        StaticLevelGenerator.drawAliens(game, platforms, 4)
+        StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_space)
+
+    @staticmethod
+    def create_level_45(game):
+        """Nível 45 - Flying-disks com plataformas mais estreitas"""
+        platforms = []
+        x = 10
+        heights = [HEIGHT - 200, HEIGHT - 320, HEIGHT - 160, HEIGHT - 300]
+        for i in range(125):
+            y = heights[i % len(heights)]
+            platforms.append((x, y, 150, 20))
+            x += 160 if i % 2 == 0 else 150
+
+        StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        StaticLevelGenerator.drawAliens(game, platforms, 4)
+        StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_space)
+
+    @staticmethod
+    def create_level_46(game):
+        """Nível 46 - Flying-disks com alturas elevadas"""
+        platforms = []
+        x = 10
+        heights = [HEIGHT - 120, HEIGHT - 180, HEIGHT - 240, HEIGHT - 300, HEIGHT - 360]
+        for i in range(120):
+            y = heights[i % len(heights)]
+            platforms.append((x, y, 150, 20))
+            x += 170
+
+        StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        StaticLevelGenerator.drawAliens(game, platforms, 4)
+        StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_space)
+
+    @staticmethod
+    def create_level_47(game):
+        """Nível 47 - Flying-disks com variação de largura de plataforma"""
+        platforms = []
+        x = 10
+        heights = [HEIGHT - 200, HEIGHT - 260, HEIGHT - 320, HEIGHT - 380]
+        widths = [150, 150, 150, 150]
+        for i in range(125):
+            y = heights[i % len(heights)]
+            w = widths[i % len(widths)]
+            platforms.append((x, y, w, 20))
+            x += 155 if i % 2 == 0 else 165
+
+        StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        StaticLevelGenerator.drawAliens(game, platforms, 4)
+        StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_space)
+
+    @staticmethod
+    def create_level_48(game):
+        """Nível 48 - Flying-disks com sequência densa de plataformas"""
+        platforms = []
+        x = 10
+        heights = [HEIGHT - 180, HEIGHT - 240, HEIGHT - 300, HEIGHT - 360]
+        for i in range(130):
+            y = heights[i % len(heights)]
+            platforms.append((x, y, 150, 20))
+            x += 150
+
+        StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        StaticLevelGenerator.drawAliens(game, platforms, 4)
+        StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_space)
+
+    @staticmethod
+    def create_level_49(game):
+        """Nível 49 - Flying-disks com degraus e alturas variadas"""
+        platforms = []
+        x = 10
+        heights = [HEIGHT - 220, HEIGHT - 280, HEIGHT - 340, HEIGHT - 200]
+        for i in range(125):
+            y = heights[i % len(heights)]
+            platforms.append((x, y, 150, 20))
+            x += 160 if i % 4 in (0, 1) else 170
+
+        StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        StaticLevelGenerator.drawAliens(game, platforms, 4)
+        StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_space)
+
+    @staticmethod
+    def create_level_50(game):
+        """Nível 50 - Flying-disks e desafio final (plataformas épicas)"""
+        platforms = []
+        x = 10
+        heights = [HEIGHT - 160, HEIGHT - 220, HEIGHT - 280, HEIGHT - 340]
+        for i in range(135):
+            y = heights[i % len(heights)]
+            platforms.append((x, y, 150, 20))
+            x += 165
+
+        StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        StaticLevelGenerator.drawAliens(game, platforms, 4)
+        StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_space)
+
+    @staticmethod
     def putPlayerInFirstPlatform(game):
         # Posicionar jogador na primeira plataforma
         first_platform = game.platforms[0]
@@ -3785,3 +3970,10 @@ class StaticLevelGenerator:
             if i < len(platforms):
                 platform = platforms[i]
                 LevelEnemy.drawRobot(game, platform)
+
+    @staticmethod
+    def drawAliens(game, platforms, factor):
+        for i in range(factor, len(platforms), factor):
+            if i < len(platforms):
+                platform = platforms[i]
+                LevelEnemy.drawAlien(game, platform)
