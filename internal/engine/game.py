@@ -27,6 +27,7 @@ from internal.engine.sound.effects import SoundEffects
 from internal.resources.image import Image
 from internal.engine.joystick import Joystick
 from internal.engine.info import Info
+from internal.resources.extra_life import ExtraLife
 
 # Carregar configurações
 ENV_CONFIG = load_env_config()
@@ -34,12 +35,15 @@ ENV_CONFIG = load_env_config()
 
 class Game:
     def __init__(self):
+        # Carregar configuração de ambiente antes de inicializar a tela
+
         self.env_config = ENV_CONFIG
         Screen.init(self)
         pygame.display.set_caption("Jump and Hit")
         self.clock = pygame.time.Clock()
         self.state = GameState.SPLASH
-
+        # Rastrear vidas extras coletadas por nível para não reaparecerem
+        self.collected_extra_life_levels = set()
         # Configurar nível inicial baseado no ambiente
         if (
             ENV_CONFIG.get("environment") == "development"
@@ -181,6 +185,9 @@ class Game:
 
         # Carregar imagens
         Image.load_images(self)
+
+        # Itens colecionáveis
+        self.extra_lives = []
 
         # Se estiver em modo desenvolvimento e iniciando em uma fase específica,
         # pular para o estado PLAYING e tocar música do nível
@@ -537,6 +544,9 @@ class Game:
                                 self.lives = self.max_lives
                                 self.player_name = ""
                                 self.game_over_selected = 0
+                                # Limpar itens coletados ao iniciar novo jogo
+                                if hasattr(self, "collected_extra_life_levels"):
+                                    self.collected_extra_life_levels.clear()
                                 self.state = GameState.PLAYING
                                 Level.init_level(self)
                                 # Tocar música do nível atual
@@ -604,6 +614,9 @@ class Game:
                             self.birds_dodged.clear()
                             self.lives = self.max_lives
                             self.player_name = ""
+                            # Limpar itens coletados ao iniciar novo jogo
+                            if hasattr(self, "collected_extra_life_levels"):
+                                self.collected_extra_life_levels.clear()
                             self.state = GameState.PLAYING
                             Level.init_level(self)
                     # Botão B para voltar do ranking
@@ -790,7 +803,29 @@ class Game:
                     self.check_extra_life()
                 # Reset da flag após verificar pontuação
                 self.player.just_landed = False
-                delattr(self.player, "landed_platform_id")
+
+            # Atualizar e verificar coleta de itens de vida
+            if hasattr(self, "extra_lives") and self.extra_lives:
+                remaining_items = []
+                for item in self.extra_lives:
+                    item.update()
+                    if self.player.rect.colliderect(item.rect):
+                        # Jogador coletou vida extra
+                        self.lives += 1
+                        # Marcar vida extra como coletada neste nível
+                        if hasattr(self, "collected_extra_life_levels"):
+                            self.collected_extra_life_levels.add(self.current_level)
+                        if hasattr(self, "sound_effects"):
+                            try:
+                                self.sound_effects.play_sound_effect("new-life")
+                            except Exception:
+                                pass
+                    else:
+                        remaining_items.append(item)
+                self.extra_lives = remaining_items
+                # Remover atributo de plataforma pousada se existir, para evitar recontagem
+                if hasattr(self.player, "landed_platform_id"):
+                    delattr(self.player, "landed_platform_id")
 
             # Sistema de pássaros e morcegos
             if self.current_level <= 20:
@@ -1770,7 +1805,7 @@ class Game:
                     # Restaurar posição original
                     self.flag.x = original_x
 
-            # Desenhar pássaros, morcegos, aviões e discos com offset da câmera
+            # Desenhar pássaros, morcegos e aviões com offset da câmera
             if self.current_level <= 20:
                 for bird in self.birds:
                     bird_x = bird.x - self.camera_x

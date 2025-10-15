@@ -11,6 +11,7 @@ class Screen:
 
         # if is_desktop:
         if (not game.is_development()) or (Screen.is_fullscreen(game)):
+
             # Usar fullscreen em PC/Mac
             game.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
         else:

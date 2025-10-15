@@ -273,6 +273,11 @@ class Image:
             )
             self.explosion_image = self.explosion_img  # Alias para compatibilidade
 
+            # Carregar imagem de vida extra (item colecionável)
+            self.extra_life_img = cache.get_image(
+                "imagens/elementos/vida.png", (24, 24)
+            )
+
             # Carregar logos para splash screen usando cache
             logo_files = ["cirrastec.png", "cirrasretrogames.png", "canaldodudu.png"]
             self.logos = []
