@@ -1674,6 +1674,7 @@ class Game:
                             self.state = GameState.VICTORY
 
     def draw(self):
+        
         if self.state == GameState.SPLASH:
             # Tela de splash com fundo preto
             self.screen.fill(BLACK)
@@ -1720,7 +1721,7 @@ class Game:
                 if instruction_alpha < 255:
                     instruction_text.set_alpha(instruction_alpha)
                 instruction_rect = instruction_text.get_rect(
-                    center=(WIDTH // 2, HEIGHT - 50)
+                    center=(WIDTH // 2, HEIGHT - 80)
                 )
                 self.screen.blit(instruction_text, instruction_rect)
 
@@ -2030,7 +2031,7 @@ class Game:
 
         elif self.state == GameState.GAME_OVER:
             # Usar fundo do cenário
-            self.draw_ocean_background(self.screen)
+            self.draw_ocean_background(game_surface)
 
             game_over_text = self.big_font.render("GAME OVER", True, RED)
             score_text = self.font.render(f"Pontuação Final: {self.score}", True, WHITE)
@@ -2270,7 +2271,7 @@ class Game:
                     # Texto normal
                     text_surface = self.font.render(line, True, WHITE)
 
-                text_rect = text_surface.get_rect(center=(WIDTH // 2, y_offset))
+                text_rect = text_surface.get_rect(center=(WIDTH // 2, y_position))
                 self.screen.blit(text_surface, text_rect)
                 y_offset += 30
 
@@ -2343,7 +2344,7 @@ class Game:
             )
             self.screen.blit(instruction_text, instruction_rect)
 
-        pygame.display.flip()
+        Screen.present(self)
 
     def is_development(self):
         return self.env_config.get("environment") == "development"
