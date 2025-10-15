@@ -8,6 +8,7 @@ from internal.engine.state import GameState
 from internal.resources.player import Player
 from internal.resources.platform import Platform
 from internal.resources.flag import Flag
+from internal.resources.spaceship import Spaceship
 from internal.resources.enemies.bird import Bird
 from internal.resources.enemies.bat import Bat
 from internal.resources.enemies.airplane import Airplane
@@ -33,6 +34,7 @@ ENV_CONFIG = load_env_config()
 
 class Game:
     def __init__(self):
+        self.env_config = ENV_CONFIG
         Screen.init(self)
         pygame.display.set_caption("Jump and Hit")
         self.clock = pygame.time.Clock()
@@ -165,7 +167,9 @@ class Game:
 
         # Inicializar variáveis de aliens (níveis 41-50)
         self.aliens = []
-        self.orphan_lasers = []  # Lasers de aliens mortos que continuam visíveis mas sem hitbox
+        self.orphan_lasers = (
+            []
+        )  # Lasers de aliens mortos que continuam visíveis mas sem hitbox
 
         # Ajustar dificuldade baseada no nível
         self.birds_per_spawn = Level.get_birds_per_spawn(self.current_level)
@@ -863,9 +867,13 @@ class Game:
                         # Spawn à direita da tela visível
                         disk_x = self.camera_x + WIDTH + 50 + (i * 120)
                         disk_images = (
-                            self.flying_disk_images if hasattr(self, "flying_disk_images") else None
+                            self.flying_disk_images
+                            if hasattr(self, "flying_disk_images")
+                            else None
                         )
-                        self.flying_disks.append(FlyingDisk(disk_x, disk_y, disk_images))
+                        self.flying_disks.append(
+                            FlyingDisk(disk_x, disk_y, disk_images)
+                        )
                     self.flying_disk_spawn_timer = 0
 
             # Atualizar pássaros, morcegos e aviões com culling (remover objetos muito distantes da câmera)
@@ -939,11 +947,15 @@ class Game:
                     # passando a posição da câmera para remoção correta dos mísseis
                     robot.update(self.camera_x)
 
-            # Atualizar aliens (níveis 41-50)
+            # Atualizar aliens (níveis 41-50) com culling
             if 41 <= self.current_level <= 50:
                 for alien in self.aliens:
-                    # Atualizar todos os aliens para manter o sistema de tiro ativo
-                    alien.update(self.camera_x)
+                    # Culling: só atualizar aliens próximos à área visível
+                    if (
+                        alien.x > self.camera_x - 200
+                        and alien.x < self.camera_x + WIDTH + 200
+                    ):
+                        alien.update(self.camera_x)
 
             # Atualizar explosões com pool
             active_explosions = []
@@ -1397,7 +1409,9 @@ class Game:
                         and disk.id not in self.birds_dodged
                     ):
                         self.birds_dodged.add(disk.id)
-                        self.score += 25  # Pontos por esquivar disco (ainda mais difícil)
+                        self.score += (
+                            25  # Pontos por esquivar disco (ainda mais difícil)
+                        )
                         # Verificar se merece vida extra
                         self.check_extra_life()
 
@@ -1594,6 +1608,27 @@ class Game:
                         self.state = GameState.ENTER_NAME
                     else:
                         self.state = GameState.VICTORY
+
+            # Verificar se entrou na área de abdução da nave (fase 50)
+            if self.spaceship and self.player.rect.colliderect(
+                self.spaceship.abduction_rect
+            ):
+                if not self.player.is_being_abducted:
+                    self.player.start_abduction()
+
+                # Após 3 segundos (180 frames) de abdução, terminar a fase
+                if self.player.abduction_timer >= 180:
+                    if self.current_level < self.max_levels:
+                        self.current_level += 1
+                        Level.init_level(self)
+                        # Tocar música do novo nível
+                        self.music.play_level_music(self, self.current_level)
+                    else:
+                        # Vitória - verificar se entra no ranking
+                        if self.ranking_manager.is_high_score(self.score):
+                            self.state = GameState.ENTER_NAME
+                        else:
+                            self.state = GameState.VICTORY
 
     def draw(self):
         if self.state == GameState.SPLASH:
@@ -1842,7 +1877,7 @@ class Game:
                                 # Chamar método draw do míssil
                                 missile.draw(self.screen)
                                 # Restaurar posição original
-                        missile.x = original_missile_x
+                                missile.x = original_missile_x
 
                 # Desenhar mísseis órfãos (de robôs mortos) com offset da câmera
                 for missile in self.orphan_missiles:
@@ -2252,6 +2287,9 @@ class Game:
             self.screen.blit(instruction_text, instruction_rect)
 
         pygame.display.flip()
+
+    def is_development(self):
+        return self.env_config.get("environment") == "development"
 
     def run(self):
         running = True

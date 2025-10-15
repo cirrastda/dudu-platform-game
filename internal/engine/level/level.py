@@ -208,6 +208,7 @@ class Level:
         game.player = Player(50, HEIGHT - 200)
         game.platforms = []
         game.flag = None
+        game.spaceship = None
         game.camera_x = 0
         # Reinicializar sistema de pássaros
         game.birds = []

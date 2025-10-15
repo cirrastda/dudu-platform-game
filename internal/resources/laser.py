@@ -22,8 +22,9 @@ class Laser:
         self.x += self.speed * self.direction
         self.rect.x = self.x
 
-        # Remover se sair muito da área visível
-        if self.x < camera_x - 300 or self.x > camera_x + WIDTH + 300:
+        # Remover apenas se sair MUITO longe da área visível para evitar desaparecimento prematuro
+        # Aumentando a margem para 800 pixels para garantir que lasers não desapareçam enquanto podem colidir
+        if self.x < camera_x - 800 or self.x > camera_x + WIDTH + 800:
             return False
         return True
 

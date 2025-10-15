@@ -24,6 +24,8 @@ class Player:
             0  # Timer para duração da invulnerabilidade (5s = 300 frames)
         )
         self.blink_timer = 0  # Timer para controlar o piscar durante invulnerabilidade
+        self.is_being_abducted = False  # Flag para quando está sendo abduzido
+        self.abduction_timer = 0  # Timer para controlar duração da abdução
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
         # Sistema de animação
@@ -164,12 +166,23 @@ class Player:
                 self.is_invulnerable = False
                 self.blink_timer = 0
 
+        # Atualizar timer de abdução
+        if self.is_being_abducted:
+            self.abduction_timer += 1
+            self.blink_timer += 1
+
     def take_hit(self):
-        """Método para quando o personagem é atingido"""
+        """Método chamado quando o personagem é atingido"""
         self.is_hit = True
         self.hit_timer = 30  # 30 frames = 0.5 segundos a 60 FPS
         self.is_invulnerable = True
-        self.invulnerability_timer = 300  # 300 frames = 5 segundos a 60 FPS
+        self.invulnerability_timer = 300  # 5 segundos de invulnerabilidade
+        self.blink_timer = 0
+
+    def start_abduction(self):
+        """Método chamado quando o personagem entra na área de abdução"""
+        self.is_being_abducted = True
+        self.abduction_timer = 0
         self.blink_timer = 0
 
     def shoot(self, bullet_image=None, game=None):
@@ -350,8 +363,8 @@ class Player:
                 # quando agachado (sprite mantém tamanho original)
                 draw_y = self.y + (self.height - current_sprite.get_height())
 
-            # Efeito de piscar durante invulnerabilidade
-            if self.is_invulnerable:
+            # Efeito de piscar durante invulnerabilidade ou abdução
+            if self.is_invulnerable or self.is_being_abducted:
                 # Piscar a cada 8 frames entre normal e esmaecido
                 if (self.blink_timer // 8) % 2 == 0:
                     # Sprite normal
@@ -359,17 +372,18 @@ class Player:
                 else:
                     # Sprite esmaecido
                     faded_sprite = current_sprite.copy()
-                    faded_sprite.set_alpha(80)  # 80/255 = ~31% de opacidade
+                    alpha_value = 80 if self.is_invulnerable else 120  # Menos transparente durante abdução
+                    faded_sprite.set_alpha(alpha_value)
                     screen.blit(faded_sprite, (self.x, draw_y))
             else:
-                # Sprite normal quando não invulnerável
+                # Sprite normal quando não invulnerável nem sendo abduzido
                 screen.blit(current_sprite, (self.x, draw_y))
         else:
             # Fallback: desenhar retângulo colorido
             color = RED if self.is_hit else BLUE
 
-            # Efeito de piscar durante invulnerabilidade no fallback também
-            if self.is_invulnerable:
+            # Efeito de piscar durante invulnerabilidade ou abdução no fallback também
+            if self.is_invulnerable or self.is_being_abducted:
                 if (self.blink_timer // 8) % 2 == 0:
                     # Retângulo normal
                     pygame.draw.rect(screen, color, self.rect)
@@ -378,7 +392,8 @@ class Player:
                     fade_surface = pygame.Surface(
                         (self.width, self.height), pygame.SRCALPHA
                     )
-                    fade_surface.fill((*color, 80))  # Cor com alpha 80
+                    alpha_value = 80 if self.is_invulnerable else 120  # Menos transparente durante abdução
+                    fade_surface.fill((*color, alpha_value))
                     screen.blit(fade_surface, (self.x, self.y))
             else:
                 pygame.draw.rect(screen, color, self.rect)
