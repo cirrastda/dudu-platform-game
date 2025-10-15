@@ -1984,6 +1984,14 @@ class Game:
                     # Restaurar posição original
                     explosion.x = original_explosion_x
 
+            # Desenhar vidas extras com offset da câmera
+            if hasattr(self, "extra_lives") and self.extra_lives:
+                for extra_life in self.extra_lives:
+                    extra_life_x = extra_life.x - self.camera_x
+                    if extra_life_x > -30 and extra_life_x < WIDTH + 30:  # Só desenhar se visível
+                        # Chamar método draw da vida extra com offset da câmera
+                        extra_life.draw(self.screen, self.camera_x)
+
             # Desenhar tiros do jogador com offset da câmera
             for bullet in self.player.bullets:
                 bullet_x = bullet.x - self.camera_x

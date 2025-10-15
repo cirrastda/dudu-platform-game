@@ -274,18 +274,25 @@ class Level:
         mid_x = (min_x + max_x) / 2
 
         # Escolher o vão cujo centro esteja mais próximo do meio da fase
+        # Primeiro tentar vãos maiores, depois relaxar o critério se necessário
         best = None  # (a, b, gap_left, gap_width, distance)
-        for i in range(len(platforms_sorted) - 1):
-            a = platforms_sorted[i]
-            b = platforms_sorted[i + 1]
-            gap_left = a.x + a.width
-            gap_right = b.x
-            gap_width = gap_right - gap_left
-            if gap_width >= 60:
-                center_x = gap_left + gap_width / 2
-                distance = abs(center_x - mid_x)
-                if best is None or distance < best[4]:
-                    best = (a, b, gap_left, gap_width, distance)
+        min_gap_sizes = [60, 40, 20]  # Tentar diferentes tamanhos mínimos de vão
+        
+        for min_gap in min_gap_sizes:
+            for i in range(len(platforms_sorted) - 1):
+                a = platforms_sorted[i]
+                b = platforms_sorted[i + 1]
+                gap_left = a.x + a.width
+                gap_right = b.x
+                gap_width = gap_right - gap_left
+                if gap_width >= min_gap:
+                    center_x = gap_left + gap_width / 2
+                    distance = abs(center_x - mid_x)
+                    if best is None or distance < best[4]:
+                        best = (a, b, gap_left, gap_width, distance)
+            # Se encontrou um vão com este tamanho mínimo, usar ele
+            if best is not None:
+                break
 
         if best is not None:
             a, b, gap_left, gap_width, _ = best
@@ -310,15 +317,48 @@ class Level:
             placed = False
 
         if not placed:
-            # Fallback: posicionar acima de uma plataforma central
-            idx = max(1, min(len(platforms_sorted) // 2, len(platforms_sorted) - 2))
-            platform = platforms_sorted[idx]
-            item_x = int(platform.x + platform.width // 2 - 12)
-            item_y = int(platform.y - 140)
-            if item_y < 80:
-                item_y = 80
-            item_image = getattr(game, "extra_life_img", None)
-            game.extra_lives.append(ExtraLife(item_x, item_y, image=item_image))
+            # Fallback melhorado: tentar encontrar qualquer vão, mesmo pequeno
+            fallback_best = None
+            for i in range(len(platforms_sorted) - 1):
+                a = platforms_sorted[i]
+                b = platforms_sorted[i + 1]
+                gap_left = a.x + a.width
+                gap_right = b.x
+                gap_width = gap_right - gap_left
+                if gap_width > 0:  # Qualquer vão, mesmo muito pequeno
+                    center_x = gap_left + gap_width / 2
+                    distance = abs(center_x - mid_x)
+                    if fallback_best is None or distance < fallback_best[4]:
+                        fallback_best = (a, b, gap_left, gap_width, distance)
+            
+            if fallback_best is not None:
+                # Usar o vão encontrado, mesmo que pequeno
+                a, b, gap_left, gap_width, _ = fallback_best
+                vertical_base = min(a.y, b.y)
+                item_x = int(gap_left + gap_width / 2 - 12)
+                # Ajustar offset baseado no tamanho do vão
+                extra_offset = int(120 + min(40, gap_width * 0.2))
+                item_y = int(vertical_base - extra_offset)
+                if item_y < 80:
+                    item_y = 80
+                # Garantir pelo menos 100px acima da plataforma mais alta
+                highest_platform_y = min(a.y, b.y)
+                if highest_platform_y - item_y < 100:
+                    item_y = highest_platform_y - 100
+                    if item_y < 80:
+                        item_y = 80
+                item_image = getattr(game, "extra_life_img", None)
+                game.extra_lives.append(ExtraLife(item_x, item_y, image=item_image))
+            else:
+                # Último recurso: posicionar acima de uma plataforma central
+                idx = max(1, min(len(platforms_sorted) // 2, len(platforms_sorted) - 2))
+                platform = platforms_sorted[idx]
+                item_x = int(platform.x + platform.width // 2 - 12)
+                item_y = int(platform.y - 140)
+                if item_y < 80:
+                    item_y = 80
+                item_image = getattr(game, "extra_life_img", None)
+                game.extra_lives.append(ExtraLife(item_x, item_y, image=item_image))
 
     def drawTurtle(game, platform):
         turtle = Turtle(
