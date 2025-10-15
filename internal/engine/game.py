@@ -28,6 +28,7 @@ from internal.resources.image import Image
 from internal.engine.joystick import Joystick
 from internal.engine.info import Info
 from internal.resources.extra_life import ExtraLife
+from internal.engine.title import TitleScreen
 
 # Carregar configurações
 ENV_CONFIG = load_env_config()
@@ -293,8 +294,11 @@ class Game:
         if len(self.explosion_pool) < 10:  # Limitar tamanho do pool
             self.explosion_pool.append(explosion)
 
-    def draw_ocean_background(self):
+    def draw_ocean_background(self, draw_surface=None):
         """Desenhar fundo do mar"""
+        # Usar surface fornecida ou self.screen como fallback
+        surface = draw_surface if draw_surface else self.screen
+
         # Determinar qual fundo usar baseado no estado do jogo
         if self.state == GameState.PLAYING:
             # Durante o jogo, usar fundo baseado no nível
@@ -307,7 +311,7 @@ class Game:
 
         if background_to_use:
             # Usar imagem de fundo
-            self.screen.blit(background_to_use, (0, 0))
+            surface.blit(background_to_use, (0, 0))
         else:
             # Fallback para gradiente se a imagem não carregar
             for y in range(HEIGHT):
@@ -315,13 +319,13 @@ class Game:
                 r = int(135 * (1 - ratio) + 0 * ratio)
                 g = int(206 * (1 - ratio) + 50 * ratio)
                 b = int(235 * (1 - ratio) + 100 * ratio)
-                pygame.draw.line(self.screen, (r, g, b), (0, y), (WIDTH, y))
+                pygame.draw.line(surface, (r, g, b), (0, y), (WIDTH, y))
 
             # Ondas simples
             wave_offset = pygame.time.get_ticks() * 0.002
             for x in range(0, WIDTH, 20):
                 wave_y = HEIGHT - 50 + math.sin(x * 0.01 + wave_offset) * 10
-                pygame.draw.circle(self.screen, (0, 80, 150), (x, int(wave_y)), 15)
+                pygame.draw.circle(surface, (0, 80, 150), (x, int(wave_y)), 15)
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -332,11 +336,15 @@ class Game:
                 if self.state == GameState.SPLASH:
                     # Só permite pular se estiver em modo development
                     if ENV_CONFIG.get("environment", "production") == "development":
-                        self.state = GameState.MAIN_MENU
-                        # Iniciar música do menu quando pular para o menu
-                        if not self.music_started:
-                            self.music.play_menu_music(self)
-                            self.music_started = True
+                        self.state = GameState.TITLE_SCREEN
+                # Navegação da tela de título
+                elif self.state == GameState.TITLE_SCREEN:
+                    # Qualquer tecla vai para o menu principal
+                    self.state = GameState.MAIN_MENU
+                    # Iniciar música do menu quando aparecer o menu
+                    if not self.music_started:
+                        self.music.play_menu_music(self)
+                        self.music_started = True
                 # Navegação do menu principal
                 elif self.state == GameState.MAIN_MENU:
                     if event.key == pygame.K_UP:
@@ -474,11 +482,15 @@ class Game:
                     if self.state == GameState.SPLASH:
                         # Só permite pular se estiver em modo development
                         if ENV_CONFIG.get("environment", "production") == "development":
-                            self.state = GameState.MAIN_MENU
-                            # Iniciar música do menu quando pular para o menu
-                            if not self.music_started:
-                                self.music.play_menu_music(self)
-                                self.music_started = True
+                            self.state = GameState.TITLE_SCREEN
+                    # Navegação da tela de título com joystick
+                    elif self.state == GameState.TITLE_SCREEN:
+                        # Qualquer botão vai para o menu principal
+                        self.state = GameState.MAIN_MENU
+                        # Iniciar música do menu quando aparecer o menu
+                        if not self.music_started:
+                            self.music.play_menu_music(self)
+                            self.music_started = True
                     # Navegação do menu principal com joystick
                     elif self.state == GameState.MAIN_MENU:
                         if event.button == 0 or event.button in [
@@ -749,13 +761,9 @@ class Game:
                     self.splash_timer // self.logo_display_time
                 ) % len(self.logos)
 
-            # Após o tempo total, ir para o menu
+            # Após o tempo total, ir para a tela de título
             if self.splash_timer >= self.splash_duration:
-                self.state = GameState.MAIN_MENU
-                # Iniciar música do menu quando aparecer o menu
-                if not self.music_started:
-                    self.music.play_menu_music(self)
-                    self.music_started = True
+                self.state = GameState.TITLE_SCREEN
 
         elif self.state == GameState.PLAYING:
             # Atualizar jogador
@@ -1108,7 +1116,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 60
+                            self.score += 70
                             # Verificar se merece vida extra
                             self.check_extra_life()
                             break
@@ -1129,7 +1137,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 60
+                            self.score += 120
                             # Verificar se merece vida extra
                             self.check_extra_life()
                             break
@@ -1156,7 +1164,7 @@ class Game:
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
                             self.score += (
-                                80  # Robôs valem mais pontos por serem mais difíceis
+                                100  # Robôs valem mais pontos por serem mais difíceis
                             )
                             # Verificar se merece vida extra
                             self.check_extra_life()
@@ -1259,7 +1267,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 80
+                            self.score += 60
                             # Verificar se merece vida extra
                             self.check_extra_life()
                             break
@@ -1526,7 +1534,7 @@ class Game:
                                 Explosion(spider.x, spider.y, self.explosion_image)
                             )
                             self.spiders.remove(spider)
-                            self.score += 25  # Pontos bônus por destruir aranha durante invulnerabilidade
+                            self.score += 35  # Pontos bônus por destruir aranha durante invulnerabilidade
                             # Verificar se merece vida extra
                             self.check_extra_life()
                         else:
@@ -1564,7 +1572,7 @@ class Game:
                             for missile in robot.missiles:
                                 self.orphan_missiles.append(missile)
                             self.robots.remove(robot)
-                            self.score += 35  # Pontos bônus por destruir robô durante invulnerabilidade
+                            self.score += 50  # Pontos bônus por destruir robô durante invulnerabilidade
                             # Verificar se merece vida extra
                             self.check_extra_life()
                         else:
@@ -1605,7 +1613,7 @@ class Game:
                             for laser in alien.lasers:
                                 self.orphan_lasers.append(laser)
                             self.aliens.remove(alien)
-                            self.score += 35  # Pontos bônus por destruir alien durante invulnerabilidade
+                            self.score += 60  # Pontos bônus por destruir alien durante invulnerabilidade
                             # Verificar se merece vida extra
                             self.check_extra_life()
                         else:
@@ -1716,9 +1724,12 @@ class Game:
                 )
                 self.screen.blit(instruction_text, instruction_rect)
 
+        elif self.state == GameState.TITLE_SCREEN:
+            TitleScreen.show(self)
+
         elif self.state == GameState.MAIN_MENU:
             # Tela de menu com fundo do jogo
-            self.draw_ocean_background()
+            self.draw_ocean_background(self.screen)
 
             # Logo do jogo (aumentado)
             if self.game_logo:
@@ -1767,10 +1778,7 @@ class Game:
             self.screen.blit(footer_surface, footer_rect)
 
         elif self.state == GameState.PLAYING:
-            self.draw_ocean_background()
-            # Criar surface temporária para aplicar offset da câmera
-            temp_surface = pygame.Surface((WIDTH, HEIGHT))
-            temp_surface.fill((0, 0, 0, 0))  # Transparente
+            self.draw_ocean_background(self.screen)
 
             # Desenhar plataformas com offset da câmera
             for platform in self.platforms:
@@ -1988,7 +1996,9 @@ class Game:
             if hasattr(self, "extra_lives") and self.extra_lives:
                 for extra_life in self.extra_lives:
                     extra_life_x = extra_life.x - self.camera_x
-                    if extra_life_x > -30 and extra_life_x < WIDTH + 30:  # Só desenhar se visível
+                    if (
+                        extra_life_x > -30 and extra_life_x < WIDTH + 30
+                    ):  # Só desenhar se visível
                         # Chamar método draw da vida extra com offset da câmera
                         extra_life.draw(self.screen, self.camera_x)
 
@@ -2020,7 +2030,7 @@ class Game:
 
         elif self.state == GameState.GAME_OVER:
             # Usar fundo do cenário
-            self.draw_ocean_background()
+            self.draw_ocean_background(self.screen)
 
             game_over_text = self.big_font.render("GAME OVER", True, RED)
             score_text = self.font.render(f"Pontuação Final: {self.score}", True, WHITE)
@@ -2065,8 +2075,12 @@ class Game:
             trophy_y = HEIGHT // 2 - 100
 
             # Base do troféu
-            pygame.draw.rect(self.screen, BROWN, (trophy_x - 40, trophy_y + 80, 80, 20))
-            pygame.draw.rect(self.screen, BROWN, (trophy_x - 10, trophy_y + 60, 20, 40))
+            pygame.draw.rect(
+                self.screen, BROWN, (trophy_x - 40, trophy_y + 80, 80, 20)
+            )
+            pygame.draw.rect(
+                self.screen, BROWN, (trophy_x - 10, trophy_y + 60, 20, 40)
+            )
 
             # Taça do troféu
             pygame.draw.ellipse(self.screen, YELLOW, (trophy_x - 30, trophy_y, 60, 80))
@@ -2151,7 +2165,7 @@ class Game:
 
         elif self.state == GameState.SHOW_RANKING:
             # Usar fundo do cenário em vez de fundo sólido
-            self.draw_ocean_background()
+            self.draw_ocean_background(self.screen)
 
             # Tela do ranking
             title_text = self.big_font.render("TOP 10 RANKING", True, YELLOW)
@@ -2216,7 +2230,7 @@ class Game:
 
         elif self.state == GameState.CREDITS:
             # Tela de créditos com fundo do jogo
-            self.draw_ocean_background()
+            self.draw_ocean_background(self.screen)
 
             # Título
             title_text = self.big_font.render("CRÉDITOS", True, YELLOW)
@@ -2271,7 +2285,7 @@ class Game:
 
         elif self.state == GameState.RECORDS:
             # Tela de recordes (reutilizar a lógica do ranking)
-            self.draw_ocean_background()
+            self.draw_ocean_background(self.screen)
 
             # Título
             title_text = self.big_font.render("RECORDES", True, YELLOW)

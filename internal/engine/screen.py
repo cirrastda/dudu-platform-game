@@ -11,11 +11,10 @@ class Screen:
 
         # if is_desktop:
         if (not game.is_development()) or (Screen.is_fullscreen(game)):
-
-            # Usar fullscreen em PC/Mac
+            # Usar fullscreen com resolução do jogo
             game.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
         else:
-            # Usar modo janela em outras plataformas (como Android)
+            # Usar modo janela
             game.screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
     def is_fullscreen(game):
