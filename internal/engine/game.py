@@ -1171,7 +1171,7 @@ class Game:
                             break
 
             # Verificar colisão entre mísseis dos robôs e jogador (níveis 31-40)
-            if 31 <= self.current_level <= 40:
+            if 31 <= self.current_level <= 40 and not self.player.is_being_abducted:
                 for robot in self.robots[:]:
                     for missile in robot.missiles[:]:
                         if self.player.rect.colliderect(missile.rect):
@@ -1210,7 +1210,7 @@ class Game:
                             break
 
             # Verificar colisão entre lasers dos aliens e jogador (níveis 41-50)
-            if 41 <= self.current_level <= 50:
+            if 41 <= self.current_level <= 50 and not self.player.is_being_abducted:
                 for alien in self.aliens[:]:
                     for laser in alien.lasers[:]:
                         if self.player.rect.colliderect(laser.rect):
@@ -1559,7 +1559,7 @@ class Game:
                         break
 
             # Verificar colisão com robôs (níveis 31-40)
-            if 31 <= self.current_level <= 40:
+            if 31 <= self.current_level <= 40 and not self.player.is_being_abducted:
                 for robot in self.robots[:]:
                     # Verificar colisão direta
                     if self.player.rect.colliderect(robot.rect):
@@ -1600,7 +1600,7 @@ class Game:
                         break
 
             # Verificar colisão com aliens (níveis 41-50)
-            if 41 <= self.current_level <= 50:
+            if 41 <= self.current_level <= 50 and not self.player.is_being_abducted:
                 for alien in self.aliens[:]:
                     # Verificar colisão direta
                     if self.player.rect.colliderect(alien.rect):
@@ -1659,8 +1659,8 @@ class Game:
                 if not self.player.is_being_abducted:
                     self.player.start_abduction()
 
-                # Após 3 segundos (180 frames) de abdução, terminar a fase
-                if self.player.abduction_timer >= 180:
+                # Após 10 segundos (600 frames) de abdução, terminar a fase
+                if self.player.abduction_timer >= 600:
                     if self.current_level < self.max_levels:
                         self.current_level += 1
                         Level.init_level(self)
@@ -1814,6 +1814,20 @@ class Game:
                     # Restaurar posição original
                     self.flag.x = original_x
 
+            # Desenhar spaceship com offset da câmera (fase 50)
+            if self.spaceship:  # Verificar se a spaceship existe
+                spaceship_x = self.spaceship.x - self.camera_x
+                if spaceship_x > -150 and spaceship_x < WIDTH:  # Só desenhar se visível
+                    # Salvar posição original da spaceship
+                    original_spaceship_x = self.spaceship.x
+                    original_spaceship_y = self.spaceship.y
+                    # Ajustar posição temporariamente para o offset da câmera usando update_position
+                    self.spaceship.update_position(spaceship_x, self.spaceship.y)
+                    # Desenhar usando o método da classe Spaceship
+                    self.spaceship.draw(self.screen)
+                    # Restaurar posição original usando update_position
+                    self.spaceship.update_position(original_spaceship_x, original_spaceship_y)
+
             # Desenhar pássaros, morcegos e aviões com offset da câmera
             if self.current_level <= 20:
                 for bird in self.birds:
@@ -1895,7 +1909,7 @@ class Game:
                         spider.x = original_spider_x
 
             # Desenhar robôs e seus mísseis com offset da câmera (níveis 31-40)
-            if 31 <= self.current_level <= 40:
+            if 31 <= self.current_level <= 40 and not self.player.is_being_abducted:
                 for robot in self.robots:
                     robot_x = robot.x - self.camera_x
                     if robot_x > -50 and robot_x < WIDTH:  # Só desenhar se visível
@@ -1939,7 +1953,7 @@ class Game:
                         missile.x = original_missile_x
 
             # Desenhar aliens e seus lasers com offset da câmera (níveis 41-50)
-            if 41 <= self.current_level <= 50:
+            if 41 <= self.current_level <= 50 and not self.player.is_being_abducted:
                 for alien in self.aliens:
                     alien_x = alien.x - self.camera_x
                     if alien_x > -50 and alien_x < WIDTH:  # Só desenhar se visível

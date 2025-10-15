@@ -4784,7 +4784,7 @@ class StaticLevelGenerator:
             (26420, HEIGHT - 320, 150, 20),
             (26610, HEIGHT - 200, 150, 20),
             (26800, HEIGHT - 340, 150, 20),
-            (26990, HEIGHT - 180, 150, 20),
+            (26990, HEIGHT - 400, 150, 20),
         ]
 
         StaticLevelGenerator.drawPlatforms(game, platforms, game.platform_texture_space)
@@ -4868,7 +4868,7 @@ class StaticLevelGenerator:
         last_platform = platforms[-1]  # Última plataforma da lista
         
         # Posicionar a nave acima da última plataforma
-        spaceship_x = last_platform[0] + (last_platform[2] // 2) - 60  # Centralizar na plataforma
-        spaceship_y = last_platform[1] - 200  # 200 pixels acima da plataforma
+        spaceship_x = last_platform[0] + (last_platform[2] // 2) - 125  # Centralizar na plataforma (ajustado para nova largura)
+        spaceship_y = last_platform[1] - 200  # Posicionar para que a parte inferior toque a plataforma (altura da nave)
         
         game.spaceship = Spaceship(spaceship_x, spaceship_y)

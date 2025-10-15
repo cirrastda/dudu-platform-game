@@ -7,18 +7,18 @@ class Spaceship:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.width = 120  # Largura da nave
-        self.height = 80  # Altura da nave
-        self.abduction_height = 150  # Altura da área de abdução (raio de luz)
+        self.width = 250  # Largura da nave (aumentada)
+        self.height = 200  # Altura da nave (aumentada proporcionalmente)
+        self.abduction_height = 250  # Altura da área de abdução (raio de luz)
         
         # Rect da nave (parte superior)
         self.rect = pygame.Rect(x, y, self.width, self.height)
         
-        # Rect da área de abdução (parte inferior - raio de luz)
+        # Rect da área de abdução (sobrepondo a nave)
         self.abduction_rect = pygame.Rect(
-            x + self.width // 4,  # Centralizar a área de abdução
-            y + self.height,      # Começar logo abaixo da nave
-            self.width // 2,      # Largura menor que a nave
+            x,                    # Mesma posição x da nave
+            y,                    # Mesma posição y da nave (sobrepondo)
+            self.width,           # Mesma largura da nave
             self.abduction_height # Altura da área de abdução
         )
 
@@ -32,16 +32,21 @@ class Spaceship:
             )
         except pygame.error:
             self.spaceship_image = None
+    
+    def update_position(self, x, y):
+        """Atualizar posição da nave e seus rects"""
+        self.x = x
+        self.y = y
+        # Atualizar rect da nave
+        self.rect.x = x
+        self.rect.y = y
+        # Atualizar rect da área de abdução
+        self.abduction_rect.x = x
+        self.abduction_rect.y = y
 
     def draw(self, screen):
-        # Desenhar área de abdução (raio de luz) - semi-transparente
-        abduction_surface = pygame.Surface(
-            (self.abduction_rect.width, self.abduction_rect.height), 
-            pygame.SRCALPHA
-        )
-        # Cor amarela semi-transparente para o raio de abdução
-        abduction_surface.fill((255, 255, 0, 60))  # Amarelo com alpha 60
-        screen.blit(abduction_surface, (self.abduction_rect.x, self.abduction_rect.y))
+        # Área de abdução invisível (sem coloração)
+        # A área de overlap existe para detecção de colisão mas não é visível
         
         # Desenhar nave espacial
         if self.spaceship_image:
