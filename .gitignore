@@ -26,6 +26,7 @@ __pycache__/
 htmlcov/
 .tox/
 .venv/
+.venv_new/
 venv/
 env/
 ENV/
@@ -147,6 +148,8 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv_new
+.venv_new/
 env/
 venv/
 ENV/

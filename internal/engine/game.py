@@ -29,6 +29,7 @@ from internal.engine.joystick import Joystick
 from internal.engine.info import Info
 from internal.resources.extra_life import ExtraLife
 from internal.engine.title import TitleScreen
+from internal.engine.video import VideoPlayer
 
 # Carregar configurações
 ENV_CONFIG = load_env_config()
@@ -103,6 +104,9 @@ class Game:
 
         # Sistema de joystick
         Joystick.init(self)
+
+        # Sistema de vídeo
+        self.video_player = VideoPlayer()
 
         # Sistema de splash screen e menu
         self.splash_timer = 0
@@ -339,9 +343,23 @@ class Game:
                         self.state = GameState.TITLE_SCREEN
                 # Navegação da tela de título
                 elif self.state == GameState.TITLE_SCREEN:
-                    # Qualquer tecla vai para o menu principal
+                    # Qualquer tecla vai para o vídeo de abertura
+                    self.state = GameState.OPENING_VIDEO
+                    # Carregar e iniciar o vídeo
+                    if self.video_player.load_video("videos/opening.mp4"):
+                        self.video_player.start_playback()
+                    else:
+                        # Se não conseguir carregar o vídeo, pular direto para o menu
+                        self.state = GameState.MAIN_MENU
+                        if not self.music_started:
+                            self.music.play_menu_music(self)
+                            self.music_started = True
+                # Navegação do vídeo de abertura
+                elif self.state == GameState.OPENING_VIDEO:
+                    # Qualquer tecla pula o vídeo
+                    self.video_player.stop()
                     self.state = GameState.MAIN_MENU
-                    # Iniciar música do menu quando aparecer o menu
+                    # Iniciar música do menu
                     if not self.music_started:
                         self.music.play_menu_music(self)
                         self.music_started = True
@@ -485,9 +503,23 @@ class Game:
                             self.state = GameState.TITLE_SCREEN
                     # Navegação da tela de título com joystick
                     elif self.state == GameState.TITLE_SCREEN:
-                        # Qualquer botão vai para o menu principal
+                        # Qualquer botão vai para o vídeo de abertura
+                        self.state = GameState.OPENING_VIDEO
+                        # Carregar e iniciar o vídeo
+                        if self.video_player.load_video("videos/opening.mp4"):
+                            self.video_player.start_playback()
+                        else:
+                            # Se não conseguir carregar o vídeo, pular direto para o menu
+                            self.state = GameState.MAIN_MENU
+                            if not self.music_started:
+                                self.music.play_menu_music(self)
+                                self.music_started = True
+                    # Navegação do vídeo de abertura com joystick
+                    elif self.state == GameState.OPENING_VIDEO:
+                        # Qualquer botão pula o vídeo
+                        self.video_player.stop()
                         self.state = GameState.MAIN_MENU
-                        # Iniciar música do menu quando aparecer o menu
+                        # Iniciar música do menu
                         if not self.music_started:
                             self.music.play_menu_music(self)
                             self.music_started = True
@@ -764,6 +796,19 @@ class Game:
             # Após o tempo total, ir para a tela de título
             if self.splash_timer >= self.splash_duration:
                 self.state = GameState.TITLE_SCREEN
+
+        elif self.state == GameState.OPENING_VIDEO:
+            # Atualizar reprodução do vídeo
+            self.video_player.update()
+            
+            # Verificar se o vídeo terminou
+            if self.video_player.is_finished():
+                self.video_player.cleanup()
+                self.state = GameState.MAIN_MENU
+                # Iniciar música do menu
+                if not self.music_started:
+                    self.music.play_menu_music(self)
+                    self.music_started = True
 
         elif self.state == GameState.PLAYING:
             # Atualizar jogador
@@ -1727,6 +1772,12 @@ class Game:
 
         elif self.state == GameState.TITLE_SCREEN:
             TitleScreen.show(self)
+
+        elif self.state == GameState.OPENING_VIDEO:
+            # Limpar a tela com fundo preto para evitar sobreposição
+            self.screen.fill(BLACK)
+            # Desenhar o vídeo de abertura
+            self.video_player.draw(self.screen)
 
         elif self.state == GameState.MAIN_MENU:
             # Tela de menu com fundo do jogo
