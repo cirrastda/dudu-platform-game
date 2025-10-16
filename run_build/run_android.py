@@ -78,76 +78,82 @@ def get_package_domain():
 
 
 def build_apk_docker():
-    """Faz o build do APK usando Docker no WSL2"""
-    print("\n🔨 Iniciando build via Docker no WSL2...")
-    print("⏳ Este processo pode demorar alguns minutos...")
-
-    # Criar link temporário do buildozer.spec na raiz
-    buildozer_path = os.path.join("run_build", "config", "buildozer.spec")
-    if not os.path.exists(buildozer_path):
-        print("❌ Arquivo buildozer.spec não encontrado!")
-        return False
-
-    import shutil
-
-    temp_spec = "buildozer.spec"
-    if os.path.exists(temp_spec):
-        os.remove(temp_spec)
-    shutil.copy2(buildozer_path, temp_spec)
-
+    """Constrói APK usando Docker no WSL2"""
     try:
-        # Usar Ubuntu com instalação mínima do Buildozer
-        docker_cmd = [
-            "wsl",
-            "docker",
-            "run",
-            "--rm",
-            "-e",
-            "DEBIAN_FRONTEND=noninteractive",
-            "-v",
-            "/mnt/b/projetos/platform-game:/app",
-            "-w",
-            "/app",
-            "ubuntu:20.04",
-            "bash",
-            "-c",
-            "apt-get update && apt-get install -y python3 python3-pip git openjdk-8-jdk-headless && pip3 install buildozer && echo 'y' | buildozer android debug",
-        ]
-
-        # Executa o build
-        process = subprocess.Popen(
-            docker_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            bufsize=1,
-        )
-
-        # Mostra output em tempo real
-        for line in process.stdout:
-            print(line.rstrip())
-
-        process.wait()
-
-        if process.returncode == 0:
-            print("\n✅ Build Docker concluído com sucesso!")
-            return True
-        else:
-            print(f"\n❌ Build falhou com código {process.returncode}")
+        print("🐳 Iniciando build Docker...")
+        
+        # Verificar se buildozer.spec existe
+        buildozer_path = os.path.join("run_build", "config", "buildozer.spec")
+        if not os.path.exists(buildozer_path):
+            print("❌ Arquivo buildozer.spec não encontrado!")
+            print("💡 Criando buildozer.spec padrão...")
+            # Criar buildozer.spec básico se não existir
+            os.makedirs(os.path.dirname(buildozer_path), exist_ok=True)
             return False
-
+        
+        # Criar link simbólico temporário na raiz
+        temp_spec = "buildozer.spec"
+        if os.path.exists(temp_spec):
+            os.remove(temp_spec)
+        
+        # No Windows, copiar ao invés de link simbólico
+        import shutil
+        shutil.copy2(buildozer_path, temp_spec)
+        
+        try:
+            # Verificar se a imagem Docker existe
+            check_image = subprocess.run(
+                ["wsl", "docker", "images", "-q", "android-builder"],
+                capture_output=True, text=True
+            )
+            
+            if not check_image.stdout.strip():
+                print("🏗️  Construindo imagem Docker Android...")
+                build_cmd = [
+                    "wsl", "docker", "build",
+                    "-t", "android-builder",
+                    "-f", ".docker/Dockerfile.android",
+                    "."
+                ]
+                
+                build_result = subprocess.run(build_cmd, cwd=os.getcwd())
+                if build_result.returncode != 0:
+                    print("❌ Erro ao construir imagem Docker")
+                    return False
+            
+            # Build usando Docker
+            cmd = [
+                "wsl",
+                "docker", "run", "--rm",
+                "-v", f"{os.getcwd()}:/home/builduser/app",
+                "-w", "/home/builduser/app",
+                "--platform", "linux/amd64",
+                "android-builder",
+                "/home/builduser/build_android.sh"
+            ]
+            
+            print(f"🔧 Executando build Docker...")
+            
+            result = subprocess.run(cmd, cwd=os.getcwd(), text=True)
+            
+            if result.returncode == 0:
+                print("✅ Build Docker concluído com sucesso")
+                return True
+            else:
+                print(f"❌ Erro no build Docker (código: {result.returncode})")
+                return False
+                
+        finally:
+            # Remover arquivo temporário
+            if os.path.exists(temp_spec):
+                os.remove(temp_spec)
+                
     except KeyboardInterrupt:
         print("\n🛑 Build cancelado pelo usuário")
         return False
     except Exception as e:
-        print(f"\n❌ Erro durante o build: {e}")
+        print(f"❌ Erro no build Docker: {e}")
         return False
-    finally:
-        # Limpar arquivo temporário
-        if os.path.exists(temp_spec):
-            os.remove(temp_spec)
 
 
 def find_apk_path():

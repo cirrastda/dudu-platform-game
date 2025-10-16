@@ -195,8 +195,68 @@ def package_apk(apk_dir):
         return None
 
 def build_apk():
-    """Constrói o APK"""
-    print("📦 Criando APK...")
+    """Constrói o APK usando buildozer se disponível, senão usa método manual"""
+    print("🔨 Construindo APK...")
+    
+    # Verificar se buildozer.spec existe
+    buildozer_spec = os.path.join("run_build", "config", "buildozer.spec")
+    if os.path.exists(buildozer_spec):
+        return build_apk_buildozer(buildozer_spec)
+    else:
+        print("⚠️  buildozer.spec não encontrado, usando método manual")
+        return build_apk_manual()
+
+def build_apk_buildozer(buildozer_spec):
+    """Constrói APK usando buildozer"""
+    try:
+        print("🏗️  Usando buildozer para construir APK...")
+        
+        # Copiar buildozer.spec para a raiz temporariamente
+        import shutil
+        temp_spec = "buildozer.spec"
+        if os.path.exists(temp_spec):
+            os.remove(temp_spec)
+        shutil.copy2(buildozer_spec, temp_spec)
+        
+        try:
+            # Executar buildozer
+            result = subprocess.run(
+                ["buildozer", "android", "debug"],
+                cwd=os.getcwd(),
+                capture_output=False,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                # Procurar APK gerado
+                bin_dir = Path("bin")
+                if bin_dir.exists():
+                    apk_files = list(bin_dir.glob("*.apk"))
+                    if apk_files:
+                        print(f"✅ APK gerado: {apk_files[0]}")
+                        return str(apk_files[0])
+                
+                print("❌ APK não encontrado após build")
+                return None
+            else:
+                print(f"❌ Erro no buildozer (código: {result.returncode})")
+                return None
+                
+        finally:
+            # Remover arquivo temporário
+            if os.path.exists(temp_spec):
+                os.remove(temp_spec)
+                
+    except FileNotFoundError:
+        print("❌ Buildozer não encontrado, tentando método manual")
+        return build_apk_manual()
+    except Exception as e:
+        print(f"❌ Erro no buildozer: {e}")
+        return build_apk_manual()
+
+def build_apk_manual():
+    """Constrói APK usando método manual"""
+    print("🔧 Construindo APK manualmente...")
     
     apk_dir = create_apk_structure()
     print("✅ Estrutura APK criada")

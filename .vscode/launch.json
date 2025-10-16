@@ -170,6 +170,50 @@
             "args": [],
             "justMyCode": false,
             "stopOnEntry": false
+        },
+        {
+            "name": "📱 Debug Android via ADB",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_build/debug_android_adb.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "ANDROID_DEBUG": "1"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "📱 Build e Debug Android Completo",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_build/build_and_debug_android.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "ANDROID_DEBUG": "1"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        },
+        {
+            "name": "🧪 Testar Configuração Android",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_build/test_android_setup.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
         }
     ]
 }
