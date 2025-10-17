@@ -35,6 +35,17 @@ class GameBuilder:
         self.dist_dir = self.project_root / "dist"
         self.build_dir = self.project_root / "build"
 
+    def _handle_remove_readonly(self, func, path, exc_info):
+        """Callback para remover arquivos somente leitura ou contornar PermissionError."""
+        import stat
+        try:
+            # Tentar alterar permissões e remover novamente
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+        except Exception:
+            # Como último recurso, apenas ignore o erro
+            pass
+
     def detect_platform(self):
         """Detecta a plataforma atual"""
         system = platform.system().lower()
@@ -52,8 +63,11 @@ class GameBuilder:
         print("Limpando diretorios de build...")
         for dir_path in [self.dist_dir, self.build_dir]:
             if dir_path.exists():
-                shutil.rmtree(dir_path)
-                print(f"   Removido: {dir_path}")
+                try:
+                    shutil.rmtree(dir_path, onerror=self._handle_remove_readonly)
+                    print(f"   Removido: {dir_path}")
+                except Exception as e:
+                    print(f"   Aviso: nao foi possivel remover {dir_path}: {e}")
 
     def check_dependencies(self):
         """Verifica se as dependências estão instaladas"""
@@ -75,6 +89,22 @@ class GameBuilder:
             print(f"   Pygame {pygame.version.ver} encontrado")
         except ImportError:
             print("   Pygame nao encontrado")
+            return False
+
+        # Verificar MoviePy
+        try:
+            import moviepy
+            print(f"   MoviePy {getattr(moviepy, '__version__', 'desconhecida')} encontrado")
+        except ImportError:
+            print("   MoviePy nao encontrado")
+            return False
+
+        # Verificar imageio-ffmpeg
+        try:
+            import imageio_ffmpeg
+            print(f"   imageio-ffmpeg {getattr(imageio_ffmpeg, '__version__', 'desconhecida')} encontrado")
+        except ImportError:
+            print("   imageio-ffmpeg nao encontrado")
             return False
 
         # Verificar arquivo principal
@@ -131,7 +161,7 @@ class GameBuilder:
         # Configurar argumentos do PyInstaller
         cmd = [
             "pyinstaller",
-            "--onefile",  # Arquivo único
+            "--onedir",  # Pasta (mais estável para diagnosticar)
             "--name",
             executable_name.replace(".exe", ""),  # Nome sem extensão
             "--distpath",
@@ -140,11 +170,16 @@ class GameBuilder:
             str(self.build_dir),
             "--specpath",
             str(self.build_dir),
+            "--runtime-hook",
+            str(self.project_root / "run_build" / "runtime_hook_logging.py"),
+            "--debug",
+            "all",
         ]
 
         # Configurações específicas por plataforma
         if target == "windows":
-            cmd.extend(["--windowed", "--console"])  # Manter console para debug
+            # Usar apenas console para garantir logs visíveis
+            cmd.extend(["--console"])  # Manter console para debug
         elif target == "macos":
             cmd.extend(["--windowed"])
         elif target == "linux":
@@ -158,37 +193,95 @@ class GameBuilder:
                 break
 
         # Incluir recursos necessários (usando caminhos absolutos)
-        resource_dirs = ["imagens", "musicas", "sounds"]
+        resource_dirs = ["imagens", "musicas", "sounds", "videos"]
         for resource_dir in resource_dirs:
             resource_path = self.project_root / resource_dir
             if resource_path.exists():
                 cmd.extend(["--add-data", f"{resource_path}{os.pathsep}{resource_dir}"])
 
-        # Arquivo principal
-        cmd.append("main.py")
+        # Incluir .env se existir (para configurar ambiente em runtime)
+        env_file = self.project_root / ".env"
+        if env_file.exists():
+            cmd.extend(["--add-data", f"{env_file}{os.pathsep}."])
+
+        # Garantir coleta de dados/submódulos para vídeo (ffmpeg + moviepy + imageio + numpy + pygame)
+        # Coleta todo conteúdo do pacote imageio_ffmpeg (inclui binários ffmpeg por plataforma)
+        cmd.extend([
+            "--collect-all", "imageio_ffmpeg",
+            "--collect-submodules", "moviepy",
+            "--collect-submodules", "imageio",
+            "--collect-submodules", "numpy",
+            "--collect-submodules", "pygame",
+            # Hidden imports comuns
+            "--hidden-import", "moviepy.editor",
+            "--hidden-import", "imageio",
+            "--hidden-import", "imageio_ffmpeg",
+            "--hidden-import", "pygame.freetype",
+        ])
+
+        # Adicionar binário do ffmpeg diretamente se disponível localmente
+        try:
+            import imageio_ffmpeg
+            ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+            if os.path.exists(ffmpeg_path):
+                # Colocar sob o pacote imageio_ffmpeg para facilitar descoberta em runtime
+                cmd.extend(["--add-binary", f"{ffmpeg_path}{os.pathsep}imageio_ffmpeg"])
+                print(f"   ffmpeg detectado e incluído: {ffmpeg_path}")
+            else:
+                print(f"   Aviso: ffmpeg não encontrado em {ffmpeg_path}; confiando em --collect-all imageio_ffmpeg")
+        except Exception as e:
+            print(f"   Aviso: não foi possível resolver ffmpeg via imageio_ffmpeg ({e}). PyInstaller coletará dados do pacote.")
+
+        # Arquivo principal (usar bootstrap para melhor logging de arranque)
+        cmd.append("bootstrap.py")
 
         try:
             print(f"   Executando: {' '.join(cmd)}")
             subprocess.run(cmd, check=True, cwd=self.project_root)
 
-            # Verificar se o executável foi criado
-            expected_exe = self.dist_dir / executable_name.replace(".exe", "")
-            if target == "windows":
-                expected_exe = (
-                    self.dist_dir / f"{executable_name.replace('.exe', '')}.exe"
-                )
+            # Verificar se o executável foi criado no diretório da plataforma
+            base_name = executable_name.replace(".exe", "")
+            windows_ext = ".exe" if target == "windows" else ""
+            expected_onefile = platform_dist_dir / f"{base_name}{windows_ext}"
+            expected_onedir = platform_dist_dir / base_name / f"{base_name}{windows_ext}"
 
-            if expected_exe.exists():
-                # Renomear para o nome correto se necessário
-                final_exe = self.dist_dir / executable_name
-                if expected_exe != final_exe:
-                    expected_exe.rename(final_exe)
+            exe_found = None
+            is_onedir = False
+            if expected_onefile.exists():
+                exe_found = expected_onefile
+                is_onedir = False
+            elif expected_onedir.exists():
+                exe_found = expected_onedir
+                is_onedir = True
 
-                print(f"   Executavel criado: {final_exe}")
-                print(f"   Tamanho: {final_exe.stat().st_size / (1024*1024):.1f} MB")
+            if exe_found:
+                # Em onedir não mover o executável (depende de DLLs do diretório)
+                if is_onedir:
+                    exe_to_report = exe_found
+                else:
+                    final_exe = self.dist_dir / executable_name
+                    if exe_found != final_exe:
+                        try:
+                            if final_exe.exists():
+                                final_exe.unlink()
+                            exe_found.rename(final_exe)
+                            exe_to_report = final_exe
+                        except Exception as e:
+                            print(f"   Aviso: nao foi possivel mover executavel: {e}")
+                            exe_to_report = exe_found
+                    else:
+                        exe_to_report = final_exe
+
+                print(f"   Executavel criado: {exe_to_report}")
+                try:
+                    print(f"   Tamanho: {exe_to_report.stat().st_size / (1024*1024):.1f} MB")
+                except Exception:
+                    pass
                 return True
             else:
-                print(f"   Executavel nao encontrado em {expected_exe}")
+                print("   Executavel nao encontrado nas seguintes localizacoes:")
+                print(f"     - {expected_onefile}")
+                print(f"     - {expected_onedir}")
                 return False
 
         except subprocess.CalledProcessError as e:
@@ -238,10 +331,14 @@ class GameBuilder:
         print()
 
         if not self.check_dependencies():
-            print(
-                "\nDependencias nao atendidas. Execute 'python build.py --install-deps' primeiro."
-            )
-            return False
+            print("\nDependencias nao atendidas. Instalando automaticamente...")
+            if not self.install_dependencies():
+                print("   Falha ao instalar dependencias.")
+                return False
+            # Revalidar após instalação
+            if not self.check_dependencies():
+                print("   Dependencias ainda não atendidas após instalação.")
+                return False
 
         self.clean_build_dirs()
 

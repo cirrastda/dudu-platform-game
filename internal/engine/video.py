@@ -1,6 +1,7 @@
 import pygame
 import os
 import time
+import sys
 from internal.utils.constants import *
 from internal.utils.functions import resource_path
 import threading
@@ -11,7 +12,10 @@ try:
     MOVIEPY_AVAILABLE = True
 except ImportError:
     MOVIEPY_AVAILABLE = False
-    print("MoviePy não está disponível. Áudio do vídeo não será reproduzido.")
+    try:
+        print(f"MoviePy não está disponível. Áudio do vídeo não será reproduzido. (Python: {sys.executable})")
+    except Exception:
+        print("MoviePy não está disponível. Áudio do vídeo não será reproduzido.")
 
 
 class VideoPlayer:
@@ -36,8 +40,14 @@ class VideoPlayer:
         self.fallback_images = []
         self.fallback_mode = False
         self.fallback_index = 0
-        self.fallback_delay = 500  # 500ms entre imagens
+        self.fallback_delay = 4000  # 4000ms (4s) por imagem
+        self.fallback_fade = 1000   # 1000ms (1s) de transição por esmaecimento
         self.last_fallback_time = 0
+
+        # Áudio para fallback (pygame.mixer)
+        self.fallback_music_path = None
+        self.has_fallback_music = False
+        self.fallback_music_started = False
         
     def load_video(self, video_path):
         """Carregar vídeo para reprodução usando moviepy"""
@@ -108,36 +118,99 @@ class VideoPlayer:
         
         self.video_rect = pygame.Rect(x, y, new_width, new_height)
         print(f"Vídeo será exibido em: {x}, {y} com tamanho {new_width}x{new_height}")
+
+    def _calculate_fallback_rect(self, image_size):
+        """Calcular posição e tamanho para imagens de fallback (fit dentro da tela, centralizado)."""
+        img_width, img_height = image_size
+        img_aspect = img_width / img_height
+        screen_aspect = self.screen_width / self.screen_height
+
+        # Ajuste para ocupar o máximo sem cortar (contain)
+        if img_aspect > screen_aspect:
+            # Limitar pela largura da tela
+            new_width = self.screen_width
+            new_height = int(new_width / img_aspect)
+            x = 0
+            y = (self.screen_height - new_height) // 2
+        else:
+            # Limitar pela altura da tela
+            new_height = self.screen_height
+            new_width = int(new_height * img_aspect)
+            x = (self.screen_width - new_width) // 2
+            y = 0
+
+        self.video_rect = pygame.Rect(x, y, new_width, new_height)
+        print(f"Fallback será exibido em: {x}, {y} com tamanho {new_width}x{new_height}")
     
     def load_fallback_video(self):
         """Carregar vídeo alternativo usando imagens estáticas"""
         self.fallback_mode = True
         self.fallback_images = []
-        
-        # Tentar carregar imagens de fallback
+
+        def try_load_series(base_dir, label):
+            """Tenta carregar uma série de frames (png/jpg) em base_dir.
+            Suporta nomes frame_1..frame_7 e frame1..frame7.
+            """
+            loaded = 0
+            for i in range(1, 8):  # Assumindo até 7 imagens
+                candidates = [
+                    os.path.join(base_dir, f"frame_{i}.png"),
+                    os.path.join(base_dir, f"frame_{i}.jpg"),
+                    os.path.join(base_dir, f"frame{i}.png"),
+                    os.path.join(base_dir, f"frame{i}.jpg"),
+                ]
+                img_path = next((p for p in candidates if os.path.exists(p)), None)
+                if img_path:
+                    try:
+                        img = pygame.image.load(img_path).convert_alpha()
+                        img_rect = img.get_rect()
+                        # Calcular rect de exibição para esta imagem e redimensionar
+                        self._calculate_fallback_rect((img_rect.width, img_rect.height))
+                        img = pygame.transform.smoothscale(
+                            img, (self.video_rect.width, self.video_rect.height)
+                        ).convert_alpha()
+                        self.fallback_images.append(img)
+                        loaded += 1
+                    except Exception as e:
+                        print(f"Erro ao carregar imagem fallback ({label}) {img_path}: {e}")
+            if loaded:
+                print(f"Fallback: carregadas {loaded} imagens de '{label}'")
+            return loaded
+
+        # 1) Preferir 'videos/fallback'
         fallback_dir = resource_path("videos/fallback")
         if os.path.exists(fallback_dir):
-            for i in range(1, 8):  # Assumindo 7 imagens
-                img_path = os.path.join(fallback_dir, f"frame_{i}.png")
-                if os.path.exists(img_path):
-                    try:
-                        img = pygame.image.load(img_path)
-                        # Redimensionar para manter aspect ratio
-                        img_rect = img.get_rect()
-                        self._calculate_video_rect((img_rect.width, img_rect.height))
-                        img = pygame.transform.scale(img, (self.video_rect.width, self.video_rect.height))
-                        self.fallback_images.append(img)
-                    except Exception as e:
-                        print(f"Erro ao carregar imagem fallback {img_path}: {e}")
-        
+            try_load_series(fallback_dir, "videos/fallback")
+
+        # 2) Se não houver imagens, tentar 'imagens/intro'
         if not self.fallback_images:
-            # Criar uma imagem preta como último recurso
-            black_surface = pygame.Surface((400, 300))
+            intro_dir = resource_path("imagens/intro")
+            if os.path.exists(intro_dir):
+                try_load_series(intro_dir, "imagens/intro")
+
+        # Tentar carregar música de introdução para o fallback
+        try:
+            music_path = resource_path("videos/intro.mp3")
+            if os.path.exists(music_path):
+                self.fallback_music_path = music_path
+                self.has_fallback_music = True
+                print("Fallback: música 'videos/intro.mp3' disponível")
+            else:
+                print("Fallback: música 'videos/intro.mp3' não encontrada")
+        except Exception as e:
+            print(f"Fallback: erro ao localizar música de intro: {e}")
+
+        # 3) Último recurso: uma tela preta centralizada
+        if not self.fallback_images:
+            self._calculate_fallback_rect((400, 300))
+            black_surface = pygame.Surface((self.video_rect.width, self.video_rect.height), pygame.SRCALPHA)
             black_surface.fill((0, 0, 0))
-            self.fallback_images.append(black_surface)
-            self._calculate_video_rect((400, 300))
-        
-        self.duration = len(self.fallback_images) * (self.fallback_delay / 1000.0)
+            self.fallback_images.append(black_surface.convert_alpha())
+            print("Fallback: nenhuma imagem encontrada; usando tela preta")
+
+        # Duração: 5s por imagem + 1s de fade entre pares
+        num_imgs = len(self.fallback_images)
+        self.duration = num_imgs * (self.fallback_delay / 1000.0) + max(0, num_imgs - 1) * (self.fallback_fade / 1000.0)
         print(f"Modo fallback ativado com {len(self.fallback_images)} imagens")
         return True
     
@@ -151,6 +224,23 @@ class VideoPlayer:
             if self.fallback_mode:
                 self.fallback_index = 0
                 self.last_fallback_time = pygame.time.get_ticks()
+                # Iniciar música do fallback se disponível
+                if self.has_fallback_music and self.fallback_music_path:
+                    try:
+                        # Parar qualquer música que esteja tocando
+                        pygame.mixer.music.stop()
+                        pygame.mixer.music.load(self.fallback_music_path)
+                        # Ajustar volume (opcional)
+                        try:
+                            pygame.mixer.music.set_volume(0.8)
+                        except Exception:
+                            pass
+                        pygame.mixer.music.play()
+                        self.fallback_music_started = True
+                        print("Fallback: música de intro iniciada")
+                    except Exception as e:
+                        print(f"Fallback: erro ao iniciar música de intro: {e}")
+                        self.fallback_music_started = False
             
             # Iniciar áudio se disponível
             if self.has_audio and self.audio_clip:
@@ -185,15 +275,21 @@ class VideoPlayer:
             return
         
         if self.fallback_mode:
-            # Modo fallback com imagens
+            # Modo fallback com imagens (5s por imagem + fade de 1s)
             current_time = pygame.time.get_ticks()
-            if current_time - self.last_fallback_time >= self.fallback_delay:
+            elapsed = current_time - self.last_fallback_time
+            if elapsed >= self.fallback_delay + self.fallback_fade:
                 self.fallback_index += 1
                 self.last_fallback_time = current_time
-                
                 if self.fallback_index >= len(self.fallback_images):
                     self.finished = True
                     self.is_playing = False
+                    # Parar música do fallback ao finalizar
+                    try:
+                        pygame.mixer.music.stop()
+                        self.fallback_music_started = False
+                    except Exception:
+                        pass
         else:
             # Modo vídeo real com moviepy
             elapsed_time = time.time() - self.start_time
@@ -223,9 +319,39 @@ class VideoPlayer:
             return
         
         if self.fallback_mode:
-            # Desenhar imagem fallback
+            # Desenhar imagem fallback com transição por esmaecimento
             if self.fallback_index < len(self.fallback_images):
-                screen.blit(self.fallback_images[self.fallback_index], self.video_rect)
+                elapsed = pygame.time.get_ticks() - self.last_fallback_time
+                if elapsed < self.fallback_delay or self.fallback_fade <= 0:
+                    # Exibir imagem atual normalmente (centralizada e ajustada)
+                    screen.blit(self.fallback_images[self.fallback_index], self.video_rect)
+                else:
+                    # Crossfade entre imagem atual e próxima
+                    fade_elapsed = min(self.fallback_fade, elapsed - self.fallback_delay)
+                    t = fade_elapsed / float(self.fallback_fade) if self.fallback_fade > 0 else 1.0
+
+                    cur_img = self.fallback_images[self.fallback_index]
+                    next_index = self.fallback_index + 1
+                    next_img = self.fallback_images[next_index] if next_index < len(self.fallback_images) else None
+
+                    # Esmaecer imagem atual (fade-out)
+                    alpha_cur = int(255 * (1.0 - t))
+                    cur_img.set_alpha(alpha_cur)
+                    screen.blit(cur_img, self.video_rect)
+                    cur_img.set_alpha(255)
+
+                    if next_img:
+                        # Esmaecer imagem próxima (fade-in)
+                        alpha_next = int(255 * t)
+                        next_img.set_alpha(alpha_next)
+                        screen.blit(next_img, self.video_rect)
+                        next_img.set_alpha(255)
+                    else:
+                        # Sem próxima imagem: esmaecer para preto
+                        black = pygame.Surface((self.video_rect.width, self.video_rect.height))
+                        black.fill((0, 0, 0))
+                        black.set_alpha(int(255 * t))
+                        screen.blit(black, self.video_rect)
         else:
             # Desenhar frame do vídeo
             if self.current_frame and self.video_rect:
@@ -242,6 +368,14 @@ class VideoPlayer:
             except:
                 pass
             self.audio_thread = None
+
+        # Parar música do fallback se estiver tocando
+        if self.fallback_music_started:
+            try:
+                pygame.mixer.music.stop()
+            except Exception:
+                pass
+            self.fallback_music_started = False
     
     def is_finished(self):
         """Verificar se o vídeo terminou"""

@@ -1,18 +1,17 @@
-import pygame
-import sys
-import math
 import os
-import json
-from enum import Enum
-import random
-import math
+import sys
 from pathlib import Path
 import time
 
-# Logging simples para diagnosticar execução do executável (PyInstaller)
+# Tentar minimizar problemas de audio/display no boot
+os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+if sys.platform.startswith("win"):
+    # Forçar driver de áudio do SDL mais estável em Windows
+    os.environ.setdefault("SDL_AUDIODRIVER", "directsound")
+
+
 def _setup_runtime_logging():
     try:
-        # Diretório para log: ao lado do executável quando congelado; caso contrário, cwd
         if getattr(sys, "frozen", False):
             log_dir = Path(sys.executable).parent
         else:
@@ -45,7 +44,6 @@ def _setup_runtime_logging():
                 except Exception:
                     pass
 
-        # Redirecionar stdout/stderr para arquivo também
         try:
             sys.stdout = Tee(sys.stdout, log_file)
         except Exception:
@@ -62,29 +60,34 @@ def _setup_runtime_logging():
                 traceback.print_tb(exc_traceback)
             except Exception:
                 pass
-            # Em ambiente congelado, aguardar um instante para garantir escrita
             if getattr(sys, "frozen", False):
                 time.sleep(0.2)
 
         sys.excepthook = excepthook
-        print("[BOOT] App iniciado")
-        print("[BOOT] Python:", sys.executable)
-        print("[BOOT] CWD:", os.getcwd())
+        print("[BOOT] Bootstrap iniciado")
+        print("[BOOT] Executable:", sys.executable)
         print("[BOOT] Frozen:", getattr(sys, "frozen", False))
+        print("[BOOT] CWD:", os.getcwd())
+        print("[BOOT] SDL_AUDIODRIVER:", os.environ.get("SDL_AUDIODRIVER"))
     except Exception:
         pass
 
-_setup_runtime_logging()
 
-# Inicializar pygame
-pygame.init()
-
-# Importar constantes do jogo
-from internal.engine.game import Game
+def main():
+    _setup_runtime_logging()
+    print("[BOOT] Importando jogo...")
+    import pygame
+    pygame.init()
+    try:
+        from internal.engine.game import Game
+        print("[BOOT] Criando Game...")
+        game = Game()
+        print("[BOOT] Iniciando loop do jogo...")
+        game.run()
+    except Exception as e:
+        print("[BOOT] Falha ao iniciar jogo:", e)
+        raise
 
 
 if __name__ == "__main__":
-    print("[BOOT] Criando Game...")
-    game = Game()
-    print("[BOOT] Iniciando loop do jogo...")
-    game.run()
+    main()

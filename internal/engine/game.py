@@ -343,17 +343,33 @@ class Game:
                         self.state = GameState.TITLE_SCREEN
                 # Navegação da tela de título
                 elif self.state == GameState.TITLE_SCREEN:
-                    # Qualquer tecla vai para o vídeo de abertura
-                    self.state = GameState.OPENING_VIDEO
-                    # Carregar e iniciar o vídeo
-                    if self.video_player.load_video("videos/opening.mp4"):
-                        self.video_player.start_playback()
-                    else:
-                        # Se não conseguir carregar o vídeo, pular direto para o menu
+                    # Em mobile, podemos já ter exibido o vídeo via Kivy
+                    skip_opening = False
+                    try:
+                        skip_opening = (
+                            self.env_config.get("skip-opening-video") == "1"
+                            or ENV_CONFIG.get("skip-opening-video") == "1"
+                        )
+                    except Exception:
+                        skip_opening = False
+
+                    if skip_opening:
                         self.state = GameState.MAIN_MENU
                         if not self.music_started:
                             self.music.play_menu_music(self)
                             self.music_started = True
+                    else:
+                        # Qualquer tecla vai para o vídeo de abertura
+                        self.state = GameState.OPENING_VIDEO
+                        # Carregar e iniciar o vídeo
+                        if self.video_player.load_video("videos/opening.mp4"):
+                            self.video_player.start_playback()
+                        else:
+                            # Se não conseguir carregar o vídeo, pular direto para o menu
+                            self.state = GameState.MAIN_MENU
+                            if not self.music_started:
+                                self.music.play_menu_music(self)
+                                self.music_started = True
                 # Navegação do vídeo de abertura
                 elif self.state == GameState.OPENING_VIDEO:
                     # Qualquer tecla pula o vídeo
@@ -503,17 +519,33 @@ class Game:
                             self.state = GameState.TITLE_SCREEN
                     # Navegação da tela de título com joystick
                     elif self.state == GameState.TITLE_SCREEN:
-                        # Qualquer botão vai para o vídeo de abertura
-                        self.state = GameState.OPENING_VIDEO
-                        # Carregar e iniciar o vídeo
-                        if self.video_player.load_video("videos/opening.mp4"):
-                            self.video_player.start_playback()
-                        else:
-                            # Se não conseguir carregar o vídeo, pular direto para o menu
+                        # Em mobile, podemos já ter exibido o vídeo via Kivy
+                        skip_opening = False
+                        try:
+                            skip_opening = (
+                                self.env_config.get("skip-opening-video") == "1"
+                                or ENV_CONFIG.get("skip-opening-video") == "1"
+                            )
+                        except Exception:
+                            skip_opening = False
+
+                        if skip_opening:
                             self.state = GameState.MAIN_MENU
                             if not self.music_started:
                                 self.music.play_menu_music(self)
                                 self.music_started = True
+                        else:
+                            # Qualquer botão vai para o vídeo de abertura
+                            self.state = GameState.OPENING_VIDEO
+                            # Carregar e iniciar o vídeo
+                            if self.video_player.load_video("videos/opening.mp4"):
+                                self.video_player.start_playback()
+                            else:
+                                # Se não conseguir carregar o vídeo, pular direto para o menu
+                                self.state = GameState.MAIN_MENU
+                                if not self.music_started:
+                                    self.music.play_menu_music(self)
+                                    self.music_started = True
                     # Navegação do vídeo de abertura com joystick
                     elif self.state == GameState.OPENING_VIDEO:
                         # Qualquer botão pula o vídeo

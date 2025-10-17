@@ -154,7 +154,13 @@ python build_release.py --help
 ```
 pygame==2.5.2
 pyinstaller==6.3.0
+moviepy==1.0.3
+imageio-ffmpeg>=0.4.5
 ```
+
+#### Nota sobre vídeos de abertura
+- Para que os vídeos e áudio de abertura sejam reproduzidos (sem cair em modo fallback), é necessário ter `moviepy` instalado.
+- Se estiver vendo apenas imagens ou tela preta na abertura, rode: `pip install -r requirements.txt` ou `pip install moviepy imageio-ffmpeg`.
 
 ## 🎮 Níveis
 

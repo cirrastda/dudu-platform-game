@@ -12,7 +12,7 @@ class TitleScreen:
         try:
             cache = ResourceCache()
             cover_image = cache.get_image(
-                "imagens/cover/cover_wide.png", (WIDTH, HEIGHT)
+                "imagens/title/title.png", (WIDTH, HEIGHT)
             )
             game.screen.blit(cover_image, (0, 0))
         except:

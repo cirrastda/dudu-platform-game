@@ -13,8 +13,9 @@ python-for-android>=2023.0.0
 # kivy-ios>=1.3.0
 
 # Framework alternativo (recomendado para mobile)
-# kivy>=2.1.0
+kivy>=2.1.0
 # kivymd>=1.1.0
+ffpyplayer>=4.3.5
 
 # Ferramentas de desenvolvimento
 colorama>=0.4.0  # Para cores no terminal

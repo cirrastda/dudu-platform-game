@@ -100,6 +100,10 @@ def create_apk_structure():
     
     if os.path.exists("musicas"):
         shutil.copytree("musicas", os.path.join(apk_dir, "assets", "musicas"), dirs_exist_ok=True)
+
+    # Vídeos para abertura no mobile (Kivy)
+    if os.path.exists("videos"):
+        shutil.copytree("videos", os.path.join(apk_dir, "assets", "videos"), dirs_exist_ok=True)
     
     # Cria AndroidManifest.xml
     manifest_content = '''<?xml version="1.0" encoding="utf-8"?>
