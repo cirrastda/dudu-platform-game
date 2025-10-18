@@ -6,7 +6,7 @@ Configuração de versão do Jump and Hit
 # Informações da versão
 VERSION_MAJOR = 0
 VERSION_MINOR = 0
-VERSION_PATCH = 1
+VERSION_PATCH = 3
 VERSION_STAGE = "alpha"  # alpha, beta, rc, stable
 VERSION_BUILD = 1
 
@@ -29,6 +29,7 @@ SUPPORTED_ARCHITECTURES = ["x64", "arm64"]
 MIN_PYTHON_VERSION = "3.8"
 REQUIRED_PYGAME_VERSION = "2.5.2"
 
+
 def get_version_info():
     """Retorna informações completas da versão"""
     return {
@@ -43,24 +44,29 @@ def get_version_info():
         "game_title": GAME_TITLE,
         "description": GAME_DESCRIPTION,
         "author": AUTHOR,
-        "copyright": COPYRIGHT
+        "copyright": COPYRIGHT,
     }
+
 
 def get_version_string():
     """Retorna string da versão para exibição"""
     return VERSION_FULL
 
+
 def is_alpha():
     """Verifica se é versão alpha"""
     return VERSION_STAGE == "alpha"
+
 
 def is_beta():
     """Verifica se é versão beta"""
     return VERSION_STAGE == "beta"
 
+
 def is_stable():
     """Verifica se é versão estável"""
     return VERSION_STAGE == "stable"
+
 
 if __name__ == "__main__":
     print(f"Versão: {get_version_string()}")

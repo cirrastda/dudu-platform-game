@@ -61,7 +61,7 @@ class VideoPlayer:
             # Tentar carregar com moviepy se disponível
             if MOVIEPY_AVAILABLE:
                 try:
-                    print(f"Carregando vídeo com MoviePy: {video_path}")
+
                     self.video_clip = VideoFileClip(full_path)
                     self.duration = self.video_clip.duration
                     self.fps = self.video_clip.fps or 30
@@ -74,14 +74,12 @@ class VideoPlayer:
                     if self.video_clip.audio:
                         self.audio_clip = self.video_clip.audio
                         self.has_audio = True
-                        print("Áudio do vídeo carregado")
+
                     else:
                         self.has_audio = False
-                        print("Vídeo não possui áudio")
+
                     
-                    print(f"Vídeo carregado: {video_path}")
-                    print(f"Duração: {self.duration:.2f}s, FPS: {self.fps}")
-                    print(f"Dimensões: {video_size[0]}x{video_size[1]}")
+
                     
                     return True
                     
@@ -117,7 +115,7 @@ class VideoPlayer:
             y = (self.screen_height - new_height) // 2
         
         self.video_rect = pygame.Rect(x, y, new_width, new_height)
-        print(f"Vídeo será exibido em: {x}, {y} com tamanho {new_width}x{new_height}")
+
 
     def _calculate_fallback_rect(self, image_size):
         """Calcular posição e tamanho para imagens de fallback (fit dentro da tela, centralizado)."""
@@ -259,13 +257,13 @@ class VideoPlayer:
                     
                     # Reproduzir áudio usando moviepy
                     self.audio_clip.preview()
-                    print("Áudio do vídeo reproduzido")
+
                 except Exception as e:
                     print(f"Erro ao reproduzir áudio: {e}")
             
             self.audio_thread = threading.Thread(target=play_audio, daemon=True)
             self.audio_thread.start()
-            print("Iniciando reprodução de áudio do vídeo")
+
         except Exception as e:
             print(f"Erro ao iniciar thread de áudio: {e}")
     
