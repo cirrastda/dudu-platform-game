@@ -92,6 +92,9 @@ class Level:
         elif 41 <= level <= 50:
             # Mundo espacial: usar fundo do espaço
             return "imagens/fundoEspaco.png"
+        elif level == 51:
+            # Fase final da nave
+            return "imagens/fundoNave.png"
         else:
             # Fallback para níveis fora do range esperado
             return "imagens/fundo6.png"
@@ -203,6 +206,8 @@ class Level:
             StaticLevelGenerator.create_level_49(self)
         elif level == 50:
             StaticLevelGenerator.create_level_50(self)
+        elif level == 51:
+            StaticLevelGenerator.create_level_51(self)
 
     def init_level(game):
         """Inicializar o nível atual"""
@@ -238,6 +243,7 @@ class Level:
 
         # Garantir que o fundo do menu permanece inalterado
         if not hasattr(game, "menu_background_img") or game.menu_background_img is None:
+            cache = ResourceCache()
             game.menu_background_img = cache.get_image(
                 "imagens/fundo6.png", (WIDTH, HEIGHT)
             )
@@ -277,7 +283,7 @@ class Level:
         # Primeiro tentar vãos maiores, depois relaxar o critério se necessário
         best = None  # (a, b, gap_left, gap_width, distance)
         min_gap_sizes = [60, 40, 20]  # Tentar diferentes tamanhos mínimos de vão
-        
+
         for min_gap in min_gap_sizes:
             for i in range(len(platforms_sorted) - 1):
                 a = platforms_sorted[i]
@@ -330,7 +336,7 @@ class Level:
                     distance = abs(center_x - mid_x)
                     if fallback_best is None or distance < fallback_best[4]:
                         fallback_best = (a, b, gap_left, gap_width, distance)
-            
+
             if fallback_best is not None:
                 # Usar o vão encontrado, mesmo que pequeno
                 a, b, gap_left, gap_width, _ = fallback_best

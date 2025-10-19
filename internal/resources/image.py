@@ -6,19 +6,28 @@ from internal.engine.level.level import Level
 
 
 class Image:
-    def __init__(self, image_path):
-        self.image_path = image_path
-        self.image = pygame.image.load(image_path)
+    def __init__(self, image_path=None):
+        if image_path:
+            self.image_path = image_path
+            self.image = pygame.image.load(image_path)
+        else:
+            self.image_path = None
+            self.image = None
 
-    def load_images(self):
+    def load_images(self, game=None):
         """Carregar todas as imagens do jogo usando sistema de cache"""
         try:
             # Inicializar cache de recursos
             cache = ResourceCache()
 
             # Carregar fundo baseado no nível atual (apenas para gameplay)
-            background_file = Level.get_background_for_level(self, self.current_level)
-            self.background_img = cache.get_image(background_file, (WIDTH, HEIGHT))
+            if game:
+                background_file = Level.get_background_for_level(
+                    game, game.current_level
+                )
+                self.background_img = cache.get_image(background_file, (WIDTH, HEIGHT))
+            else:
+                self.background_img = None
 
             # Carregar fundo fixo para menus, recordes, etc.
             self.menu_background_img = cache.get_image(
@@ -36,6 +45,10 @@ class Image:
             self.platform_texture_space = cache.get_image(
                 "imagens/texturas/platform-space.png", (20, 20)
             )
+            # Textura da nave para nível 51
+            self.platform_texture_ship = cache.get_image(
+                "imagens/texturas/platform-ship.png", (20, 20)
+            )
             # Textura padrão para a plataforma da bandeira
             # Usa a mesma textura das plataformas comuns por padrão
             self.platform_texture_flag = self.platform_texture
@@ -50,16 +63,26 @@ class Image:
             self.bat_img3 = cache.get_image("imagens/inimigos/bat3.png", (40, 30))
 
             # Carregar imagens dos aviões usando cache
-            self.airplane_img1 = cache.get_image("imagens/inimigos/airplane1.png", (50, 30))
-            self.airplane_img2 = cache.get_image("imagens/inimigos/airplane2.png", (50, 30))
-            self.airplane_img3 = cache.get_image("imagens/inimigos/airplane3.png", (50, 30))
+            self.airplane_img1 = cache.get_image(
+                "imagens/inimigos/airplane1.png", (50, 30)
+            )
+            self.airplane_img2 = cache.get_image(
+                "imagens/inimigos/airplane2.png", (50, 30)
+            )
+            self.airplane_img3 = cache.get_image(
+                "imagens/inimigos/airplane3.png", (50, 30)
+            )
 
             # Carregar imagens do flying-disk usando cache
             try:
                 self.disk_img1 = cache.get_image("imagens/inimigos/disk1.png", (40, 40))
                 self.disk_img2 = cache.get_image("imagens/inimigos/disk2.png", (40, 40))
                 self.disk_img3 = cache.get_image("imagens/inimigos/disk3.png", (40, 40))
-                self.flying_disk_images = [self.disk_img1, self.disk_img2, self.disk_img3]
+                self.flying_disk_images = [
+                    self.disk_img1,
+                    self.disk_img2,
+                    self.disk_img3,
+                ]
             except pygame.error as e:
                 print(f"Erro ao carregar imagens do flying-disk: {e}")
                 self.flying_disk_images = None
@@ -141,7 +164,7 @@ class Image:
                 self.robot_left3 = cache.get_image(
                     "imagens/inimigos/robot-left3.png", (57, 57)
                 )
-                
+
                 # Imagens de tiro
                 self.robot_shot_right1 = cache.get_image(
                     "imagens/inimigos/robot-shot-right1.png", (57, 57)
@@ -166,8 +189,16 @@ class Image:
                 self.robot_images = {
                     "left": [self.robot_left1, self.robot_left2, self.robot_left3],
                     "right": [self.robot_right1, self.robot_right2, self.robot_right3],
-                    "shot_left": [self.robot_shot_left1, self.robot_shot_left2, self.robot_shot_left3],
-                    "shot_right": [self.robot_shot_right1, self.robot_shot_right2, self.robot_shot_right3],
+                    "shot_left": [
+                        self.robot_shot_left1,
+                        self.robot_shot_left2,
+                        self.robot_shot_left3,
+                    ],
+                    "shot_right": [
+                        self.robot_shot_right1,
+                        self.robot_shot_right2,
+                        self.robot_shot_right3,
+                    ],
                 }
             except pygame.error as e:
                 print(f"Erro ao carregar imagens dos robôs: {e}")
@@ -245,6 +276,68 @@ class Image:
                 print(f"Erro ao carregar imagens dos aliens: {e}")
                 self.alien_images = None
 
+            # Carregar imagens do boss alien usando cache
+            try:
+                # Imagens de corrida
+                self.boss_alien_run1 = cache.get_image(
+                    "imagens/boss/alien1.png", (57, 57)
+                )
+                self.boss_alien_run2 = cache.get_image(
+                    "imagens/boss/alien2.png", (57, 57)
+                )
+                self.boss_alien_run3 = cache.get_image(
+                    "imagens/boss/alien3.png", (57, 57)
+                )
+                self.boss_alien_run4 = cache.get_image(
+                    "imagens/boss/alien4.png", (57, 57)
+                )
+
+                # Imagens de salto
+                self.boss_alien_jump1 = cache.get_image(
+                    "imagens/boss/alienJ1.png", (57, 57)
+                )
+                self.boss_alien_jump2 = cache.get_image(
+                    "imagens/boss/alienJ2.png", (57, 57)
+                )
+                self.boss_alien_jump3 = cache.get_image(
+                    "imagens/boss/alienJ3.png", (57, 57)
+                )
+                self.boss_alien_jump4 = cache.get_image(
+                    "imagens/boss/alienJ4.png", (57, 57)
+                )
+
+                # Imagem de parado
+                self.boss_alien_stop = cache.get_image(
+                    "imagens/boss/alienStop.png", (57, 57)
+                )
+
+                # Organizar imagens em dicionário para facilitar o uso
+                self.boss_alien_images = {
+                    "running": [
+                        self.boss_alien_run1,
+                        self.boss_alien_run2,
+                        self.boss_alien_run3,
+                        self.boss_alien_run4,
+                    ],
+                    "jumping": [
+                        self.boss_alien_jump1,
+                        self.boss_alien_jump2,
+                        self.boss_alien_jump3,
+                        self.boss_alien_jump4,
+                    ],
+                    "stopped": self.boss_alien_stop,
+                }
+            except pygame.error as e:
+                print(f"Erro ao carregar imagens do boss alien: {e}")
+                self.boss_alien_images = None
+
+            # Carregar imagem do foguinho usando cache
+            try:
+                self.fire_image = cache.get_image("imagens/inimigos/fogo.png", (30, 30))
+            except pygame.error as e:
+                print(f"Erro ao carregar imagem do foguinho: {e}")
+                self.fire_image = None
+
             # Carregar imagens dos mísseis usando cache
             try:
                 self.missile_right = cache.get_image(
@@ -253,7 +346,7 @@ class Image:
                 self.missile_left = cache.get_image(
                     "imagens/elementos/missil-left.png", (20, 8)
                 )
-                
+
                 # Organizar imagens em dicionário para facilitar o uso
                 self.missile_images = {
                     "right": self.missile_right,

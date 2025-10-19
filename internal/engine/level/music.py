@@ -63,6 +63,9 @@ class LevelMusic:
             music_index = (level - 43) % len(background_music_space)
             self.level_music_list[level] = background_music_space[music_index]
 
+        # Fase 51: música especial para o boss final
+        self.level_music_list[51] = "musicas/space3.mp3"
+
         return self.level_music_list
 
     def get_level_music(self, level):

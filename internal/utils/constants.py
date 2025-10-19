@@ -23,5 +23,6 @@ GOLD = (255, 215, 0)  # Cor dourada para invulnerabilidade
 GRAY = (128, 128, 128)
 LIGHT_GRAY = (200, 200, 200)
 DARK_GRAY = (64, 64, 64)
+CYAN = (0, 255, 255)
 
 DEFAULT_INITIAL_LIVES = 3

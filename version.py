@@ -17,7 +17,7 @@ VERSION_FULL = f"{VERSION}-{VERSION_STAGE}.{VERSION_BUILD}"
 # Informações do jogo
 GAME_NAME = "Jump and Hit"
 GAME_TITLE = "Jump and Hit"
-GAME_DESCRIPTION = "Um jogo de plataforma 2D desenvolvido em Python com Pygame"
+GAME_DESCRIPTION = "Ajude o garoto a conseguir recuperar seu jogo de vídeo-game"
 AUTHOR = "CirrasTec"
 COPYRIGHT = "© 2025"
 

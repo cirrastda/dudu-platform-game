@@ -4872,3 +4872,53 @@ class StaticLevelGenerator:
         spaceship_y = last_platform[1] - 200  # Posicionar para que a parte inferior toque a plataforma (altura da nave)
         
         game.spaceship = Spaceship(spaceship_x, spaceship_y)
+
+    @staticmethod
+    def create_level_51(game):
+        """Nível 51 - Fase final com boss alien - Plataformas longas de 400px"""
+        platform_width = 400
+        platforms = [
+            (10, HEIGHT - 200, platform_width, 20),
+            (500, HEIGHT - 280, platform_width, 20),
+            (1000, HEIGHT - 160, platform_width, 20),
+            (1500, HEIGHT - 320, platform_width, 20),
+            (2000, HEIGHT - 180, platform_width, 20),
+            (2500, HEIGHT - 300, platform_width, 20),
+            (3000, HEIGHT - 140, platform_width, 20),
+            (3500, HEIGHT - 260, platform_width, 20),
+            (4000, HEIGHT - 200, platform_width, 20),
+            (4500, HEIGHT - 340, platform_width, 20),
+            (5000, HEIGHT - 160, platform_width, 20),
+            (5500, HEIGHT - 280, platform_width, 20),
+            (6000, HEIGHT - 220, platform_width, 20),
+            (6500, HEIGHT - 300, platform_width, 20),
+            (7000, HEIGHT - 180, platform_width, 20),
+        ]
+
+        # Usar textura especial da nave (sem redimensionar para permitir repetição)
+        ship_texture = ResourceCache().get_image("imagens/texturas/platform-ship.png")
+        StaticLevelGenerator.drawPlatforms(game, platforms, ship_texture)
+        StaticLevelGenerator.putPlayerInFirstPlatform(game)
+        
+        # Não desenhar bandeira na fase 51 - será tratado pelo boss
+        # StaticLevelGenerator.drawFlag(game, platforms)
+        
+        # Inicializar boss alien
+        from internal.resources.enemies.boss_alien import BossAlien
+        boss_start_x = platforms[0][0] + 75  # Começar 75px à frente do jogador
+        boss_start_y = platforms[0][1] - 57  # Altura do boss
+        game.boss_alien = BossAlien(
+            boss_start_x, 
+            boss_start_y, 
+            platforms, 
+            game.image.boss_alien_images
+        )
+        
+        # Inicializar variáveis de controle
+        game.boss_alien_captured = False
+        game.capture_sequence_timer = 0
+        game.capture_flash_timer = 0
+        game.capture_flash_state = False
+        
+        # Desabilitar tiros do jogador na fase 51
+        game.can_shoot = False

@@ -14,3 +14,5 @@ class GameState(Enum):
     SHOW_RANKING = 10  # Estado para mostrar ranking
     CREDITS = 11  # Tela de créditos
     RECORDS = 12  # Tela de recordes
+    ENDING_VIDEO = 13  # Vídeo de ending após captura do boss
+    FIM_SCREEN = 14  # Tela de "FIM" após o vídeo de ending

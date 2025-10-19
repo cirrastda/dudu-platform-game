@@ -17,6 +17,7 @@ from internal.resources.enemies.turtle import Turtle
 from internal.resources.enemies.spider import Spider
 from internal.resources.enemies.robot import Robot
 from internal.resources.enemies.alien import Alien
+from internal.resources.enemies.fire import Fire
 from internal.resources.bullet import Bullet
 from internal.resources.explosion import Explosion
 from internal.engine.level.level import Level
@@ -46,6 +47,7 @@ class Game:
         self.state = GameState.SPLASH
         # Rastrear vidas extras coletadas por nível para não reaparecerem
         self.collected_extra_life_levels = set()
+        self.max_levels = 51
         # Configurar nível inicial baseado no ambiente
         if (
             ENV_CONFIG.get("environment") == "development"
@@ -54,7 +56,7 @@ class Game:
             try:
                 self.current_level = int(ENV_CONFIG["initial-stage"])
                 # Validar se o nível está dentro do range válido
-                if self.current_level < 1 or self.current_level > 50:
+                if self.current_level < 1 or self.current_level > self.max_levels:
                     print(
                         f"Aviso: initial-stage {self.current_level} inválido. Usando nível 1."
                     )
@@ -73,7 +75,7 @@ class Game:
         self.ranking_manager = RankingManager()
         self.player_name = ""
         self.name_input_active = False
-        self.max_levels = 50
+        
 
         Mixer.init(pygame)
 
@@ -107,6 +109,7 @@ class Game:
 
         # Sistema de vídeo
         self.video_player = VideoPlayer()
+        self.ending_video_player = VideoPlayer()
 
         # Sistema de splash screen e menu
         self.splash_timer = 0
@@ -180,6 +183,12 @@ class Game:
             []
         )  # Lasers de aliens mortos que continuam visíveis mas sem hitbox
 
+        # Inicializar variáveis de foguinhos (nível 51)
+        self.fires = []
+        self.fire_spawn_timer = 0
+        self.fires_per_spawn = 1
+        self.fire_spawn_interval = 240  # Spawn menos frequente para reduzir quantidade
+
         # Ajustar dificuldade baseada no nível
         self.birds_per_spawn = Level.get_birds_per_spawn(self.current_level)
         self.bird_spawn_interval = Level.get_bird_spawn_interval(self.current_level)
@@ -189,7 +198,17 @@ class Game:
         self.big_font = pygame.font.Font(None, 72)
 
         # Carregar imagens
-        Image.load_images(self)
+        self.image = Image()
+        self.image.load_images(self)
+        
+        # Transferir logo do jogo
+        self.game_logo = self.image.game_logo
+        
+        # Sistema de créditos com rolagem
+        self.credits_scroll_y = 0
+        self.credits_scroll_speed = 1
+        self.credits_reset_timer = 0
+        self.credits_type = "menu"  # "menu" ou "ending"
 
         # Itens colecionáveis
         self.extra_lives = []
@@ -306,11 +325,11 @@ class Game:
         # Determinar qual fundo usar baseado no estado do jogo
         if self.state == GameState.PLAYING:
             # Durante o jogo, usar fundo baseado no nível
-            background_to_use = self.background_img
+            background_to_use = self.image.background_img
         else:
             # Em menus, recordes, etc., usar fundo fixo
             background_to_use = getattr(
-                self, "menu_background_img", self.background_img
+                self, "menu_background_img", self.image.background_img
             )
 
         if background_to_use:
@@ -391,9 +410,16 @@ class Game:
                         )
                     elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.handle_menu_selection()
+                # Navegação da tela FIM
+                elif self.state == GameState.FIM_SCREEN:
+                    # Qualquer tecla pula para os créditos do final
+                    self.state = GameState.CREDITS
+                    self.credits_type = "ending"
+                    self.music.play_music("credits")
                 # Navegação das telas de créditos e recordes
                 elif self.state == GameState.CREDITS:
-                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
+                    # Apenas créditos do menu respondem a teclas
+                    if self.credits_type == "menu" and (event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN):
                         self.state = GameState.MAIN_MENU
                 elif self.state == GameState.RECORDS:
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
@@ -564,14 +590,21 @@ class Game:
                             9,
                         ]:  # A/X ou Start/Options
                             self.handle_menu_selection()
+                    # Navegação da tela FIM com joystick
+                    elif self.state == GameState.FIM_SCREEN:
+                        # Qualquer botão pula para os créditos do final
+                        self.state = GameState.CREDITS
+                        self.credits_type = "ending"
+                        self.music.play_music("credits")
                     # Navegação das telas de créditos e recordes com joystick
                     elif self.state == GameState.CREDITS:
-                        if event.button == 1 or event.button in [
+                        # Apenas créditos do menu respondem a botões
+                        if self.credits_type == "menu" and (event.button == 1 or event.button in [
                             6,
                             7,
                             8,
                             9,
-                        ]:  # B/Círculo ou Start/Options
+                        ]):  # B/Círculo ou Start/Options
                             self.state = GameState.MAIN_MENU
                     elif self.state == GameState.RECORDS:
                         if event.button == 1 or event.button in [
@@ -810,6 +843,7 @@ class Game:
             self.state = GameState.RECORDS
         elif selected_option == "Créditos":
             self.state = GameState.CREDITS
+            self.credits_type = "menu"
         elif selected_option == "Sair":
             pygame.quit()
             sys.exit()
@@ -832,7 +866,7 @@ class Game:
         elif self.state == GameState.OPENING_VIDEO:
             # Atualizar reprodução do vídeo
             self.video_player.update()
-            
+
             # Verificar se o vídeo terminou
             if self.video_player.is_finished():
                 self.video_player.cleanup()
@@ -842,11 +876,56 @@ class Game:
                     self.music.play_menu_music(self)
                     self.music_started = True
 
+        elif self.state == GameState.ENDING_VIDEO:
+            # Carregar vídeo de ending se ainda não foi carregado
+            if not hasattr(self, "ending_video_loaded"):
+                if self.ending_video_player.load_video("videos/ending.mp4"):
+                    self.ending_video_loaded = True
+                    # Iniciar reprodução do vídeo
+                    self.ending_video_player.start_playback()
+                else:
+                    # Se não conseguir carregar o vídeo, ir direto para tela FIM
+                    self.state = GameState.FIM_SCREEN
+                    self.fim_screen_timer = 0
+
+            # Atualizar reprodução do vídeo de ending
+            if hasattr(self, "ending_video_loaded") and self.ending_video_loaded:
+                self.ending_video_player.update()
+
+                # Verificar se o vídeo terminou
+                if self.ending_video_player.is_finished():
+                    self.ending_video_player.cleanup()
+                    self.state = GameState.FIM_SCREEN
+                    # Inicializar timer para a tela FIM
+                    self.fim_screen_timer = 0
+
+        elif self.state == GameState.FIM_SCREEN:
+            # Atualizar timer da tela FIM
+            self.fim_screen_timer += 1
+            
+            # Após 3 segundos (180 frames a 60 FPS), ir para os créditos
+            if self.fim_screen_timer >= 180:
+                self.state = GameState.CREDITS
+                self.music.play_music("credits")
+                # Resetar rolagem dos créditos
+                self.credits_scroll_y = 0
+                self.credits_reset_timer = 0
+
+        elif self.state == GameState.CREDITS:
+            # Atualizar rolagem dos créditos
+            self.credits_scroll_y += self.credits_scroll_speed
+            self.credits_reset_timer += 1
+            
+            # Resetar rolagem apenas para créditos do menu (loop contínuo)
+            if self.credits_type == "menu" and self.credits_reset_timer >= 1800:  # 30 segundos a 60 FPS
+                self.credits_scroll_y = 0
+                self.credits_reset_timer = 0
+
         elif self.state == GameState.PLAYING:
             # Atualizar jogador
             player_action = self.player.update(
                 self.platforms,
-                self.bullet_image,
+                self.image.bullet_image,
                 self.camera_x,
                 self.joystick if self.joystick_connected else None,
                 self,
@@ -927,10 +1006,10 @@ class Game:
                             self.camera_x + WIDTH + 50 + (i * 100)
                         )  # Espaçar pássaros
                         bird_images = (
-                            (self.bird_img1, self.bird_img2)
-                            if hasattr(self, "bird_img1")
-                            else None
-                        )
+                             (self.image.bird_img1, self.image.bird_img2)
+                             if hasattr(self.image, "bird_img1")
+                             else None
+                         )
                         self.birds.append(Bird(bird_x, bird_y, bird_images))
                     self.bird_spawn_timer = 0
             elif self.current_level <= 30:
@@ -947,10 +1026,10 @@ class Game:
                             self.camera_x + WIDTH + 50 + (i * 100)
                         )  # Espaçar morcegos
                         bat_images = (
-                            (self.bat_img1, self.bat_img2, self.bat_img3)
-                            if hasattr(self, "bat_img1")
-                            else None
-                        )
+                             (self.image.bat_img1, self.image.bat_img2, self.image.bat_img3)
+                             if hasattr(self.image, "bat_img1")
+                             else None
+                         )
                         self.bats.append(Bat(bat_x, bat_y, bat_images))
                     self.bat_spawn_timer = 0
             elif self.current_level <= 40:
@@ -975,7 +1054,7 @@ class Game:
                             Airplane(airplane_x, airplane_y, airplane_images)
                         )
                     self.airplane_spawn_timer = 0
-            else:
+            elif self.current_level <= 50:
                 # Spawn de novos flying-disks (níveis 41-50)
                 self.flying_disk_spawn_timer += 1
                 if self.flying_disk_spawn_timer >= self.flying_disk_spawn_interval:
@@ -995,6 +1074,23 @@ class Game:
                             FlyingDisk(disk_x, disk_y, disk_images)
                         )
                     self.flying_disk_spawn_timer = 0
+            else:
+                # Spawn de novos foguinhos (nível 51)
+                if self.current_level == 51:
+                    self.fire_spawn_timer += 1
+                    if self.fire_spawn_timer >= self.fire_spawn_interval:
+                        # Spawnar foguinhos
+                        import random
+
+                        for i in range(self.fires_per_spawn):
+                            fire_y = random.randint(HEIGHT // 4, HEIGHT - 150)
+                            # Spawn à direita da tela visível
+                            fire_x = self.camera_x + WIDTH + 50 + (i * 80)
+                            fire_image = (
+                                self.image.fire_image if hasattr(self.image, "fire_image") else None
+                            )
+                            self.fires.append(Fire(fire_x, fire_y, fire_image))
+                        self.fire_spawn_timer = 0
 
             # Atualizar pássaros, morcegos e aviões com culling (remover objetos muito distantes da câmera)
             if self.current_level <= 20:
@@ -1030,7 +1126,7 @@ class Game:
                         ):
                             visible_airplanes.append(airplane)
                 self.airplanes = visible_airplanes
-            else:
+            elif self.current_level <= 50:
                 visible_disks = []
                 for disk in self.flying_disks:
                     if disk.update(self.camera_x):
@@ -1041,6 +1137,19 @@ class Game:
                         ):
                             visible_disks.append(disk)
                 self.flying_disks = visible_disks
+            else:
+                # Atualizar foguinhos (nível 51)
+                if self.current_level == 51:
+                    visible_fires = []
+                    for fire in self.fires:
+                        if fire.update(self.camera_x):
+                            # Culling: manter apenas foguinhos próximos à área visível
+                            if (
+                                fire.x > self.camera_x - 200
+                                and fire.x < self.camera_x + WIDTH + 200
+                            ):
+                                visible_fires.append(fire)
+                    self.fires = visible_fires
 
             # Atualizar tartarugas e aranhas com culling
             if self.current_level <= 20:
@@ -1077,6 +1186,39 @@ class Game:
                     ):
                         alien.update(self.camera_x)
 
+            # Atualizar boss alien (nível 51)
+            if (
+                self.current_level == 51
+                and hasattr(self, "boss_alien")
+                and self.boss_alien
+            ):
+                self.boss_alien.update(self.player.x, self.camera_x)
+
+                # Verificar se o boss foi capturado
+                if not self.boss_alien_captured and self.boss_alien.is_captured(
+                    self.player.rect
+                ):
+                    self.boss_alien_captured = True
+                    self.capture_sequence_timer = 0
+                    self.capture_flash_timer = 0
+                    self.capture_flash_state = False
+                    # Tocar música de captura
+                    self.music.play_music("capture")
+
+                # Processar sequência de captura
+                if self.boss_alien_captured:
+                    self.capture_sequence_timer += 1
+                    self.capture_flash_timer += 1
+
+                    # Piscadas a cada 30 frames (0.5 segundos a 60 FPS)
+                    if self.capture_flash_timer >= 30:
+                        self.capture_flash_timer = 0
+                        self.capture_flash_state = not self.capture_flash_state
+
+                    # Após 5 segundos (300 frames), iniciar vídeo de ending
+                    if self.capture_sequence_timer >= 300:
+                        self.state = GameState.ENDING_VIDEO
+
             # Atualizar explosões com pool
             active_explosions = []
             for explosion in self.explosions:
@@ -1097,7 +1239,7 @@ class Game:
                             self.birds.remove(bird)
                             # Criar explosão usando pool
                             explosion = self.get_pooled_explosion(
-                                bird.x, bird.y, self.explosion_image
+                                bird.x, bird.y, self.image.explosion_image
                             )
                             self.explosions.append(explosion)
                             # Retornar bala ao pool
@@ -1120,7 +1262,7 @@ class Game:
                             self.bats.remove(bat)
                             # Criar explosão usando pool
                             explosion = self.get_pooled_explosion(
-                                bat.x, bat.y, self.explosion_image
+                                bat.x, bat.y, self.image.explosion_image
                             )
                             self.explosions.append(explosion)
                             # Retornar bala ao pool
@@ -1141,7 +1283,7 @@ class Game:
                             self.airplanes.remove(airplane)
                             # Criar explosão usando pool
                             explosion = self.get_pooled_explosion(
-                                airplane.x, airplane.y, self.explosion_image
+                                airplane.x, airplane.y, self.image.explosion_image
                             )
                             self.explosions.append(explosion)
                             # Retornar bala ao pool
@@ -1162,7 +1304,7 @@ class Game:
                             self.flying_disks.remove(disk)
                             # Criar explosão usando pool
                             explosion = self.get_pooled_explosion(
-                                disk.x, disk.y, self.explosion_image
+                                disk.x, disk.y, self.image.explosion_image
                             )
                             self.explosions.append(explosion)
                             # Retornar bala ao pool
@@ -1185,7 +1327,7 @@ class Game:
                             self.turtles.remove(turtle)
                             # Criar explosão usando pool
                             explosion = self.get_pooled_explosion(
-                                turtle.x, turtle.y, self.explosion_image
+                                turtle.x, turtle.y, self.image.explosion_image
                             )
                             self.explosions.append(explosion)
                             # Retornar bala ao pool
@@ -1206,7 +1348,7 @@ class Game:
                             self.spiders.remove(spider)
                             # Criar explosão usando pool
                             explosion = self.get_pooled_explosion(
-                                spider.x, spider.y, self.explosion_image
+                                spider.x, spider.y, self.image.explosion_image
                             )
                             self.explosions.append(explosion)
                             # Retornar bala ao pool
@@ -1232,7 +1374,7 @@ class Game:
                             self.robots.remove(robot)
                             # Criar explosão usando pool
                             explosion = self.get_pooled_explosion(
-                                robot.x, robot.y, self.explosion_image
+                                robot.x, robot.y, self.image.explosion_image
                             )
                             self.explosions.append(explosion)
                             # Retornar bala ao pool
@@ -1255,7 +1397,7 @@ class Game:
                             if self.player.is_invulnerable:
                                 # Jogador invulnerável: explodir míssil sem causar dano
                                 explosion = self.get_pooled_explosion(
-                                    missile.x, missile.y, self.explosion_image
+                                    missile.x, missile.y, self.image.explosion_image
                                 )
                                 self.explosions.append(explosion)
                                 robot.missiles.remove(missile)
@@ -1294,7 +1436,7 @@ class Game:
                             if self.player.is_invulnerable:
                                 # Jogador invulnerável: explodir laser sem causar dano
                                 explosion = self.get_pooled_explosion(
-                                    laser.x, laser.y, self.explosion_image
+                                    laser.x, laser.y, self.image.explosion_image
                                 )
                                 self.explosions.append(explosion)
                                 alien.lasers.remove(laser)
@@ -1336,7 +1478,7 @@ class Game:
                             self.aliens.remove(alien)
                             # Criar explosão usando pool
                             explosion = self.get_pooled_explosion(
-                                alien.x, alien.y, self.explosion_image
+                                alien.x, alien.y, self.image.explosion_image
                             )
                             self.explosions.append(explosion)
                             # Retornar bala ao pool
@@ -1389,7 +1531,7 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(bird.x, bird.y, self.explosion_image)
+                                Explosion(bird.x, bird.y, self.image.explosion_image)
                             )
                             self.birds.remove(bird)
                             self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
@@ -1438,7 +1580,7 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(bat.x, bat.y, self.explosion_image)
+                                Explosion(bat.x, bat.y, self.image.explosion_image)
                             )
                             self.bats.remove(bat)
                             self.score += 25  # Pontos bônus por destruir morcego durante invulnerabilidade
@@ -1487,7 +1629,7 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(airplane.x, airplane.y, self.explosion_image)
+                                Explosion(airplane.x, airplane.y, self.image.explosion_image)
                             )
                             self.airplanes.remove(airplane)
                             self.score += 30  # Pontos bônus por destruir avião durante invulnerabilidade
@@ -1502,7 +1644,7 @@ class Game:
                                 # Criar explosão na posição do avião
                                 self.explosions.append(
                                     Explosion(
-                                        airplane.x, airplane.y, self.explosion_image
+                                        airplane.x, airplane.y, self.image.explosion_image
                                     )
                                 )
                                 self.airplanes.remove(airplane)
@@ -1540,7 +1682,7 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(disk.x, disk.y, self.explosion_image)
+                                Explosion(disk.x, disk.y, self.image.explosion_image)
                             )
                             self.flying_disks.remove(disk)
                             self.score += 40  # Pontos bônus por destruir disco durante invulnerabilidade
@@ -1554,7 +1696,7 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição do disco
                                 self.explosions.append(
-                                    Explosion(disk.x, disk.y, self.explosion_image)
+                                    Explosion(disk.x, disk.y, self.image.explosion_image)
                                 )
                                 self.flying_disks.remove(disk)
                                 self.lives -= 1
@@ -1567,6 +1709,25 @@ class Game:
                                 # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
 
+            # Verificar colisão com foguinhos (nível 51) - foguinhos não podem ser destruídos
+            if self.current_level == 51:
+                for fire in self.fires[:]:
+                    # Verificar colisão direta
+                    if self.player.rect.colliderect(fire.rect):
+                        if not self.player.is_invulnerable and not self.player.is_hit:
+                            # Colidiu com foguinho, ativar animação de hit
+                            self.player.take_hit()
+                            # Foguinho não é removido - continua existindo
+                            self.lives -= 1
+                            if self.lives <= 0:
+                                # Sem vidas, game over - verificar se entra no ranking
+                                if self.ranking_manager.is_high_score(self.score):
+                                    self.state = GameState.ENTER_NAME
+                                else:
+                                    self.state = GameState.GAME_OVER
+                            # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                        break
+
             # Verificar colisão com tartarugas e aranhas
             if self.current_level <= 20:
                 for turtle in self.turtles[:]:
@@ -1575,7 +1736,7 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(turtle.x, turtle.y, self.explosion_image)
+                                Explosion(turtle.x, turtle.y, self.image.explosion_image)
                             )
                             self.turtles.remove(turtle)
                             self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
@@ -1608,7 +1769,7 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(spider.x, spider.y, self.explosion_image)
+                                Explosion(spider.x, spider.y, self.image.explosion_image)
                             )
                             self.spiders.remove(spider)
                             self.score += 35  # Pontos bônus por destruir aranha durante invulnerabilidade
@@ -1643,7 +1804,7 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(robot.x, robot.y, self.explosion_image)
+                                Explosion(robot.x, robot.y, self.image.explosion_image)
                             )
                             # Transferir mísseis ativos do robô para a lista de órfãos
                             for missile in robot.missiles:
@@ -1684,7 +1845,7 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(alien.x, alien.y, self.explosion_image)
+                                Explosion(alien.x, alien.y, self.image.explosion_image)
                             )
                             # Transferir lasers ativos do alien para a lista de órfãos
                             for laser in alien.lasers:
@@ -1751,7 +1912,7 @@ class Game:
                             self.state = GameState.VICTORY
 
     def draw(self):
-        
+
         if self.state == GameState.SPLASH:
             # Tela de splash com fundo preto
             self.screen.fill(BLACK)
@@ -1811,6 +1972,12 @@ class Game:
             # Desenhar o vídeo de abertura
             self.video_player.draw(self.screen)
 
+        elif self.state == GameState.ENDING_VIDEO:
+            # Limpar a tela com fundo preto para evitar sobreposição
+            self.screen.fill(BLACK)
+            # Desenhar o vídeo de ending
+            self.ending_video_player.draw(self.screen)
+
         elif self.state == GameState.MAIN_MENU:
             # Tela de menu com fundo do jogo
             self.draw_ocean_background(self.screen)
@@ -1831,7 +1998,7 @@ class Game:
             # Título do jogo se não houver logo
             else:
                 title_text = self.big_font.render(
-                    "Jogo de Plataforma - Mar", True, WHITE
+                    "Jump & Hit", True, WHITE
                 )
                 title_rect = title_text.get_rect(center=(WIDTH // 2, 150))
                 self.screen.blit(title_text, title_rect)
@@ -1909,7 +2076,9 @@ class Game:
                     # Desenhar usando o método da classe Spaceship
                     self.spaceship.draw(self.screen)
                     # Restaurar posição original usando update_position
-                    self.spaceship.update_position(original_spaceship_x, original_spaceship_y)
+                    self.spaceship.update_position(
+                        original_spaceship_x, original_spaceship_y
+                    )
 
             # Desenhar pássaros, morcegos e aviões com offset da câmera
             if self.current_level <= 20:
@@ -1964,6 +2133,20 @@ class Game:
                         disk.draw(self.screen)
                         # Restaurar posição original
                         disk.x = original_disk_x
+
+            # Desenhar foguinhos com offset da câmera (nível 51)
+            if self.current_level == 51:
+                for fire in self.fires:
+                    fire_x = fire.x - self.camera_x
+                    if fire_x > -40 and fire_x < WIDTH:  # Só desenhar se visível
+                        # Salvar posição original do foguinho
+                        original_fire_x = fire.x
+                        # Ajustar posição para câmera
+                        fire.x = fire_x
+                        # Chamar método draw do foguinho
+                        fire.draw(self.screen)
+                        # Restaurar posição original
+                        fire.x = original_fire_x
 
             # Desenhar tartarugas e aranhas com offset da câmera
             if self.current_level <= 20:
@@ -2077,6 +2260,34 @@ class Game:
                         # Restaurar posição original
                         laser.x = original_laser_x
 
+            # Desenhar boss alien com offset da câmera (nível 51)
+            if (
+                self.current_level == 51
+                and hasattr(self, "boss_alien")
+                and self.boss_alien
+                and not self.player.is_being_abducted
+            ):
+                boss_x = self.boss_alien.x - self.camera_x
+                if boss_x > -100 and boss_x < WIDTH + 100:  # Só desenhar se visível
+                    # Salvar posição original do boss
+                    original_boss_x = self.boss_alien.x
+                    # Ajustar posição para câmera
+                    self.boss_alien.x = boss_x
+
+                    # Desenhar boss alien com efeito de piscada durante captura
+                    if self.boss_alien_captured and hasattr(
+                        self, "capture_flash_state"
+                    ):
+                        # Só desenhar se não estiver piscando (estado False)
+                        if not self.capture_flash_state:
+                            self.boss_alien.draw(self.screen)
+                    else:
+                        # Desenhar normalmente se não foi capturado
+                        self.boss_alien.draw(self.screen)
+
+                    # Restaurar posição original
+                    self.boss_alien.x = original_boss_x
+
             # Desenhar explosões com offset da câmera
             for explosion in self.explosions:
                 explosion_x = explosion.x - self.camera_x
@@ -2173,12 +2384,8 @@ class Game:
             trophy_y = HEIGHT // 2 - 100
 
             # Base do troféu
-            pygame.draw.rect(
-                self.screen, BROWN, (trophy_x - 40, trophy_y + 80, 80, 20)
-            )
-            pygame.draw.rect(
-                self.screen, BROWN, (trophy_x - 10, trophy_y + 60, 20, 40)
-            )
+            pygame.draw.rect(self.screen, BROWN, (trophy_x - 40, trophy_y + 80, 80, 20))
+            pygame.draw.rect(self.screen, BROWN, (trophy_x - 10, trophy_y + 60, 20, 40))
 
             # Taça do troféu
             pygame.draw.ellipse(self.screen, YELLOW, (trophy_x - 30, trophy_y, 60, 80))
@@ -2326,60 +2533,235 @@ class Game:
             back_rect = back_text.get_rect(center=(WIDTH // 2, HEIGHT - 50))
             self.screen.blit(back_text, back_rect)
 
+        elif self.state == GameState.FIM_SCREEN:
+            # Tela FIM com fundo preto
+            self.screen.fill(BLACK)
+            
+            # Texto "FIM" centralizado
+            fim_text = pygame.font.Font(None, 120).render("FIM", True, WHITE)
+            fim_rect = fim_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            self.screen.blit(fim_text, fim_rect)
+            
+            # Instrução para pular (opcional, aparece após 1 segundo)
+            if self.fim_screen_timer > 60:  # Após 1 segundo
+                skip_text = self.font.render("Pressione qualquer tecla para continuar", True, LIGHT_GRAY)
+                skip_rect = skip_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
+                self.screen.blit(skip_text, skip_rect)
+
         elif self.state == GameState.CREDITS:
-            # Tela de créditos com fundo do jogo
-            self.draw_ocean_background(self.screen)
-
-            # Título
-            title_text = self.big_font.render("CRÉDITOS", True, YELLOW)
-            title_rect = title_text.get_rect(center=(WIDTH // 2, 80))
-            self.screen.blit(title_text, title_rect)
-
-            # Conteúdo dos créditos
-            credits_content = [
-                "Jogo de Plataforma - Mar",
+            if self.credits_type == "menu":
+                # Créditos simples do menu (versão antiga)
+                self.draw_ocean_background(self.screen)
+                
+                # Título
+                title_text = self.big_font.render("CRÉDITOS", True, YELLOW)
+                title_rect = title_text.get_rect(center=(WIDTH // 2, 100))
+                self.screen.blit(title_text, title_rect)
+                
+                # Conteúdo dos créditos do menu
+                menu_credits = [
+                    "Desenvolvido por:",
+                    "CirrasTec",
+                    "",
+                    "Em parceria com:",
+                    "Cirras RetroGames",
+                    "https://www.youtube.com/@cirrasretrogames",
+                    "",
+                    "Canal do Dudu",
+                    "https://www.youtube.com/@canaldodudu8789",
+                    "",
+                    "Obrigado por jogar!"
+                ]
+                
+                y_offset = 200
+                for line in menu_credits:
+                    if line.startswith("https://"):
+                        # Links em azul
+                        text_surface = self.font.render(line, True, LIGHT_BLUE)
+                    elif line in ["CirrasTec", "Cirras RetroGames", "Canal do Dudu"]:
+                        # Nomes em amarelo
+                        text_surface = self.font.render(line, True, YELLOW)
+                    elif line != "":
+                        # Texto normal em branco
+                        text_surface = self.font.render(line, True, WHITE)
+                    else:
+                        y_offset += 20
+                        continue
+                    
+                    text_rect = text_surface.get_rect(center=(WIDTH // 2, y_offset))
+                    self.screen.blit(text_surface, text_rect)
+                    y_offset += 40
+                
+                # Instruções
+                instruction_text = self.font.render(
+                    "Pressione ESC ou ENTER para voltar", True, LIGHT_GRAY
+                )
+                instruction_rect = instruction_text.get_rect(center=(WIDTH // 2, HEIGHT - 50))
+                self.screen.blit(instruction_text, instruction_rect)
+                
+            else:
+                # Créditos cinematográficos do final do jogo
+                self.screen.fill(BLACK)
+                
+                # Conteúdo completo dos créditos
+                credits_content = [
                 "",
-                "Desenvolvido por:",
+                "",
+                "",
+                "JUMP & HIT",
+                "",
+                "",
+                "Um jogo de plataforma 2D",
+                "inspirado nos clássicos dos anos 80 e 90",
+                "",
+                "",
+                "═══════════════════════════════════════",
+                "",
+                "DESENVOLVIDO POR",
+                "",
                 "CirrasTec",
                 "",
-                "Em parceria com:",
+                "═══════════════════════════════════════",
+                "",
+                "EM PARCERIA COM",
+                "",
                 "Cirras RetroGames",
                 "https://www.youtube.com/@cirrasretrogames",
                 "",
                 "Canal do Dudu",
                 "https://www.youtube.com/@canaldodudu8789",
                 "",
+                "═══════════════════════════════════════",
+                "",
+                "PROGRAMAÇÃO E DESIGN",
+                "",
+                "CirrasTec Team",
+                "",
+                "═══════════════════════════════════════",
+                "",
+                "ARTE E GRÁFICOS",
+                "",
+                "Sprites clássicos adaptados",
+                "Interface moderna",
+                "Efeitos visuais personalizados",
+                "",
+                "═══════════════════════════════════════",
+                "",
+                "ÁUDIO E MÚSICA",
+                "",
+                "Trilha sonora nostálgica",
+                "Efeitos sonoros clássicos",
+                "Mixagem e masterização",
+                "",
+                "═══════════════════════════════════════",
+                "",
+                "NÍVEIS E GAMEPLAY",
+                "",
+                "51 níveis únicos",
+                "Sistema de dificuldade progressiva",
+                "Múltiplos tipos de inimigos",
+                "Mecânicas de plataforma refinadas",
+                "",
+                "═══════════════════════════════════════",
+                "",
+                "TECNOLOGIAS UTILIZADAS",
+                "",
+                "Python 3.x",
+                "Pygame",
+                "Sistema de cache otimizado",
+                "Arquitetura modular",
+                "",
+                "═══════════════════════════════════════",
+                "",
+                "AGRADECIMENTOS ESPECIAIS",
+                "",
+                "À comunidade retrogaming",
+                "Aos jogadores que testaram o jogo",
+                "Aos criadores dos jogos clássicos",
+                "que nos inspiraram",
+                "",
+                "═══════════════════════════════════════",
+                "",
+                "MENSAGEM FINAL",
+                "",
                 "Este jogo foi criado com paixão e dedicação,",
                 "combinando a nostalgia dos jogos clássicos",
                 "com elementos modernos de gameplay.",
                 "",
-                "Agradecemos por jogar!",
+                "Esperamos que você tenha se divertido",
+                "tanto quanto nós nos divertimos criando!",
+                "",
+                "Continue jogando, continue sonhando!",
+                "",
+                "═══════════════════════════════════════",
+                "",
+                "© 2024 CirrasTec",
+                "Todos os direitos reservados",
+                "",
+                "",
+                "Obrigado por jogar!",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
             ]
-
-            y_offset = 150
-            for line in credits_content:
-                if line.startswith("https://"):
-                    # Links em cor diferente
-                    text_surface = self.font.render(line, True, LIGHT_BLUE)
-                elif line in ["CirrasTec", "Cirras RetroGames", "Canal do Dudu"]:
-                    # Nomes em destaque
-                    text_surface = self.font.render(line, True, YELLOW)
-                else:
-                    # Texto normal
-                    text_surface = self.font.render(line, True, WHITE)
-
-                text_rect = text_surface.get_rect(center=(WIDTH // 2, y_position))
-                self.screen.blit(text_surface, text_rect)
-                y_offset += 30
-
-            # Instruções
-            instruction_text = self.font.render(
-                "Pressione ESC ou ENTER para voltar", True, LIGHT_GRAY
-            )
-            instruction_rect = instruction_text.get_rect(
-                center=(WIDTH // 2, HEIGHT - 50)
-            )
-            self.screen.blit(instruction_text, instruction_rect)
+            
+                # Renderizar créditos com rolagem
+                y_start = HEIGHT - self.credits_scroll_y
+                line_height = 35
+                
+                for i, line in enumerate(credits_content):
+                    y_pos = y_start + (i * line_height)
+                    
+                    # Só renderizar linhas visíveis na tela
+                    if y_pos > -50 and y_pos < HEIGHT + 50:
+                        if line == "JUMP & HIT":
+                            # Título principal maior
+                            title_font = pygame.font.Font(None, 96)
+                            text_surface = title_font.render(line, True, YELLOW)
+                        elif line.startswith("═══"):
+                            # Separadores
+                            text_surface = self.font.render(line, True, DARK_GRAY)
+                        elif line.startswith("https://"):
+                            # Links
+                            text_surface = self.font.render(line, True, LIGHT_BLUE)
+                        elif line in ["DESENVOLVIDO POR", "EM PARCERIA COM", "PROGRAMAÇÃO E DESIGN", 
+                                    "ARTE E GRÁFICOS", "ÁUDIO E MÚSICA", "NÍVEIS E GAMEPLAY",
+                                    "TECNOLOGIAS UTILIZADAS", "AGRADECIMENTOS ESPECIAIS", "MENSAGEM FINAL"]:
+                            # Seções principais
+                            section_font = pygame.font.Font(None, 48)
+                            text_surface = section_font.render(line, True, CYAN)
+                        elif line in ["CirrasTec", "Cirras RetroGames", "Canal do Dudu"]:
+                            # Nomes importantes
+                            text_surface = self.font.render(line, True, YELLOW)
+                        elif line == "© 2024 CirrasTec" or line == "Todos os direitos reservados":
+                            # Copyright
+                            text_surface = self.font.render(line, True, LIGHT_GRAY)
+                        elif line == "Obrigado por jogar!":
+                            # Mensagem final
+                            final_font = pygame.font.Font(None, 56)
+                            text_surface = final_font.render(line, True, YELLOW)
+                        elif line != "":
+                            # Texto normal
+                            text_surface = self.font.render(line, True, WHITE)
+                        else:
+                            # Linha vazia
+                            continue
+                        
+                        text_rect = text_surface.get_rect(center=(WIDTH // 2, y_pos))
+                        self.screen.blit(text_surface, text_rect)
+                
+                # Verificar se os créditos terminaram (todos passaram pela tela)
+                total_credits_height = len(credits_content) * line_height
+                if self.credits_scroll_y > total_credits_height + HEIGHT:
+                    # Créditos terminaram, parar música e voltar ao menu
+                    self.music.stop_music()
+                    self.state = GameState.MAIN_MENU
+                    self.credits_scroll_y = 0  # Reset para próxima vez
+                    self.credits_reset_timer = 0
 
         elif self.state == GameState.RECORDS:
             # Tela de recordes (reutilizar a lógica do ranking)

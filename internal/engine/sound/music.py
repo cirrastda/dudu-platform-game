@@ -86,6 +86,44 @@ class Music:
         except pygame.error as e:
             print(f"Erro ao carregar música {music_file}: {e}")
 
+    def play_music(self, music_type):
+        """Tocar música especial (capture, credits, etc.)"""
+        # Para músicas especiais, usar um volume padrão
+        volume = 0.7
+        
+        # Mapear tipos de música para arquivos
+        special_music_files = {
+            "capture": "musicas/capture.mp3",
+            "credits": "musicas/credits.mp3"
+        }
+        
+        if music_type not in special_music_files:
+            print(f"Tipo de música especial não encontrado: {music_type}")
+            return
+            
+        music_file = special_music_files[music_type]
+        full_music_path = self.check_music_exists(music_file)
+        
+        if not full_music_path:
+            print(f"Arquivo de música não encontrado: {music_file}")
+            return
+            
+        try:
+            # Parar música atual se estiver tocando
+            pygame.mixer.music.stop()
+            # Carregar e tocar música
+            pygame.mixer.music.load(full_music_path)
+            # Usar volume específico para esta música
+            pygame.mixer.music.set_volume(volume)
+            # Para música de captura, tocar apenas uma vez; para outras, loop infinito
+            if music_type == "capture":
+                pygame.mixer.music.play(0)  # 0 = tocar apenas uma vez
+            else:
+                pygame.mixer.music.play(-1)  # -1 para loop infinito
+            print(f"Tocando música especial: {music_type} ({music_file})")
+        except pygame.error as e:
+            print(f"Erro ao carregar música especial {music_file}: {e}")
+
     def play(self, game, music_file, full_music_path, volume):
         # Parar música atual se estiver tocando
         pygame.mixer.music.stop()
