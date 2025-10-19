@@ -75,7 +75,6 @@ class Game:
         self.ranking_manager = RankingManager()
         self.player_name = ""
         self.name_input_active = False
-        
 
         Mixer.init(pygame)
 
@@ -200,10 +199,10 @@ class Game:
         # Carregar imagens
         self.image = Image()
         self.image.load_images(self)
-        
+
         # Transferir logo do jogo
         self.game_logo = self.image.game_logo
-        
+
         # Sistema de créditos com rolagem
         self.credits_scroll_y = 0
         self.credits_scroll_speed = 1
@@ -419,7 +418,9 @@ class Game:
                 # Navegação das telas de créditos e recordes
                 elif self.state == GameState.CREDITS:
                     # Apenas créditos do menu respondem a teclas
-                    if self.credits_type == "menu" and (event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN):
+                    if self.credits_type == "menu" and (
+                        event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN
+                    ):
                         self.state = GameState.MAIN_MENU
                 elif self.state == GameState.RECORDS:
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
@@ -599,12 +600,16 @@ class Game:
                     # Navegação das telas de créditos e recordes com joystick
                     elif self.state == GameState.CREDITS:
                         # Apenas créditos do menu respondem a botões
-                        if self.credits_type == "menu" and (event.button == 1 or event.button in [
-                            6,
-                            7,
-                            8,
-                            9,
-                        ]):  # B/Círculo ou Start/Options
+                        if self.credits_type == "menu" and (
+                            event.button == 1
+                            or event.button
+                            in [
+                                6,
+                                7,
+                                8,
+                                9,
+                            ]
+                        ):  # B/Círculo ou Start/Options
                             self.state = GameState.MAIN_MENU
                     elif self.state == GameState.RECORDS:
                         if event.button == 1 or event.button in [
@@ -902,7 +907,7 @@ class Game:
         elif self.state == GameState.FIM_SCREEN:
             # Atualizar timer da tela FIM
             self.fim_screen_timer += 1
-            
+
             # Após 3 segundos (180 frames a 60 FPS), ir para os créditos
             if self.fim_screen_timer >= 180:
                 self.state = GameState.CREDITS
@@ -915,9 +920,11 @@ class Game:
             # Atualizar rolagem dos créditos
             self.credits_scroll_y += self.credits_scroll_speed
             self.credits_reset_timer += 1
-            
+
             # Resetar rolagem apenas para créditos do menu (loop contínuo)
-            if self.credits_type == "menu" and self.credits_reset_timer >= 1800:  # 30 segundos a 60 FPS
+            if (
+                self.credits_type == "menu" and self.credits_reset_timer >= 1800
+            ):  # 30 segundos a 60 FPS
                 self.credits_scroll_y = 0
                 self.credits_reset_timer = 0
 
@@ -1006,10 +1013,10 @@ class Game:
                             self.camera_x + WIDTH + 50 + (i * 100)
                         )  # Espaçar pássaros
                         bird_images = (
-                             (self.image.bird_img1, self.image.bird_img2)
-                             if hasattr(self.image, "bird_img1")
-                             else None
-                         )
+                            (self.image.bird_img1, self.image.bird_img2)
+                            if hasattr(self.image, "bird_img1")
+                            else None
+                        )
                         self.birds.append(Bird(bird_x, bird_y, bird_images))
                     self.bird_spawn_timer = 0
             elif self.current_level <= 30:
@@ -1026,10 +1033,14 @@ class Game:
                             self.camera_x + WIDTH + 50 + (i * 100)
                         )  # Espaçar morcegos
                         bat_images = (
-                             (self.image.bat_img1, self.image.bat_img2, self.image.bat_img3)
-                             if hasattr(self.image, "bat_img1")
-                             else None
-                         )
+                            (
+                                self.image.bat_img1,
+                                self.image.bat_img2,
+                                self.image.bat_img3,
+                            )
+                            if hasattr(self.image, "bat_img1")
+                            else None
+                        )
                         self.bats.append(Bat(bat_x, bat_y, bat_images))
                     self.bat_spawn_timer = 0
             elif self.current_level <= 40:
@@ -1087,7 +1098,9 @@ class Game:
                             # Spawn à direita da tela visível
                             fire_x = self.camera_x + WIDTH + 50 + (i * 80)
                             fire_image = (
-                                self.image.fire_image if hasattr(self.image, "fire_image") else None
+                                self.image.fire_image
+                                if hasattr(self.image, "fire_image")
+                                else None
                             )
                             self.fires.append(Fire(fire_x, fire_y, fire_image))
                         self.fire_spawn_timer = 0
@@ -1629,7 +1642,9 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(airplane.x, airplane.y, self.image.explosion_image)
+                                Explosion(
+                                    airplane.x, airplane.y, self.image.explosion_image
+                                )
                             )
                             self.airplanes.remove(airplane)
                             self.score += 30  # Pontos bônus por destruir avião durante invulnerabilidade
@@ -1644,7 +1659,9 @@ class Game:
                                 # Criar explosão na posição do avião
                                 self.explosions.append(
                                     Explosion(
-                                        airplane.x, airplane.y, self.image.explosion_image
+                                        airplane.x,
+                                        airplane.y,
+                                        self.image.explosion_image,
                                     )
                                 )
                                 self.airplanes.remove(airplane)
@@ -1696,7 +1713,9 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição do disco
                                 self.explosions.append(
-                                    Explosion(disk.x, disk.y, self.image.explosion_image)
+                                    Explosion(
+                                        disk.x, disk.y, self.image.explosion_image
+                                    )
                                 )
                                 self.flying_disks.remove(disk)
                                 self.lives -= 1
@@ -1736,7 +1755,9 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(turtle.x, turtle.y, self.image.explosion_image)
+                                Explosion(
+                                    turtle.x, turtle.y, self.image.explosion_image
+                                )
                             )
                             self.turtles.remove(turtle)
                             self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
@@ -1769,7 +1790,9 @@ class Game:
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
-                                Explosion(spider.x, spider.y, self.image.explosion_image)
+                                Explosion(
+                                    spider.x, spider.y, self.image.explosion_image
+                                )
                             )
                             self.spiders.remove(spider)
                             self.score += 35  # Pontos bônus por destruir aranha durante invulnerabilidade
@@ -1997,9 +2020,7 @@ class Game:
 
             # Título do jogo se não houver logo
             else:
-                title_text = self.big_font.render(
-                    "Jump & Hit", True, WHITE
-                )
+                title_text = self.big_font.render("Jump & Hit", True, WHITE)
                 title_rect = title_text.get_rect(center=(WIDTH // 2, 150))
                 self.screen.blit(title_text, title_rect)
 
@@ -2536,15 +2557,17 @@ class Game:
         elif self.state == GameState.FIM_SCREEN:
             # Tela FIM com fundo preto
             self.screen.fill(BLACK)
-            
+
             # Texto "FIM" centralizado
             fim_text = pygame.font.Font(None, 120).render("FIM", True, WHITE)
             fim_rect = fim_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
             self.screen.blit(fim_text, fim_rect)
-            
+
             # Instrução para pular (opcional, aparece após 1 segundo)
             if self.fim_screen_timer > 60:  # Após 1 segundo
-                skip_text = self.font.render("Pressione qualquer tecla para continuar", True, LIGHT_GRAY)
+                skip_text = self.font.render(
+                    "Pressione qualquer tecla para continuar", True, LIGHT_GRAY
+                )
                 skip_rect = skip_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
                 self.screen.blit(skip_text, skip_rect)
 
@@ -2552,12 +2575,12 @@ class Game:
             if self.credits_type == "menu":
                 # Créditos simples do menu (versão antiga)
                 self.draw_ocean_background(self.screen)
-                
+
                 # Título
                 title_text = self.big_font.render("CRÉDITOS", True, YELLOW)
                 title_rect = title_text.get_rect(center=(WIDTH // 2, 100))
                 self.screen.blit(title_text, title_rect)
-                
+
                 # Conteúdo dos créditos do menu
                 menu_credits = [
                     "Desenvolvido por:",
@@ -2568,11 +2591,11 @@ class Game:
                     "https://www.youtube.com/@cirrasretrogames",
                     "",
                     "Canal do Dudu",
-                    "https://www.youtube.com/@canaldodudu8789",
+                    "https://www.youtube.com/@canaldodudu14",
                     "",
-                    "Obrigado por jogar!"
+                    "Obrigado por jogar!",
                 ]
-                
+
                 y_offset = 200
                 for line in menu_credits:
                     if line.startswith("https://"):
@@ -2587,135 +2610,134 @@ class Game:
                     else:
                         y_offset += 20
                         continue
-                    
+
                     text_rect = text_surface.get_rect(center=(WIDTH // 2, y_offset))
                     self.screen.blit(text_surface, text_rect)
                     y_offset += 40
-                
+
                 # Instruções
                 instruction_text = self.font.render(
                     "Pressione ESC ou ENTER para voltar", True, LIGHT_GRAY
                 )
-                instruction_rect = instruction_text.get_rect(center=(WIDTH // 2, HEIGHT - 50))
+                instruction_rect = instruction_text.get_rect(
+                    center=(WIDTH // 2, HEIGHT - 50)
+                )
                 self.screen.blit(instruction_text, instruction_rect)
-                
+
             else:
                 # Créditos cinematográficos do final do jogo
                 self.screen.fill(BLACK)
-                
+
                 # Conteúdo completo dos créditos
                 credits_content = [
-                "",
-                "",
-                "",
-                "JUMP & HIT",
-                "",
-                "",
-                "Um jogo de plataforma 2D",
-                "inspirado nos clássicos dos anos 80 e 90",
-                "",
-                "",
-                "═══════════════════════════════════════",
-                "",
-                "DESENVOLVIDO POR",
-                "",
-                "CirrasTec",
-                "",
-                "═══════════════════════════════════════",
-                "",
-                "EM PARCERIA COM",
-                "",
-                "Cirras RetroGames",
-                "https://www.youtube.com/@cirrasretrogames",
-                "",
-                "Canal do Dudu",
-                "https://www.youtube.com/@canaldodudu8789",
-                "",
-                "═══════════════════════════════════════",
-                "",
-                "PROGRAMAÇÃO E DESIGN",
-                "",
-                "CirrasTec Team",
-                "",
-                "═══════════════════════════════════════",
-                "",
-                "ARTE E GRÁFICOS",
-                "",
-                "Sprites clássicos adaptados",
-                "Interface moderna",
-                "Efeitos visuais personalizados",
-                "",
-                "═══════════════════════════════════════",
-                "",
-                "ÁUDIO E MÚSICA",
-                "",
-                "Trilha sonora nostálgica",
-                "Efeitos sonoros clássicos",
-                "Mixagem e masterização",
-                "",
-                "═══════════════════════════════════════",
-                "",
-                "NÍVEIS E GAMEPLAY",
-                "",
-                "51 níveis únicos",
-                "Sistema de dificuldade progressiva",
-                "Múltiplos tipos de inimigos",
-                "Mecânicas de plataforma refinadas",
-                "",
-                "═══════════════════════════════════════",
-                "",
-                "TECNOLOGIAS UTILIZADAS",
-                "",
-                "Python 3.x",
-                "Pygame",
-                "Sistema de cache otimizado",
-                "Arquitetura modular",
-                "",
-                "═══════════════════════════════════════",
-                "",
-                "AGRADECIMENTOS ESPECIAIS",
-                "",
-                "À comunidade retrogaming",
-                "Aos jogadores que testaram o jogo",
-                "Aos criadores dos jogos clássicos",
-                "que nos inspiraram",
-                "",
-                "═══════════════════════════════════════",
-                "",
-                "MENSAGEM FINAL",
-                "",
-                "Este jogo foi criado com paixão e dedicação,",
-                "combinando a nostalgia dos jogos clássicos",
-                "com elementos modernos de gameplay.",
-                "",
-                "Esperamos que você tenha se divertido",
-                "tanto quanto nós nos divertimos criando!",
-                "",
-                "Continue jogando, continue sonhando!",
-                "",
-                "═══════════════════════════════════════",
-                "",
-                "© 2024 CirrasTec",
-                "Todos os direitos reservados",
-                "",
-                "",
-                "Obrigado por jogar!",
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-                "",
-            ]
-            
+                    "",
+                    "",
+                    "",
+                    "JUMP & HIT",
+                    "",
+                    "",
+                    "Um jogo de plataforma 2D",
+                    "inspirado nos clássicos dos anos 80 e 90",
+                    "",
+                    "",
+                    "═══════════════════════════════════════",
+                    "",
+                    "DESENVOLVIDO POR",
+                    "",
+                    "CirrasTec",
+                    "",
+                    "═══════════════════════════════════════",
+                    "",
+                    "EM PARCERIA COM",
+                    "",
+                    "Cirras RetroGames",
+                    "https://www.youtube.com/@cirrasretrogames",
+                    "",
+                    "Canal do Dudu",
+                    "https://www.youtube.com/@canaldodudu14",
+                    "",
+                    "═══════════════════════════════════════",
+                    "",
+                    "PROGRAMAÇÃO E DESIGN",
+                    "",
+                    "Cirras",
+                    "Dudu",
+                    "",
+                    "═══════════════════════════════════════",
+                    "",
+                    "ARTE E GRÁFICOS",
+                    "",
+                    "Cirras",
+                    "",
+                    "═══════════════════════════════════════",
+                    "",
+                    "ÁUDIO E MÚSICA",
+                    "",
+                    "Cirras",
+                    "",
+                    "═══════════════════════════════════════",
+                    "",
+                    "NÍVEIS E GAMEPLAY",
+                    "",
+                    "Cirras",
+                    "Dudu",
+                    "Aline",
+                    "",
+                    "═══════════════════════════════════════",
+                    "",
+                    "TECNOLOGIAS UTILIZADAS",
+                    "",
+                    "Python 3.x",
+                    "Pygame",
+                    "Trae",
+                    "Suno",
+                    "Canva",
+                    "",
+                    "═══════════════════════════════════════",
+                    "",
+                    "AGRADECIMENTOS ESPECIAIS",
+                    "",
+                    "À comunidade retrogaming",
+                    "Aos jogadores que testaram o jogo",
+                    "Aos criadores dos jogos clássicos",
+                    "que nos inspiraram",
+                    "",
+                    "═══════════════════════════════════════",
+                    "",
+                    "MENSAGEM FINAL",
+                    "",
+                    "Este jogo foi criado com paixão e dedicação,",
+                    "combinando a nostalgia dos jogos clássicos",
+                    "com elementos modernos de gameplay.",
+                    "",
+                    "Esperamos que você tenha se divertido",
+                    "tanto quanto nós nos divertimos criando!",
+                    "",
+                    "Continue jogando, continue sonhando!",
+                    "",
+                    "═══════════════════════════════════════",
+                    "",
+                    "© 2025 CirrasTec",
+                    "Todos os direitos reservados",
+                    "",
+                    "",
+                    "Obrigado por jogar!",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                ]
+
                 # Renderizar créditos com rolagem
                 y_start = HEIGHT - self.credits_scroll_y
                 line_height = 35
-                
+
                 for i, line in enumerate(credits_content):
                     y_pos = y_start + (i * line_height)
-                    
+
                     # Só renderizar linhas visíveis na tela
                     if y_pos > -50 and y_pos < HEIGHT + 50:
                         if line == "JUMP & HIT":
@@ -2728,16 +2750,31 @@ class Game:
                         elif line.startswith("https://"):
                             # Links
                             text_surface = self.font.render(line, True, LIGHT_BLUE)
-                        elif line in ["DESENVOLVIDO POR", "EM PARCERIA COM", "PROGRAMAÇÃO E DESIGN", 
-                                    "ARTE E GRÁFICOS", "ÁUDIO E MÚSICA", "NÍVEIS E GAMEPLAY",
-                                    "TECNOLOGIAS UTILIZADAS", "AGRADECIMENTOS ESPECIAIS", "MENSAGEM FINAL"]:
+                        elif line in [
+                            "DESENVOLVIDO POR",
+                            "EM PARCERIA COM",
+                            "PROGRAMAÇÃO E DESIGN",
+                            "ARTE E GRÁFICOS",
+                            "ÁUDIO E MÚSICA",
+                            "NÍVEIS E GAMEPLAY",
+                            "TECNOLOGIAS UTILIZADAS",
+                            "AGRADECIMENTOS ESPECIAIS",
+                            "MENSAGEM FINAL",
+                        ]:
                             # Seções principais
                             section_font = pygame.font.Font(None, 48)
                             text_surface = section_font.render(line, True, CYAN)
-                        elif line in ["CirrasTec", "Cirras RetroGames", "Canal do Dudu"]:
+                        elif line in [
+                            "CirrasTec",
+                            "Cirras RetroGames",
+                            "Canal do Dudu",
+                        ]:
                             # Nomes importantes
                             text_surface = self.font.render(line, True, YELLOW)
-                        elif line == "© 2024 CirrasTec" or line == "Todos os direitos reservados":
+                        elif (
+                            line == "© 2025 CirrasTec"
+                            or line == "Todos os direitos reservados"
+                        ):
                             # Copyright
                             text_surface = self.font.render(line, True, LIGHT_GRAY)
                         elif line == "Obrigado por jogar!":
@@ -2750,10 +2787,10 @@ class Game:
                         else:
                             # Linha vazia
                             continue
-                        
+
                         text_rect = text_surface.get_rect(center=(WIDTH // 2, y_pos))
                         self.screen.blit(text_surface, text_rect)
-                
+
                 # Verificar se os créditos terminaram (todos passaram pela tela)
                 total_credits_height = len(credits_content) * line_height
                 if self.credits_scroll_y > total_credits_height + HEIGHT:
