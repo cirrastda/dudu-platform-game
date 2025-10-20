@@ -363,14 +363,16 @@ class Game:
                 # Navegação da tela de título
                 elif self.state == GameState.TITLE_SCREEN:
                     # Em mobile, podemos já ter exibido o vídeo via Kivy
+                    is_dev = ENV_CONFIG.get("environment", "production") == "development"
                     skip_opening = False
-                    try:
-                        skip_opening = (
-                            self.env_config.get("skip-opening-video") == "1"
-                            or ENV_CONFIG.get("skip-opening-video") == "1"
-                        )
-                    except Exception:
-                        skip_opening = False
+                    if not is_dev:
+                        try:
+                            skip_opening = (
+                                self.env_config.get("skip-opening-video") == "1"
+                                or ENV_CONFIG.get("skip-opening-video") == "1"
+                            )
+                        except Exception:
+                            skip_opening = False
 
                     if skip_opening:
                         self.state = GameState.MAIN_MENU
@@ -548,14 +550,16 @@ class Game:
                     # Navegação da tela de título com joystick
                     elif self.state == GameState.TITLE_SCREEN:
                         # Em mobile, podemos já ter exibido o vídeo via Kivy
+                        is_dev = ENV_CONFIG.get("environment", "production") == "development"
                         skip_opening = False
-                        try:
-                            skip_opening = (
-                                self.env_config.get("skip-opening-video") == "1"
-                                or ENV_CONFIG.get("skip-opening-video") == "1"
-                            )
-                        except Exception:
-                            skip_opening = False
+                        if not is_dev:
+                            try:
+                                skip_opening = (
+                                    self.env_config.get("skip-opening-video") == "1"
+                                    or ENV_CONFIG.get("skip-opening-video") == "1"
+                                )
+                            except Exception:
+                                skip_opening = False
 
                         if skip_opening:
                             self.state = GameState.MAIN_MENU
