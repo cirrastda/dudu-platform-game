@@ -2799,6 +2799,7 @@ class Game:
                     # Créditos terminaram, parar música e voltar ao menu
                     self.music.stop_music()
                     self.state = GameState.MAIN_MENU
+                    self.music.play_menu_music(self)  # Iniciar música do menu
                     self.credits_scroll_y = 0  # Reset para próxima vez
                     self.credits_reset_timer = 0
 
