@@ -119,6 +119,7 @@ class Game:
         self.menu_selected = 0  # Opção selecionada no menu
         self.menu_options = ["Iniciar", "Recordes", "Créditos", "Sair"]
         self.game_logo = None  # Logo principal do jogo
+        self.credits_type = None  # Inicializa tipo de créditos para evitar valores antigos
 
         # Efeitos de fade para splash screen
         self.fade_in_duration = 30  # 0.5 segundos para fade in
@@ -911,6 +912,7 @@ class Game:
             # Após 3 segundos (180 frames a 60 FPS), ir para os créditos
             if self.fim_screen_timer >= 180:
                 self.state = GameState.CREDITS
+                self.credits_type = "ending"
                 self.music.play_music("credits")
                 # Resetar rolagem dos créditos
                 self.credits_scroll_y = 0
