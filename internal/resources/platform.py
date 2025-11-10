@@ -70,6 +70,6 @@ class Platform:
 
     def get_platform_texture(game, level):
         if level <= 30:
-            return game.image_manager.platform_texture
+            return game.image.platform_texture
         elif level <= 40:
-            return game.image_manager.platform_texture_city
+            return game.image.platform_texture_city

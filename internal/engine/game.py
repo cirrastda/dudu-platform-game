@@ -200,6 +200,34 @@ class Game:
         self.image = Image()
         self.image.load_images(self)
 
+        # Espelhar texturas e imagens necessárias como atributos diretos do jogo
+        self.platform_texture = getattr(self.image, "platform_texture", None)
+        self.platform_texture_city = getattr(self.image, "platform_texture_city", None)
+        self.platform_texture_space = getattr(self.image, "platform_texture_space", None)
+        self.platform_texture_ship = getattr(self.image, "platform_texture_ship", None)
+        self.platform_texture_flag = getattr(self.image, "platform_texture_flag", None)
+
+        self.turtle_images = getattr(self.image, "turtle_images", None)
+        self.spider_images = getattr(self.image, "spider_images", None)
+        self.robot_images = getattr(self.image, "robot_images", None)
+        self.missile_images = getattr(self.image, "missile_images", None)
+        self.alien_images = getattr(self.image, "alien_images", None)
+
+        # Imagens de avião: manter também cópias individuais para uso existente
+        self.airplane_img1 = getattr(self.image, "airplane_img1", None)
+        self.airplane_img2 = getattr(self.image, "airplane_img2", None)
+        self.airplane_img3 = getattr(self.image, "airplane_img3", None)
+        self.airplane_images = (
+            (self.airplane_img1, self.airplane_img2, self.airplane_img3)
+            if self.airplane_img1 and self.airplane_img2 and self.airplane_img3
+            else None
+        )
+
+        self.flying_disk_images = getattr(self.image, "flying_disk_images", None)
+        self.fire_image = getattr(self.image, "fire_image", None)
+        self.extra_life_img = getattr(self.image, "extra_life_img", None)
+        self.explosion_image = getattr(self.image, "explosion_image", None)
+
         # Transferir logo do jogo
         self.game_logo = self.image.game_logo
 
@@ -323,8 +351,8 @@ class Game:
 
         # Determinar qual fundo usar baseado no estado do jogo
         if self.state == GameState.PLAYING:
-            # Durante o jogo, usar fundo baseado no nível
-            background_to_use = self.image.background_img
+            # Durante o jogo, usar fundo baseado no nível já calculado em Level.init_level
+            background_to_use = getattr(self, "background_img", self.image.background_img)
         else:
             # Em menus, recordes, etc., usar fundo fixo
             background_to_use = getattr(
@@ -816,25 +844,8 @@ class Game:
         selected_option = self.menu_options[self.menu_selected]
 
         if selected_option == "Iniciar":
-            # Iniciar novo jogo
-            # Configurar nível inicial baseado no ambiente
-            if (
-                ENV_CONFIG.get("environment") == "development"
-                and "initial-stage" in ENV_CONFIG
-            ):
-                try:
-                    self.current_level = int(ENV_CONFIG["initial-stage"])
-                    # Validar se o nível está dentro do range válido
-                    if self.current_level < 1 or self.current_level > 50:
-                        print(
-                            f"Aviso: initial-stage {self.current_level} inválido. Usando nível 1."
-                        )
-                        self.current_level = 1
-                except (ValueError, TypeError):
-                    print("Aviso: initial-stage deve ser um número. Usando nível 1.")
-                    self.current_level = 1
-            else:
-                self.current_level = 1
+            # Iniciar novo jogo sempre no nível 1, ignorando seleção de debugger
+            self.current_level = 1
             self.score = 0
             self.platforms_jumped.clear()
             self.birds_dodged.clear()
@@ -2795,7 +2806,7 @@ class Game:
                 total_credits_height = len(credits_content) * line_height
                 if self.credits_scroll_y > total_credits_height + HEIGHT:
                     # Créditos terminaram, parar música e voltar ao menu
-                    self.music.stop_music()
+                    pygame.mixer.music.stop()
                     self.state = GameState.MAIN_MENU
                     self.credits_scroll_y = 0  # Reset para próxima vez
                     self.credits_reset_timer = 0
