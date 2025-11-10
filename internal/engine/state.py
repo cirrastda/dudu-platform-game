@@ -16,3 +16,4 @@ class GameState(Enum):
     RECORDS = 12  # Tela de recordes
     ENDING_VIDEO = 13  # Vídeo de ending após captura do boss
     FIM_SCREEN = 14  # Tela de "FIM" após o vídeo de ending
+    SELECT_DIFFICULTY = 15  # Tela de seleção de dificuldade

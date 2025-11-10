@@ -5,6 +5,7 @@ from internal.resources.cache import ResourceCache
 from internal.engine.screen import Screen
 from internal.engine.ranking import RankingManager
 from internal.engine.state import GameState
+from internal.engine.difficulty import Difficulty
 from internal.resources.player import Player
 from internal.resources.platform import Platform
 from internal.resources.flag import Flag
@@ -87,6 +88,11 @@ class Game:
         # Sistema de câmera
         self.camera_x = 0
 
+        # Dificuldade padrão e opções
+        self.difficulty = Difficulty.NORMAL
+        self.difficulty_options = ["Fácil", "Normal", "Difícil"]
+        self.difficulty_selected = 1
+
         # Sistema de pontuação
         self.score = 0
         self.platforms_jumped = (
@@ -98,9 +104,12 @@ class Game:
         self.lives = self.get_initial_lives()
         self.max_lives = self.get_initial_lives()
 
-        # Sistema de vidas extras por pontuação
-        self.extra_life_milestones = [1000, 5000, 10000]  # Marcos iniciais
-        self.next_extra_life_score = 1000  # Próxima pontuação para vida extra
+        # Sistema de vidas extras por pontuação (ajustado por dificuldade)
+        (
+            self.extra_life_milestones,
+            self.extra_life_increment_after_milestones,
+        ) = self.get_extra_life_milestones_and_increment()
+        self.next_extra_life_score = self.extra_life_milestones[0]
         self.extra_lives_earned = 0  # Contador de vidas extras ganhas
 
         # Sistema de joystick
@@ -119,6 +128,7 @@ class Game:
         self.menu_selected = 0  # Opção selecionada no menu
         self.menu_options = ["Iniciar", "Recordes", "Créditos", "Sair"]
         self.game_logo = None  # Logo principal do jogo
+        self.credits_type = None  # Inicializa tipo de créditos para evitar valores antigos
 
         # Efeitos de fade para splash screen
         self.fade_in_duration = 30  # 0.5 segundos para fade in
@@ -199,6 +209,14 @@ class Game:
         # Carregar imagens
         self.image = Image()
         self.image.load_images(self)
+        # Disponibilizar texturas de plataforma diretamente no Game para geradores de níveis
+        self.platform_texture = self.image.platform_texture
+        self.platform_texture_city = self.image.platform_texture_city
+        self.platform_texture_space = self.image.platform_texture_space
+        self.platform_texture_ship = self.image.platform_texture_ship
+        self.platform_texture_flag = self.image.platform_texture_flag
+        # Compatibilidade com código que espera image_manager
+        self.image_manager = self.image
 
         # Espelhar texturas e imagens necessárias como atributos diretos do jogo
         self.platform_texture = getattr(self.image, "platform_texture", None)
@@ -259,12 +277,28 @@ class Game:
             Level.init_level(self)
 
     def get_initial_lives(self):
-        """Obter o número inicial de vidas baseado na configuração"""
+        """Obter o número inicial de vidas baseado na configuração e dificuldade"""
         if ENV_CONFIG.get("environment") == "development" and "lives" in ENV_CONFIG:
             if ENV_CONFIG.get("lives").isdigit() and int(ENV_CONFIG.get("lives")) > 0:
                 return int(ENV_CONFIG["lives"])
 
-        return DEFAULT_INITIAL_LIVES  # Valor padrão se não houver configuração válida
+        # Padrões por dificuldade
+        if getattr(self, "difficulty", Difficulty.NORMAL) == Difficulty.EASY:
+            return 5
+        elif self.difficulty == Difficulty.HARD:
+            return 2
+        else:
+            return DEFAULT_INITIAL_LIVES  # Normal
+
+    def get_extra_life_milestones_and_increment(self):
+        """Retorna (marcos_iniciais, incremento) conforme dificuldade"""
+        diff = getattr(self, "difficulty", Difficulty.NORMAL)
+        if diff == Difficulty.EASY:
+            return [1000, 2000, 3000], 1000
+        elif diff == Difficulty.HARD:
+            return [5000, 10000, 20000], 20000
+        else:  # Normal
+            return [1000, 5000, 10000], 10000
 
     def check_extra_life(self):
         """Verificar se o jogador merece uma vida extra baseada na pontuação"""
@@ -278,21 +312,46 @@ class Game:
                 "new-life"
             )  # Som específico para vida extra
 
-            # Calcular próxima pontuação para vida extra
-            if self.extra_lives_earned <= 3:  # Primeiros 3 marcos: 1000, 5000, 10000
-                if self.extra_lives_earned < len(self.extra_life_milestones):
-                    self.next_extra_life_score = self.extra_life_milestones[
-                        self.extra_lives_earned
-                    ]
-                else:
-                    # Após 10000, a cada 10000 pontos
-                    self.next_extra_life_score = 20000
+            # Calcular próxima pontuação para vida extra conforme dificuldade
+            if self.extra_lives_earned < len(self.extra_life_milestones):
+                self.next_extra_life_score = self.extra_life_milestones[
+                    self.extra_lives_earned
+                ]
             else:
-                # A cada 10000 pontos após os marcos iniciais
-                self.next_extra_life_score += 10000
+                # Após os marcos iniciais, usar incremento configurado pela dificuldade
+                increment = getattr(
+                    self, "extra_life_increment_after_milestones", 10000
+                )
+                self.next_extra_life_score += increment
 
             return True  # Indica que uma vida extra foi concedida
         return False
+
+    def get_score_multiplier(self):
+        """Multiplicador de pontuação com base na dificuldade atual"""
+        diff = getattr(self, "difficulty", Difficulty.NORMAL)
+        if diff == Difficulty.EASY:
+            return 0.4
+        elif diff == Difficulty.HARD:
+            return 3.0
+        return 1.0
+
+    def add_score(self, base_points):
+        """Adiciona pontuação aplicando multiplicador da dificuldade e verifica vida extra.
+        Retorna os pontos efetivamente adicionados.
+        """
+        try:
+            multiplier = self.get_score_multiplier()
+        except Exception:
+            multiplier = 1.0
+        points = int(round(base_points * multiplier))
+        # Garante pelo menos 1 ponto em incrementos positivos
+        if base_points > 0 and points <= 0:
+            points = 1
+        self.score += points
+        # Checar vida extra conforme sistema configurado por dificuldade
+        self.check_extra_life()
+        return points
 
     def update_bird_difficulty(self):
         """Atualizar dificuldade dos pássaros baseada no nível atual
@@ -390,14 +449,16 @@ class Game:
                 # Navegação da tela de título
                 elif self.state == GameState.TITLE_SCREEN:
                     # Em mobile, podemos já ter exibido o vídeo via Kivy
+                    is_dev = ENV_CONFIG.get("environment", "production") == "development"
                     skip_opening = False
-                    try:
-                        skip_opening = (
-                            self.env_config.get("skip-opening-video") == "1"
-                            or ENV_CONFIG.get("skip-opening-video") == "1"
-                        )
-                    except Exception:
-                        skip_opening = False
+                    if not is_dev:
+                        try:
+                            skip_opening = (
+                                self.env_config.get("skip-opening-video") == "1"
+                                or ENV_CONFIG.get("skip-opening-video") == "1"
+                            )
+                        except Exception:
+                            skip_opening = False
 
                     if skip_opening:
                         self.state = GameState.MAIN_MENU
@@ -437,6 +498,67 @@ class Game:
                         )
                     elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.handle_menu_selection()
+                # Seleção de Dificuldade
+                elif self.state == GameState.SELECT_DIFFICULTY:
+                    if event.key == pygame.K_UP:
+                        self.difficulty_selected = (self.difficulty_selected - 1) % len(
+                            self.difficulty_options
+                        )
+                    elif event.key == pygame.K_DOWN:
+                        self.difficulty_selected = (self.difficulty_selected + 1) % len(
+                            self.difficulty_options
+                        )
+                    elif event.key == pygame.K_ESCAPE:
+                        self.state = GameState.MAIN_MENU
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        # Aplicar dificuldade escolhida
+                        if self.difficulty_selected == 0:
+                            self.difficulty = Difficulty.EASY
+                        elif self.difficulty_selected == 2:
+                            self.difficulty = Difficulty.HARD
+                        else:
+                            self.difficulty = Difficulty.NORMAL
+
+                        # Reconfigurar thresholds de vida extra conforme dificuldade
+                        (
+                            self.extra_life_milestones,
+                            self.extra_life_increment_after_milestones,
+                        ) = self.get_extra_life_milestones_and_increment()
+                        self.next_extra_life_score = self.extra_life_milestones[0]
+                        self.extra_lives_earned = 0
+
+                        # Configurar nível inicial baseado no ambiente
+                        if (
+                            ENV_CONFIG.get("environment") == "development"
+                            and "initial-stage" in ENV_CONFIG
+                        ):
+                            try:
+                                self.current_level = int(ENV_CONFIG["initial-stage"])
+                                if self.current_level < 1 or self.current_level > 50:
+                                    self.current_level = 1
+                            except (ValueError, TypeError):
+                                self.current_level = 1
+                        else:
+                            self.current_level = 1
+
+                        # Resetar progresso de jogo
+                        self.score = 0
+                        self.platforms_jumped.clear()
+                        self.birds_dodged.clear()
+                        self.player_name = ""
+
+                        # Vidas por dificuldade
+                        self.max_lives = self.get_initial_lives()
+                        self.lives = self.max_lives
+
+                        # Limpar itens coletados
+                        if hasattr(self, "collected_extra_life_levels"):
+                            self.collected_extra_life_levels.clear()
+
+                        # Iniciar jogo
+                        self.state = GameState.PLAYING
+                        Level.init_level(self)
+                        self.music.play_level_music(self, self.current_level)
                 # Navegação da tela FIM
                 elif self.state == GameState.FIM_SCREEN:
                     # Qualquer tecla pula para os créditos do final
@@ -575,14 +697,16 @@ class Game:
                     # Navegação da tela de título com joystick
                     elif self.state == GameState.TITLE_SCREEN:
                         # Em mobile, podemos já ter exibido o vídeo via Kivy
+                        is_dev = ENV_CONFIG.get("environment", "production") == "development"
                         skip_opening = False
-                        try:
-                            skip_opening = (
-                                self.env_config.get("skip-opening-video") == "1"
-                                or ENV_CONFIG.get("skip-opening-video") == "1"
-                            )
-                        except Exception:
-                            skip_opening = False
+                        if not is_dev:
+                            try:
+                                skip_opening = (
+                                    self.env_config.get("skip-opening-video") == "1"
+                                    or ENV_CONFIG.get("skip-opening-video") == "1"
+                                )
+                            except Exception:
+                                skip_opening = False
 
                         if skip_opening:
                             self.state = GameState.MAIN_MENU
@@ -619,6 +743,59 @@ class Game:
                             9,
                         ]:  # A/X ou Start/Options
                             self.handle_menu_selection()
+                    # Seleção de dificuldade com joystick
+                    elif self.state == GameState.SELECT_DIFFICULTY:
+                        if event.button == 0 or event.button in [6, 7, 8, 9]:  # Confirmar
+                            # Aplicar dificuldade escolhida
+                            if self.difficulty_selected == 0:
+                                self.difficulty = Difficulty.EASY
+                            elif self.difficulty_selected == 2:
+                                self.difficulty = Difficulty.HARD
+                            else:
+                                self.difficulty = Difficulty.NORMAL
+
+                            # Reconfigurar thresholds de vida extra conforme dificuldade
+                            (
+                                self.extra_life_milestones,
+                                self.extra_life_increment_after_milestones,
+                            ) = self.get_extra_life_milestones_and_increment()
+                            self.next_extra_life_score = self.extra_life_milestones[0]
+                            self.extra_lives_earned = 0
+
+                            # Configurar nível inicial baseado no ambiente
+                            if (
+                                ENV_CONFIG.get("environment") == "development"
+                                and "initial-stage" in ENV_CONFIG
+                            ):
+                                try:
+                                    self.current_level = int(ENV_CONFIG["initial-stage"])
+                                    if self.current_level < 1 or self.current_level > 50:
+                                        self.current_level = 1
+                                except (ValueError, TypeError):
+                                    self.current_level = 1
+                            else:
+                                self.current_level = 1
+
+                            # Resetar progresso de jogo
+                            self.score = 0
+                            self.platforms_jumped.clear()
+                            self.birds_dodged.clear()
+                            self.player_name = ""
+
+                            # Vidas por dificuldade
+                            self.max_lives = self.get_initial_lives()
+                            self.lives = self.max_lives
+
+                            # Limpar itens coletados
+                            if hasattr(self, "collected_extra_life_levels"):
+                                self.collected_extra_life_levels.clear()
+
+                            # Iniciar jogo
+                            self.state = GameState.PLAYING
+                            Level.init_level(self)
+                            self.music.play_level_music(self, self.current_level)
+                        elif event.button == 1:  # Voltar
+                            self.state = GameState.MAIN_MENU
                     # Navegação da tela FIM com joystick
                     elif self.state == GameState.FIM_SCREEN:
                         # Qualquer botão pula para os créditos do final
@@ -855,6 +1032,8 @@ class Game:
             Level.init_level(self)
             # Tocar música do nível atual
             self.music.play_level_music(self, self.current_level)
+            # Ir para seleção de dificuldade antes de iniciar o jogo
+            self.state = GameState.SELECT_DIFFICULTY
         elif selected_option == "Recordes":
             self.state = GameState.RECORDS
         elif selected_option == "Créditos":
@@ -922,6 +1101,7 @@ class Game:
             # Após 3 segundos (180 frames a 60 FPS), ir para os créditos
             if self.fim_screen_timer >= 180:
                 self.state = GameState.CREDITS
+                self.credits_type = "ending"
                 self.music.play_music("credits")
                 # Resetar rolagem dos créditos
                 self.credits_scroll_y = 0
@@ -980,9 +1160,7 @@ class Game:
             if self.player.just_landed and hasattr(self.player, "landed_platform_id"):
                 if self.player.landed_platform_id not in self.platforms_jumped:
                     self.platforms_jumped.add(self.player.landed_platform_id)
-                    self.score += 10
-                    # Verificar se merece vida extra
-                    self.check_extra_life()
+                    self.add_score(10)
                 # Reset da flag após verificar pontuação
                 self.player.just_landed = False
 
@@ -1271,11 +1449,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += (
-                                100  # Aviões valem mais pontos por serem maiores
-                            )
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(100)
                             break
             elif self.current_level <= 30:
                 for bullet in self.player.bullets[:]:
@@ -1294,9 +1468,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 75  # Morcegos valem mais pontos
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(75)
                             break
             elif self.current_level <= 40:
                 for bullet in self.player.bullets[:]:
@@ -1315,9 +1487,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 50
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(50)
                             break
             else:
                 for bullet in self.player.bullets[:]:
@@ -1336,9 +1506,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 90
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(90)
                             break
 
             # Verificar colisão entre tiros e tartarugas/aranhas
@@ -1359,9 +1527,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 70
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(70)
                             break
             else:
                 for bullet in self.player.bullets[:]:
@@ -1380,9 +1546,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 120
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(120)
                             break
 
             # Verificar colisão entre tiros do jogador e robôs (níveis 31-40)
@@ -1406,11 +1570,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += (
-                                100  # Robôs valem mais pontos por serem mais difíceis
-                            )
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(100)
                             break
 
             # Verificar colisão entre mísseis dos robôs e jogador (níveis 31-40)
@@ -1425,9 +1585,7 @@ class Game:
                                 )
                                 self.explosions.append(explosion)
                                 robot.missiles.remove(missile)
-                                self.score += 15  # Pontos bônus por destruir míssil durante invulnerabilidade
-                                # Verificar se merece vida extra
-                                self.check_extra_life()
+                                self.add_score(15)  # Pontos bônus por destruir míssil durante invulnerabilidade
                             else:
                                 # Colidiu com míssil, ativar animação de hit
                                 if (
@@ -1436,7 +1594,7 @@ class Game:
                                     self.player.take_hit()
                                     # Criar explosão na posição do míssil
                                     explosion = self.get_pooled_explosion(
-                                        missile.x, missile.y, self.explosion_image
+                                        missile.x, missile.y, self.image.explosion_image
                                     )
                                     self.explosions.append(explosion)
                                     robot.missiles.remove(missile)
@@ -1464,16 +1622,14 @@ class Game:
                                 )
                                 self.explosions.append(explosion)
                                 alien.lasers.remove(laser)
-                                self.score += 15  # Pontos bônus por destruir laser durante invulnerabilidade
-                                # Verificar se merece vida extra
-                                self.check_extra_life()
+                                self.add_score(15)  # Pontos bônus por destruir laser durante invulnerabilidade
                             else:
                                 # Colidiu com laser, ativar animação de hit
                                 if not self.player.is_hit:
                                     self.player.take_hit()
                                     # Criar explosão na posição do laser
                                     explosion = self.get_pooled_explosion(
-                                        laser.x, laser.y, self.explosion_image
+                                        laser.x, laser.y, self.image.explosion_image
                                     )
                                     self.explosions.append(explosion)
                                     alien.lasers.remove(laser)
@@ -1510,9 +1666,7 @@ class Game:
                             # Tocar som de explosão
                             self.sound_effects.play_sound_effect("explosion")
                             # Adicionar pontos
-                            self.score += 60
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(60)
                             break
 
             # Atualizar mísseis órfãos (de robôs mortos) - apenas visual, sem colisão
@@ -1546,9 +1700,7 @@ class Game:
                         and bird.id not in self.birds_dodged
                     ):
                         self.birds_dodged.add(bird.id)
-                        self.score += 10  # Pontos por esquivar
-                        # Verificar se merece vida extra
-                        self.check_extra_life()
+                        self.add_score(10)  # Pontos por esquivar
 
                     # Verificar colisão direta
                     if self.player.rect.colliderect(bird.rect):
@@ -1558,9 +1710,7 @@ class Game:
                                 Explosion(bird.x, bird.y, self.image.explosion_image)
                             )
                             self.birds.remove(bird)
-                            self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(20)  # Pontos bônus por destruir inimigo durante invulnerabilidade
                         else:
                             # Colidiu com pássaro, ativar animação de hit
                             if (
@@ -1569,7 +1719,7 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição do pássaro
                                 self.explosions.append(
-                                    Explosion(bird.x, bird.y, self.explosion_image)
+                                    Explosion(bird.x, bird.y, self.image.explosion_image)
                                 )
                                 self.birds.remove(bird)
                                 self.lives -= 1
@@ -1595,9 +1745,7 @@ class Game:
                         and bat.id not in self.birds_dodged
                     ):
                         self.birds_dodged.add(bat.id)
-                        self.score += 15  # Pontos por esquivar morcego (mais difícil)
-                        # Verificar se merece vida extra
-                        self.check_extra_life()
+                        self.add_score(15)  # Pontos por esquivar morcego (mais difícil)
 
                     # Verificar colisão direta
                     if self.player.rect.colliderect(bat.rect):
@@ -1607,9 +1755,7 @@ class Game:
                                 Explosion(bat.x, bat.y, self.image.explosion_image)
                             )
                             self.bats.remove(bat)
-                            self.score += 25  # Pontos bônus por destruir morcego durante invulnerabilidade
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(25)  # Pontos bônus por destruir morcego durante invulnerabilidade
                         else:
                             # Colidiu com morcego, ativar animação de hit
                             if (
@@ -1618,7 +1764,7 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição do morcego
                                 self.explosions.append(
-                                    Explosion(bat.x, bat.y, self.explosion_image)
+                                    Explosion(bat.x, bat.y, self.image.explosion_image)
                                 )
                                 self.bats.remove(bat)
                                 self.lives -= 1
@@ -1644,9 +1790,7 @@ class Game:
                         and airplane.id not in self.birds_dodged
                     ):
                         self.birds_dodged.add(airplane.id)
-                        self.score += 20  # Pontos por esquivar avião (mais difícil)
-                        # Verificar se merece vida extra
-                        self.check_extra_life()
+                        self.add_score(20)  # Pontos por esquivar avião (mais difícil)
 
                     # Verificar colisão direta
                     if self.player.rect.colliderect(airplane.rect):
@@ -1658,9 +1802,7 @@ class Game:
                                 )
                             )
                             self.airplanes.remove(airplane)
-                            self.score += 30  # Pontos bônus por destruir avião durante invulnerabilidade
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(30)  # Pontos bônus por destruir avião durante invulnerabilidade
                         else:
                             # Colidiu com avião, ativar animação de hit
                             if (
@@ -1699,11 +1841,7 @@ class Game:
                         and disk.id not in self.birds_dodged
                     ):
                         self.birds_dodged.add(disk.id)
-                        self.score += (
-                            25  # Pontos por esquivar disco (ainda mais difícil)
-                        )
-                        # Verificar se merece vida extra
-                        self.check_extra_life()
+                        self.add_score(25)  # Pontos por esquivar disco (ainda mais difícil)
 
                     # Verificar colisão direta
                     if self.player.rect.colliderect(disk.rect):
@@ -1713,9 +1851,7 @@ class Game:
                                 Explosion(disk.x, disk.y, self.image.explosion_image)
                             )
                             self.flying_disks.remove(disk)
-                            self.score += 40  # Pontos bônus por destruir disco durante invulnerabilidade
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(40)  # Pontos bônus por destruir disco durante invulnerabilidade
                         else:
                             # Colidiu com disco, ativar animação de hit
                             if (
@@ -1771,9 +1907,7 @@ class Game:
                                 )
                             )
                             self.turtles.remove(turtle)
-                            self.score += 20  # Pontos bônus por destruir inimigo durante invulnerabilidade
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(20)  # Pontos bônus por destruir inimigo durante invulnerabilidade
                         else:
                             # Colidiu com tartaruga, ativar animação de hit
                             if (
@@ -1782,7 +1916,7 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição da tartaruga
                                 self.explosions.append(
-                                    Explosion(turtle.x, turtle.y, self.explosion_image)
+                                    Explosion(turtle.x, turtle.y, self.image.explosion_image)
                                 )
                                 self.turtles.remove(turtle)
                                 self.lives -= 1
@@ -1806,9 +1940,7 @@ class Game:
                                 )
                             )
                             self.spiders.remove(spider)
-                            self.score += 35  # Pontos bônus por destruir aranha durante invulnerabilidade
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(35)  # Pontos bônus por destruir aranha durante invulnerabilidade
                         else:
                             # Colidiu com aranha, ativar animação de hit
                             if (
@@ -1817,7 +1949,7 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição da aranha
                                 self.explosions.append(
-                                    Explosion(spider.x, spider.y, self.explosion_image)
+                                    Explosion(spider.x, spider.y, self.image.explosion_image)
                                 )
                                 self.spiders.remove(spider)
                                 self.lives -= 1
@@ -1844,9 +1976,7 @@ class Game:
                             for missile in robot.missiles:
                                 self.orphan_missiles.append(missile)
                             self.robots.remove(robot)
-                            self.score += 50  # Pontos bônus por destruir robô durante invulnerabilidade
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(50)  # Pontos bônus por destruir robô durante invulnerabilidade
                         else:
                             # Colidiu com robô, ativar animação de hit
                             if (
@@ -1855,7 +1985,7 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição do robô
                                 self.explosions.append(
-                                    Explosion(robot.x, robot.y, self.explosion_image)
+                                    Explosion(robot.x, robot.y, self.image.explosion_image)
                                 )
                                 # Transferir mísseis ativos do robô para a lista de órfãos
                                 for missile in robot.missiles:
@@ -1885,16 +2015,14 @@ class Game:
                             for laser in alien.lasers:
                                 self.orphan_lasers.append(laser)
                             self.aliens.remove(alien)
-                            self.score += 60  # Pontos bônus por destruir alien durante invulnerabilidade
-                            # Verificar se merece vida extra
-                            self.check_extra_life()
+                            self.add_score(60)  # Pontos bônus por destruir alien durante invulnerabilidade
                         else:
                             # Colidiu com alien, ativar animação de hit
                             if not self.player.is_hit:
                                 self.player.take_hit()
                                 # Criar explosão na posição do alien
                                 self.explosions.append(
-                                    Explosion(alien.x, alien.y, self.explosion_image)
+                                    Explosion(alien.x, alien.y, self.image.explosion_image)
                                 )
                                 # Transferir lasers ativos do alien para a lista de órfãos
                                 for laser in alien.lasers:
@@ -2059,6 +2187,41 @@ class Game:
             )
             footer_rect = footer_surface.get_rect(center=(WIDTH // 2, HEIGHT - 30))
             self.screen.blit(footer_surface, footer_rect)
+
+        elif self.state == GameState.SELECT_DIFFICULTY:
+            # Tela de seleção de dificuldade com o mesmo estilo do menu
+            self.draw_ocean_background(self.screen)
+
+            # Título da tela
+            title_text = self.big_font.render("Selecione a Dificuldade", True, YELLOW)
+            title_rect = title_text.get_rect(center=(WIDTH // 2, 140))
+            self.screen.blit(title_text, title_rect)
+
+            # Opções de dificuldade
+            start_y = 280
+            for i, option in enumerate(self.difficulty_options):
+                color = YELLOW if i == self.difficulty_selected else WHITE
+                option_text = self.font.render(option, True, color)
+                option_rect = option_text.get_rect(
+                    center=(WIDTH // 2, start_y + i * 60)
+                )
+
+                if i == self.difficulty_selected:
+                    pygame.draw.rect(
+                        self.screen, DARK_BLUE, option_rect.inflate(20, 10)
+                    )
+
+                self.screen.blit(option_text, option_rect)
+
+            # Instruções de controle
+            instructions = [
+                "↑↓ para escolher, Enter/A confirma",
+                "ESC/B para voltar",
+            ]
+            for j, line in enumerate(instructions):
+                inst_text = self.font.render(line, True, LIGHT_GRAY)
+                inst_rect = inst_text.get_rect(center=(WIDTH // 2, HEIGHT - 100 + j * 30))
+                self.screen.blit(inst_text, inst_rect)
 
         elif self.state == GameState.PLAYING:
             self.draw_ocean_background(self.screen)
@@ -2808,6 +2971,7 @@ class Game:
                     # Créditos terminaram, parar música e voltar ao menu
                     pygame.mixer.music.stop()
                     self.state = GameState.MAIN_MENU
+                    self.music.play_menu_music(self)  # Iniciar música do menu
                     self.credits_scroll_y = 0  # Reset para próxima vez
                     self.credits_reset_timer = 0
 

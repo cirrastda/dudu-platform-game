@@ -331,9 +331,16 @@ class Image:
                 print(f"Erro ao carregar imagens do boss alien: {e}")
                 self.boss_alien_images = None
 
-            # Carregar imagem do foguinho usando cache
+            # Carregar imagem do foguinho mantendo proporção
             try:
-                self.fire_image = cache.get_image("imagens/inimigos/fogo.png", (30, 30))
+                base_fire = cache.get_image("imagens/inimigos/fogo.png")
+                if base_fire:
+                    orig_w, orig_h = base_fire.get_size()
+                    target_h = 30
+                    new_w = max(1, int(orig_w * target_h / orig_h))
+                    self.fire_image = pygame.transform.scale(base_fire, (new_w, target_h))
+                else:
+                    self.fire_image = None
             except pygame.error as e:
                 print(f"Erro ao carregar imagem do foguinho: {e}")
                 self.fire_image = None

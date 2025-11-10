@@ -14,6 +14,7 @@ except ImportError:
     MOVIEPY_AVAILABLE = False
     try:
         print(f"MoviePy não está disponível. Áudio do vídeo não será reproduzido. (Python: {sys.executable})")
+        print(f"Dica: \"{sys.executable}\" -m pip install -r requirements.txt")
     except Exception:
         print("MoviePy não está disponível. Áudio do vídeo não será reproduzido.")
 
@@ -48,12 +49,22 @@ class VideoPlayer:
         self.fallback_music_path = None
         self.has_fallback_music = False
         self.fallback_music_started = False
+        # Contexto do fallback: 'opening' (padrão) ou 'ending'
+        self.fallback_context = "opening"
         
     def load_video(self, video_path):
         """Carregar vídeo para reprodução usando moviepy"""
         try:
             # Verificar se o arquivo existe
             full_path = resource_path(video_path)
+
+            # Definir contexto pelo nome do arquivo
+            try:
+                base = os.path.basename(video_path).lower()
+                self.fallback_context = "ending" if ("ending" in base or "final" in base) else "opening"
+            except Exception:
+                self.fallback_context = "opening"
+
             if not os.path.exists(full_path):
                 print(f"Arquivo de vídeo não encontrado: {full_path}")
                 return self.load_fallback_video()
@@ -175,28 +186,47 @@ class VideoPlayer:
                 print(f"Fallback: carregadas {loaded} imagens de '{label}'")
             return loaded
 
-        # 1) Preferir 'videos/fallback'
-        fallback_dir = resource_path("videos/fallback")
-        if os.path.exists(fallback_dir):
-            try_load_series(fallback_dir, "videos/fallback")
-
-        # 2) Se não houver imagens, tentar 'imagens/intro'
-        if not self.fallback_images:
-            intro_dir = resource_path("imagens/intro")
-            if os.path.exists(intro_dir):
-                try_load_series(intro_dir, "imagens/intro")
-
-        # Tentar carregar música de introdução para o fallback
+        # Seleção de fontes de imagens conforme contexto
         try:
-            music_path = resource_path("videos/intro.mp3")
+            if self.fallback_context == "ending":
+                # Final: priorizar imagens finais
+                final_dir = resource_path("imagens/final")
+                if os.path.exists(final_dir):
+                    try_load_series(final_dir, "imagens/final")
+                # (Opcional) pastas alternativas, caso existam
+                if not self.fallback_images:
+                    fb_end_a = resource_path("videos/fallback_ending")
+                    fb_end_b = resource_path("videos/fallback-ending")
+                    if os.path.exists(fb_end_a):
+                        try_load_series(fb_end_a, "videos/fallback_ending")
+                    elif os.path.exists(fb_end_b):
+                        try_load_series(fb_end_b, "videos/fallback-ending")
+            else:
+                # Abertura: manter comportamento existente
+                fallback_dir = resource_path("videos/fallback")
+                if os.path.exists(fallback_dir):
+                    try_load_series(fallback_dir, "videos/fallback")
+                if not self.fallback_images:
+                    intro_dir = resource_path("imagens/intro")
+                    if os.path.exists(intro_dir):
+                        try_load_series(intro_dir, "imagens/intro")
+        except Exception as e:
+            print(f"Fallback: erro ao selecionar imagens ({self.fallback_context}): {e}")
+
+        # Música de fallback conforme contexto
+        try:
+            if self.fallback_context == "ending":
+                music_path = resource_path("videos/final.mp3")
+            else:
+                music_path = resource_path("videos/intro.mp3")
             if os.path.exists(music_path):
                 self.fallback_music_path = music_path
                 self.has_fallback_music = True
-                print("Fallback: música 'videos/intro.mp3' disponível")
+                print(f"Fallback: música '{os.path.relpath(music_path)}' disponível")
             else:
-                print("Fallback: música 'videos/intro.mp3' não encontrada")
+                print(f"Fallback: música não encontrada para contexto '{self.fallback_context}'")
         except Exception as e:
-            print(f"Fallback: erro ao localizar música de intro: {e}")
+            print(f"Fallback: erro ao localizar música ({self.fallback_context}): {e}")
 
         # 3) Último recurso: uma tela preta centralizada
         if not self.fallback_images:
@@ -235,9 +265,9 @@ class VideoPlayer:
                             pass
                         pygame.mixer.music.play()
                         self.fallback_music_started = True
-                        print("Fallback: música de intro iniciada")
+                        print("Fallback: música iniciada")
                     except Exception as e:
-                        print(f"Fallback: erro ao iniciar música de intro: {e}")
+                        print(f"Fallback: erro ao iniciar música: {e}")
                         self.fallback_music_started = False
             
             # Iniciar áudio se disponível

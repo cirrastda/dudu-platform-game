@@ -221,6 +221,72 @@ def show_launch_configurations():
         print("❌ Não foi possível ler as configurações de execução")
 
 
+def test_video_dependencies():
+    """Testa dependências de vídeo (MoviePy/FFmpeg) e o vídeo de abertura"""
+    print("\n🎬 Testando player de vídeo (MoviePy/FFmpeg)...")
+    ok = True
+
+    # Verificar MoviePy
+    try:
+        import moviepy  # noqa: F401
+        from moviepy.editor import VideoFileClip  # noqa: F401
+        print(f"✅ MoviePy {getattr(moviepy, '__version__', 'desconhecida')} instalado")
+    except Exception as e:
+        print(f"❌ MoviePy indisponível no interpretador atual ({sys.executable}): {e}")
+        print("   Dica: instale as dependências neste Python com:")
+        print(f"   \"{sys.executable}\" -m pip install -r requirements.txt")
+        return False
+
+    # Verificar imageio-ffmpeg / ffmpeg
+    try:
+        import imageio_ffmpeg as iio_ffmpeg  # noqa: F401
+        ffmpeg_path = iio_ffmpeg.get_ffmpeg_exe()
+        print(f"✅ imageio-ffmpeg disponível (ffmpeg: {ffmpeg_path})")
+    except Exception as e:
+        print(f"❌ imageio-ffmpeg/ffmpeg indisponível: {e}")
+        print(f"   Dica: \"{sys.executable}\" -m pip install imageio-ffmpeg")
+        ok = False
+
+    # Verificar arquivo de vídeo de abertura
+    video_path = os.path.join(".", "videos", "opening.mp4")
+    abs_video = os.path.abspath(video_path)
+    if not os.path.exists(video_path):
+        print(f"❌ Vídeo de abertura não encontrado: {abs_video}")
+        ok = False
+    else:
+        print(f"➡️  Testando leitura de: {abs_video}")
+        try:
+            from moviepy.editor import VideoFileClip
+            clip = VideoFileClip(abs_video)
+            # Força leitura de um frame inicial
+            _ = clip.get_frame(0.0)
+            print(f"✅ Abriu vídeo de abertura (dur: {clip.duration:.2f}s, fps: {clip.fps})")
+            clip.close()
+        except Exception as e:
+            print(f"❌ Erro ao abrir/ler vídeo de abertura com MoviePy: {e}")
+            ok = False
+
+    # Verificar arquivo de vídeo final
+    end_path = os.path.join(".", "videos", "ending.mp4")
+    abs_end = os.path.abspath(end_path)
+    if not os.path.exists(end_path):
+        print(f"❌ Vídeo final não encontrado: {abs_end}")
+        ok = False
+    else:
+        print(f"➡️  Testando leitura de: {abs_end}")
+        try:
+            from moviepy.editor import VideoFileClip
+            clip = VideoFileClip(abs_end)
+            _ = clip.get_frame(0.0)
+            print(f"✅ Abriu vídeo final (dur: {clip.duration:.2f}s, fps: {clip.fps})")
+            clip.close()
+        except Exception as e:
+            print(f"❌ Erro ao abrir/ler vídeo final com MoviePy: {e}")
+            ok = False
+
+    return ok
+
+
 def main():
     """Função principal"""
     print("🧪 TESTE DE CONFIGURAÇÃO DE DESENVOLVIMENTO")
@@ -228,6 +294,7 @@ def main():
 
     tests = [
         ("Ambiente Python", test_python_environment),
+        ("Player de Vídeo (MoviePy/FFmpeg)", test_video_dependencies),
         ("Configurações VS Code", test_vscode_config),
         ("Configuração Android", test_android_setup),
         ("Configuração Linux", test_linux_setup),

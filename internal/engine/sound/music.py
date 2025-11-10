@@ -133,3 +133,10 @@ class Music:
         pygame.mixer.music.set_volume(volume)
         pygame.mixer.music.play(-1)  # -1 para loop infinito
         game.current_music = music_file
+
+    def stop_music(self):
+        """Parar qualquer música em execução (compatível com chamadas do jogo)."""
+        try:
+            pygame.mixer.music.stop()
+        except Exception:
+            pass
