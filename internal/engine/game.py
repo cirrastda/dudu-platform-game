@@ -354,18 +354,54 @@ class Game:
         return points
 
     def update_bird_difficulty(self):
-        """Atualizar dificuldade dos pássaros baseada no nível atual
-        Progressão gradual e jogável de 1-20 níveis
+        """Atualiza parâmetros de spawn por faixa de nível e aplica modificadores da dificuldade.
+        Mantém progressão por nível (Level.get_*) e ajusta quantidade/intervalo conforme Difficulty.
         """
-        if self.current_level <= 20:
-            self.birds_per_spawn = Level.get_birds_per_spawn(self.current_level)
-            self.bird_spawn_interval = Level.get_bird_spawn_interval(self.current_level)
-        elif self.current_level <= 30:
-            self.bats_per_spawn = Level.get_birds_per_spawn(self.current_level)
-            self.bat_spawn_interval = Level.get_bird_spawn_interval(self.current_level)
+        # Definir fatores de dificuldade (quantidade e intervalo)
+        diff = getattr(self, "difficulty", Difficulty.NORMAL)
+        if diff == Difficulty.EASY:
+            qty_factor = 0.7
+            interval_factor = 1.5
+        elif diff == Difficulty.HARD:
+            qty_factor = 1.4
+            interval_factor = 0.7
         else:
-            self.birds_per_spawn = Level.get_birds_per_spawn(self.current_level)
-            self.bird_spawn_interval = Level.get_bird_spawn_interval(self.current_level)
+            qty_factor = 1.0
+            interval_factor = 1.0
+
+        # Faixas de níveis e parâmetros base
+        if self.current_level <= 20:
+            # Pássaros: base por nível
+            base_qty = Level.get_birds_per_spawn(self.current_level)
+            base_interval = Level.get_bird_spawn_interval(self.current_level)
+            # Aplicar dificuldade com limites
+            self.birds_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
+            # Respeitar limites da progressão (mínimo 60 como nas funções de Level)
+            self.bird_spawn_interval = max(60, int(base_interval * interval_factor))
+        elif self.current_level <= 30:
+            # Morcegos: seguem mesma progressão dos pássaros 11-20
+            base_qty = Level.get_birds_per_spawn(self.current_level)
+            base_interval = Level.get_bird_spawn_interval(self.current_level)
+            self.bats_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
+            self.bat_spawn_interval = max(60, int(base_interval * interval_factor))
+        elif self.current_level <= 40:
+            # Aviões: usar valores base fixos e aplicar dificuldade
+            base_qty = 1
+            base_interval = 150
+            self.airplanes_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
+            self.airplane_spawn_interval = max(60, int(base_interval * interval_factor))
+        elif self.current_level <= 50:
+            # Flying-disks: valores base fixos com dificuldade
+            base_qty = 1
+            base_interval = 150
+            self.flying_disks_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
+            self.flying_disk_spawn_interval = max(60, int(base_interval * interval_factor))
+        else:
+            # Foguinhos (nível 51): valores base fixos com dificuldade
+            base_qty = 1
+            base_interval = 240
+            self.fires_per_spawn = max(1, min(4, int(round(base_qty * qty_factor))))
+            self.fire_spawn_interval = max(60, int(base_interval * interval_factor))
 
     def get_pooled_bullet(self, x, y, direction=1, image=None):
         """Obter bala do pool ou criar nova se necessário"""
