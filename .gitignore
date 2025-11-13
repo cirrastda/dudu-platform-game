@@ -76,6 +76,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+pytest*.txt
 
 # Translations
 *.mo
@@ -225,3 +226,7 @@ saves/
 .vscode/*.code-workspace
 releases/
 apk_build/
+
+# Test outputs
+tests/output/
+tests/outputs/

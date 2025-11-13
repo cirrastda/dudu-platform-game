@@ -37,9 +37,7 @@ class Level:
             ) / 19.0  # 0.0 a 1.0 (mesmo cálculo das fases 11-20)
 
             # Morcegos por spawn: seguir EXATAMENTE o mesmo padrão dos pássaros das fases 11-20
-            if equivalent_bird_level <= 4:  # Fases 21-24 (equivalente a 11-14)
-                return 1
-            elif (
+            if (
                 equivalent_bird_level <= 15
             ):  # Fases 25-32 (equivalente a 15-22, mas limitado a 30)
                 return 2

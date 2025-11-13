@@ -1,4 +1,5 @@
 import pygame
+import math
 from internal.utils.constants import *
 from internal.utils.functions import *
 from internal.resources.cache import ResourceCache
@@ -608,6 +609,7 @@ class Game:
                         event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN
                     ):
                         self.state = GameState.MAIN_MENU
+                        return True
                 elif self.state == GameState.RECORDS:
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
                         # Voltar ao estado anterior (MAIN_MENU ou GAME_OVER)
@@ -720,7 +722,35 @@ class Game:
                         self.state = GameState.GAME_OVER  # Fallback
                     Level.init_level(self)
                 elif event.key == pygame.K_ESCAPE:
-                    return False
+                    # ESC deve respeitar o contexto do estado atual
+                    if self.state == GameState.CREDITS:
+                        # Em créditos do menu, ESC volta ao menu
+                        if getattr(self, "credits_type", None) == "menu":
+                            self.state = GameState.MAIN_MENU
+                        else:
+                            # Em créditos cinematográficos, manter comportamento padrão (não sair)
+                            pass
+                    elif self.state == GameState.RECORDS:
+                        # Voltar ao estado anterior, se existir, senão ao menu
+                        if getattr(self, "previous_state_before_records", None):
+                            self.state = self.previous_state_before_records
+                            self.previous_state_before_records = None
+                        else:
+                            self.state = GameState.MAIN_MENU
+                    elif self.state == GameState.SHOW_RANKING:
+                        # ESC retorna ao estado anterior se definido
+                        if getattr(self, "previous_state_before_ranking", None):
+                            self.state = self.previous_state_before_ranking
+                            self.previous_state_before_ranking = None
+                        else:
+                            # Fallback: voltar ao menu
+                            self.state = GameState.MAIN_MENU
+                    elif self.state == GameState.SELECT_DIFFICULTY:
+                        # ESC volta para o menu principal
+                        self.state = GameState.MAIN_MENU
+                    else:
+                        # Em outros estados, ESC encerra o jogo
+                        return False
 
             # Eventos do joystick
             elif event.type == pygame.JOYBUTTONDOWN:
@@ -852,6 +882,7 @@ class Game:
                             ]
                         ):  # B/Círculo ou Start/Options
                             self.state = GameState.MAIN_MENU
+                            return True
                     elif self.state == GameState.RECORDS:
                         if event.button == 1 or event.button in [
                             6,
@@ -865,6 +896,14 @@ class Game:
                                 self.previous_state_before_records = None
                             else:
                                 self.state = GameState.MAIN_MENU  # Fallback
+                    elif self.state == GameState.SHOW_RANKING:
+                        # Botão B/Círculo ou Start/Options volta ao estado anterior
+                        if event.button == 1 or event.button in [6, 7, 8, 9]:
+                            if getattr(self, "previous_state_before_ranking", None):
+                                self.state = self.previous_state_before_ranking
+                                self.previous_state_before_ranking = None
+                            else:
+                                self.state = GameState.MAIN_MENU
                     # Navegação do menu de game over com joystick
                     elif self.state == GameState.GAME_OVER:
                         if event.button == 0 or event.button in [
@@ -2569,8 +2608,8 @@ class Game:
             Info.display(self, self.screen, self.font, YELLOW)
 
         elif self.state == GameState.GAME_OVER:
-            # Usar fundo do cenário
-            self.draw_ocean_background(game_surface)
+            # Usar fundo do cenário, explicitamente na surface do jogo
+            self.draw_ocean_background(Screen.get_game_surface(self))
 
             game_over_text = self.big_font.render("GAME OVER", True, RED)
             score_text = self.font.render(f"Pontuação Final: {self.score}", True, WHITE)

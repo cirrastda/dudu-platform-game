@@ -268,7 +268,7 @@ class DynamicLevelGenerator:
                 start_x, start_y, num_platforms
             )
         elif pattern_choice == 4:
-        return DynamicLevelGenerator.generate_random_clusters(
+            return DynamicLevelGenerator.generate_random_clusters(
                 start_x, start_y, num_platforms
             )
         elif pattern_choice == 5:
