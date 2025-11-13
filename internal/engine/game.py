@@ -228,6 +228,8 @@ class Game:
         # Carregar imagens
         self.image = Image()
         self.image.load_images(self)
+        # Sincronizar logos da splash screen carregados pelo Image
+        self.logos = getattr(self.image, "logos", [])
         # Disponibilizar texturas de plataforma diretamente no Game para geradores de níveis
         self.platform_texture = self.image.platform_texture
         self.platform_texture_city = self.image.platform_texture_city

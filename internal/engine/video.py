@@ -10,10 +10,11 @@ import threading
 try:
     from moviepy.editor import VideoFileClip
     MOVIEPY_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     MOVIEPY_AVAILABLE = False
     try:
-        print(f"MoviePy não está disponível. Áudio do vídeo não será reproduzido. (Python: {sys.executable})")
+        print(f"MoviePy import falhou ({e.__class__.__name__}): {e}")
+        print(f"Python: {sys.executable}")
         print(f"Dica: \"{sys.executable}\" -m pip install -r requirements.txt")
     except Exception:
         print("MoviePy não está disponível. Áudio do vídeo não será reproduzido.")
@@ -57,6 +58,10 @@ class VideoPlayer:
         try:
             # Verificar se o arquivo existe
             full_path = resource_path(video_path)
+            try:
+                print(f"[VideoPlayer] Resolvido caminho do vídeo: {full_path} | MOVIEPY_AVAILABLE={MOVIEPY_AVAILABLE}")
+            except Exception:
+                pass
 
             # Definir contexto pelo nome do arquivo
             try:
@@ -96,6 +101,11 @@ class VideoPlayer:
                     
                 except Exception as e:
                     print(f"Erro ao carregar vídeo com MoviePy: {e}")
+                    try:
+                        import traceback
+                        traceback.print_exc()
+                    except Exception:
+                        pass
                     return self.load_fallback_video()
             else:
                 print("MoviePy não disponível, usando modo fallback")

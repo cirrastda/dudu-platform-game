@@ -3,14 +3,24 @@ import os
 
 
 def resource_path(relative_path):
-    """Obter caminho absoluto para recursos, funciona para dev e PyInstaller"""
+    """Obter caminho absoluto para recursos, funcionando em dev, onefile e onedir.
+
+    - PyInstaller onefile: usa sys._MEIPASS (pasta temporária extraída)
+    - PyInstaller onedir: usa o diretório do executável (sys.executable)
+    - Desenvolvimento: usa a raiz do projeto baseada neste arquivo
+    """
     try:
-        # PyInstaller cria uma pasta temporária e armazena
-        # o caminho em _MEIPASS
-        base_path = sys._MEIPASS
+        # PyInstaller (onefile): pasta temporária
+        base_path = sys._MEIPASS  # type: ignore[attr-defined]
     except Exception:
-        # Modo desenvolvimento - usar diretório atual
-        base_path = os.path.abspath(".")
+        # Se estiver congelado (PyInstaller onedir), usar diretório do executável
+        if getattr(sys, "frozen", False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            # Modo desenvolvimento: raiz do projeto relativa a este arquivo
+            base_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..")
+            )
 
     return os.path.join(base_path, relative_path)
 

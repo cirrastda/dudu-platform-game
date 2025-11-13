@@ -204,7 +204,10 @@ class GameBuilder:
             if target == "windows" and chosen_icon.lower().endswith(".png"):
                 print("⚠️  Ícone PNG detectado para Windows. Recomenda-se usar .ico para o executável.")
                 print("    Dica: converta o PNG para ICO (32x32/64x64) e salve como imagens/icones/icon_desktop_new.ico")
-            cmd.extend(["--icon", chosen_icon])
+            # Use caminho absoluto para evitar resolução relativa ao workpath do PyInstaller
+            icon_abs = str(self.project_root / chosen_icon)
+            print(f"   Ícone selecionado: {icon_abs}")
+            cmd.extend(["--icon", icon_abs])
 
         # Incluir recursos necessários (usando caminhos absolutos)
         resource_dirs = ["imagens", "musicas", "sounds", "videos"]
@@ -222,15 +225,31 @@ class GameBuilder:
         # Coleta todo conteúdo do pacote imageio_ffmpeg (inclui binários ffmpeg por plataforma)
         cmd.extend([
             "--collect-all", "imageio_ffmpeg",
+            "--collect-all", "moviepy",
             "--collect-submodules", "moviepy",
             "--collect-submodules", "imageio",
             "--collect-submodules", "numpy",
             "--collect-submodules", "pygame",
+            "--collect-submodules", "proglog",
+            "--collect-submodules", "tqdm",
+            "--collect-submodules", "decorator",
+            # Incluir metadados dos pacotes (importlib.metadata)
+            "--copy-metadata", "imageio",
+            "--copy-metadata", "moviepy",
+            "--copy-metadata", "numpy",
+            "--copy-metadata", "proglog",
+            "--copy-metadata", "tqdm",
             # Hidden imports comuns
+            "--hidden-import", "moviepy",
             "--hidden-import", "moviepy.editor",
+            "--hidden-import", "numpy",
+            "--hidden-import", "requests",
             "--hidden-import", "imageio",
             "--hidden-import", "imageio_ffmpeg",
             "--hidden-import", "pygame.freetype",
+            "--hidden-import", "proglog",
+            "--hidden-import", "tqdm",
+            "--hidden-import", "decorator",
         ])
 
         # Adicionar binário do ffmpeg diretamente se disponível localmente

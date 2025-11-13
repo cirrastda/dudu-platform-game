@@ -15,7 +15,7 @@ from datetime import datetime
 
 # Importar informações de versão
 try:
-    from version import VERSION_FULL, GAME_TITLE, get_version_info
+    from version import VERSION_FULL, GAME_TITLE, GAME_NAME, get_version_info
 except ImportError:
     print("⚠️  Arquivo version.py não encontrado.")
     sys.exit(1)
@@ -49,8 +49,10 @@ class ReleaseBuilder:
         print(f"Executando build para {self.current_platform}...")
 
         try:
+            # Executar o build usando o script correto dentro de run_build
+            build_script = str(Path(__file__).parent / "build.py")
             result = subprocess.run(
-                [sys.executable, "build.py"], check=True, capture_output=True, text=True
+                [sys.executable, build_script], check=True, capture_output=True, text=True
             )
 
             print("Build concluido com sucesso!")
@@ -88,14 +90,33 @@ class ReleaseBuilder:
         # Criar diretório do pacote
         package_dir.mkdir(exist_ok=True)
 
-        # Copiar executáveis
-        for item in platform_dist_dir.iterdir():
-            if item.is_file():
-                shutil.copy2(item, package_dir)
-                print(f"   Copiado: {item.name}")
-            elif item.is_dir() and item.name.startswith("release-"):
-                shutil.copytree(item, package_dir / item.name, dirs_exist_ok=True)
-                print(f"   Copiado diretório: {item.name}")
+        # Copiar artefatos do build
+        # Preferir copiar a pasta onedir do executável principal
+        base_name = GAME_NAME.replace(" ", "").replace("-", "")
+        if self.current_platform == "windows":
+            onedir_name = f"{base_name}-{VERSION_FULL}-win64"
+        elif self.current_platform == "linux":
+            onedir_name = f"{base_name}-{VERSION_FULL}-linux64"
+        elif self.current_platform == "macos":
+            onedir_name = f"{base_name}-{VERSION_FULL}-macos"
+        else:
+            onedir_name = f"{base_name}-{VERSION_FULL}"
+
+        onedir_path = platform_dist_dir / onedir_name
+
+        if onedir_path.exists() and onedir_path.is_dir():
+            # Copia a pasta do executável (onedir) com todas as dependências
+            shutil.copytree(onedir_path, package_dir / onedir_name, dirs_exist_ok=True)
+            print(f"   Copiado diretório do executável: {onedir_name}")
+        else:
+            # Fallback: copiar todos os arquivos e diretórios gerados para a plataforma
+            for item in platform_dist_dir.iterdir():
+                if item.is_file():
+                    shutil.copy2(item, package_dir)
+                    print(f"   Copiado: {item.name}")
+                elif item.is_dir():
+                    shutil.copytree(item, package_dir / item.name, dirs_exist_ok=True)
+                    print(f"   Copiado diretório: {item.name}")
 
         # Copiar documentação essencial
         docs = ["README.md", "CHANGELOG.md", "LICENSE", "requirements.txt"]
