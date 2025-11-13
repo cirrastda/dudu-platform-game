@@ -1,4 +1,5 @@
 import pygame
+import os
 import math
 from internal.utils.constants import *
 from internal.utils.functions import *
@@ -45,6 +46,21 @@ class Game:
         self.env_config = ENV_CONFIG
         Screen.init(self)
         pygame.display.set_caption("Jump and Hit")
+        # Definir ícone da janela (barra de título)
+        try:
+            # Prioriza o ícone de desktop novo (PNG/ICO) e aplica fallback
+            candidates = [
+                resource_path("imagens/icones/icon_minimal.png"),
+                resource_path("imagens/icones/icon_desktop_new.png"),
+                resource_path("imagens/icones/title_icon.png"),
+            ]
+            icon_path = next((p for p in candidates if os.path.exists(p)), None)
+            if icon_path:
+                icon_surface = pygame.image.load(icon_path)
+                pygame.display.set_icon(icon_surface)
+        except Exception:
+            # Ignorar falhas ao definir ícone para não interromper o jogo
+            pass
         self.clock = pygame.time.Clock()
         self.state = GameState.SPLASH
         # Rastrear vidas extras coletadas por nível para não reaparecerem
@@ -129,7 +145,9 @@ class Game:
         self.menu_selected = 0  # Opção selecionada no menu
         self.menu_options = ["Iniciar", "Recordes", "Créditos", "Sair"]
         self.game_logo = None  # Logo principal do jogo
-        self.credits_type = None  # Inicializa tipo de créditos para evitar valores antigos
+        self.credits_type = (
+            None  # Inicializa tipo de créditos para evitar valores antigos
+        )
 
         # Efeitos de fade para splash screen
         self.fade_in_duration = 30  # 0.5 segundos para fade in
@@ -222,7 +240,9 @@ class Game:
         # Espelhar texturas e imagens necessárias como atributos diretos do jogo
         self.platform_texture = getattr(self.image, "platform_texture", None)
         self.platform_texture_city = getattr(self.image, "platform_texture_city", None)
-        self.platform_texture_space = getattr(self.image, "platform_texture_space", None)
+        self.platform_texture_space = getattr(
+            self.image, "platform_texture_space", None
+        )
         self.platform_texture_ship = getattr(self.image, "platform_texture_ship", None)
         self.platform_texture_flag = getattr(self.image, "platform_texture_flag", None)
 
@@ -395,8 +415,12 @@ class Game:
             # Flying-disks: valores base fixos com dificuldade
             base_qty = 1
             base_interval = 150
-            self.flying_disks_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
-            self.flying_disk_spawn_interval = max(60, int(base_interval * interval_factor))
+            self.flying_disks_per_spawn = max(
+                1, min(3, int(round(base_qty * qty_factor)))
+            )
+            self.flying_disk_spawn_interval = max(
+                60, int(base_interval * interval_factor)
+            )
         else:
             # Foguinhos (nível 51): valores base fixos com dificuldade
             base_qty = 1
@@ -448,7 +472,9 @@ class Game:
         # Determinar qual fundo usar baseado no estado do jogo
         if self.state == GameState.PLAYING:
             # Durante o jogo, usar fundo baseado no nível já calculado em Level.init_level
-            background_to_use = getattr(self, "background_img", self.image.background_img)
+            background_to_use = getattr(
+                self, "background_img", self.image.background_img
+            )
         else:
             # Em menus, recordes, etc., usar fundo fixo
             background_to_use = getattr(
@@ -486,7 +512,9 @@ class Game:
                 # Navegação da tela de título
                 elif self.state == GameState.TITLE_SCREEN:
                     # Em mobile, podemos já ter exibido o vídeo via Kivy
-                    is_dev = ENV_CONFIG.get("environment", "production") == "development"
+                    is_dev = (
+                        ENV_CONFIG.get("environment", "production") == "development"
+                    )
                     skip_opening = False
                     if not is_dev:
                         try:
@@ -763,7 +791,9 @@ class Game:
                     # Navegação da tela de título com joystick
                     elif self.state == GameState.TITLE_SCREEN:
                         # Em mobile, podemos já ter exibido o vídeo via Kivy
-                        is_dev = ENV_CONFIG.get("environment", "production") == "development"
+                        is_dev = (
+                            ENV_CONFIG.get("environment", "production") == "development"
+                        )
                         skip_opening = False
                         if not is_dev:
                             try:
@@ -811,7 +841,12 @@ class Game:
                             self.handle_menu_selection()
                     # Seleção de dificuldade com joystick
                     elif self.state == GameState.SELECT_DIFFICULTY:
-                        if event.button == 0 or event.button in [6, 7, 8, 9]:  # Confirmar
+                        if event.button == 0 or event.button in [
+                            6,
+                            7,
+                            8,
+                            9,
+                        ]:  # Confirmar
                             # Aplicar dificuldade escolhida
                             if self.difficulty_selected == 0:
                                 self.difficulty = Difficulty.EASY
@@ -834,8 +869,13 @@ class Game:
                                 and "initial-stage" in ENV_CONFIG
                             ):
                                 try:
-                                    self.current_level = int(ENV_CONFIG["initial-stage"])
-                                    if self.current_level < 1 or self.current_level > 50:
+                                    self.current_level = int(
+                                        ENV_CONFIG["initial-stage"]
+                                    )
+                                    if (
+                                        self.current_level < 1
+                                        or self.current_level > 50
+                                    ):
                                         self.current_level = 1
                                 except (ValueError, TypeError):
                                     self.current_level = 1
@@ -1660,7 +1700,9 @@ class Game:
                                 )
                                 self.explosions.append(explosion)
                                 robot.missiles.remove(missile)
-                                self.add_score(15)  # Pontos bônus por destruir míssil durante invulnerabilidade
+                                self.add_score(
+                                    15
+                                )  # Pontos bônus por destruir míssil durante invulnerabilidade
                             else:
                                 # Colidiu com míssil, ativar animação de hit
                                 if (
@@ -1697,7 +1739,9 @@ class Game:
                                 )
                                 self.explosions.append(explosion)
                                 alien.lasers.remove(laser)
-                                self.add_score(15)  # Pontos bônus por destruir laser durante invulnerabilidade
+                                self.add_score(
+                                    15
+                                )  # Pontos bônus por destruir laser durante invulnerabilidade
                             else:
                                 # Colidiu com laser, ativar animação de hit
                                 if not self.player.is_hit:
@@ -1785,7 +1829,9 @@ class Game:
                                 Explosion(bird.x, bird.y, self.image.explosion_image)
                             )
                             self.birds.remove(bird)
-                            self.add_score(20)  # Pontos bônus por destruir inimigo durante invulnerabilidade
+                            self.add_score(
+                                20
+                            )  # Pontos bônus por destruir inimigo durante invulnerabilidade
                         else:
                             # Colidiu com pássaro, ativar animação de hit
                             if (
@@ -1794,7 +1840,9 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição do pássaro
                                 self.explosions.append(
-                                    Explosion(bird.x, bird.y, self.image.explosion_image)
+                                    Explosion(
+                                        bird.x, bird.y, self.image.explosion_image
+                                    )
                                 )
                                 self.birds.remove(bird)
                                 self.lives -= 1
@@ -1830,7 +1878,9 @@ class Game:
                                 Explosion(bat.x, bat.y, self.image.explosion_image)
                             )
                             self.bats.remove(bat)
-                            self.add_score(25)  # Pontos bônus por destruir morcego durante invulnerabilidade
+                            self.add_score(
+                                25
+                            )  # Pontos bônus por destruir morcego durante invulnerabilidade
                         else:
                             # Colidiu com morcego, ativar animação de hit
                             if (
@@ -1877,7 +1927,9 @@ class Game:
                                 )
                             )
                             self.airplanes.remove(airplane)
-                            self.add_score(30)  # Pontos bônus por destruir avião durante invulnerabilidade
+                            self.add_score(
+                                30
+                            )  # Pontos bônus por destruir avião durante invulnerabilidade
                         else:
                             # Colidiu com avião, ativar animação de hit
                             if (
@@ -1916,7 +1968,9 @@ class Game:
                         and disk.id not in self.birds_dodged
                     ):
                         self.birds_dodged.add(disk.id)
-                        self.add_score(25)  # Pontos por esquivar disco (ainda mais difícil)
+                        self.add_score(
+                            25
+                        )  # Pontos por esquivar disco (ainda mais difícil)
 
                     # Verificar colisão direta
                     if self.player.rect.colliderect(disk.rect):
@@ -1926,7 +1980,9 @@ class Game:
                                 Explosion(disk.x, disk.y, self.image.explosion_image)
                             )
                             self.flying_disks.remove(disk)
-                            self.add_score(40)  # Pontos bônus por destruir disco durante invulnerabilidade
+                            self.add_score(
+                                40
+                            )  # Pontos bônus por destruir disco durante invulnerabilidade
                         else:
                             # Colidiu com disco, ativar animação de hit
                             if (
@@ -1982,7 +2038,9 @@ class Game:
                                 )
                             )
                             self.turtles.remove(turtle)
-                            self.add_score(20)  # Pontos bônus por destruir inimigo durante invulnerabilidade
+                            self.add_score(
+                                20
+                            )  # Pontos bônus por destruir inimigo durante invulnerabilidade
                         else:
                             # Colidiu com tartaruga, ativar animação de hit
                             if (
@@ -1991,7 +2049,9 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição da tartaruga
                                 self.explosions.append(
-                                    Explosion(turtle.x, turtle.y, self.image.explosion_image)
+                                    Explosion(
+                                        turtle.x, turtle.y, self.image.explosion_image
+                                    )
                                 )
                                 self.turtles.remove(turtle)
                                 self.lives -= 1
@@ -2015,7 +2075,9 @@ class Game:
                                 )
                             )
                             self.spiders.remove(spider)
-                            self.add_score(35)  # Pontos bônus por destruir aranha durante invulnerabilidade
+                            self.add_score(
+                                35
+                            )  # Pontos bônus por destruir aranha durante invulnerabilidade
                         else:
                             # Colidiu com aranha, ativar animação de hit
                             if (
@@ -2024,7 +2086,9 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição da aranha
                                 self.explosions.append(
-                                    Explosion(spider.x, spider.y, self.image.explosion_image)
+                                    Explosion(
+                                        spider.x, spider.y, self.image.explosion_image
+                                    )
                                 )
                                 self.spiders.remove(spider)
                                 self.lives -= 1
@@ -2051,7 +2115,9 @@ class Game:
                             for missile in robot.missiles:
                                 self.orphan_missiles.append(missile)
                             self.robots.remove(robot)
-                            self.add_score(50)  # Pontos bônus por destruir robô durante invulnerabilidade
+                            self.add_score(
+                                50
+                            )  # Pontos bônus por destruir robô durante invulnerabilidade
                         else:
                             # Colidiu com robô, ativar animação de hit
                             if (
@@ -2060,7 +2126,9 @@ class Game:
                                 self.player.take_hit()
                                 # Criar explosão na posição do robô
                                 self.explosions.append(
-                                    Explosion(robot.x, robot.y, self.image.explosion_image)
+                                    Explosion(
+                                        robot.x, robot.y, self.image.explosion_image
+                                    )
                                 )
                                 # Transferir mísseis ativos do robô para a lista de órfãos
                                 for missile in robot.missiles:
@@ -2090,14 +2158,18 @@ class Game:
                             for laser in alien.lasers:
                                 self.orphan_lasers.append(laser)
                             self.aliens.remove(alien)
-                            self.add_score(60)  # Pontos bônus por destruir alien durante invulnerabilidade
+                            self.add_score(
+                                60
+                            )  # Pontos bônus por destruir alien durante invulnerabilidade
                         else:
                             # Colidiu com alien, ativar animação de hit
                             if not self.player.is_hit:
                                 self.player.take_hit()
                                 # Criar explosão na posição do alien
                                 self.explosions.append(
-                                    Explosion(alien.x, alien.y, self.image.explosion_image)
+                                    Explosion(
+                                        alien.x, alien.y, self.image.explosion_image
+                                    )
                                 )
                                 # Transferir lasers ativos do alien para a lista de órfãos
                                 for laser in alien.lasers:
@@ -2295,7 +2367,9 @@ class Game:
             ]
             for j, line in enumerate(instructions):
                 inst_text = self.font.render(line, True, LIGHT_GRAY)
-                inst_rect = inst_text.get_rect(center=(WIDTH // 2, HEIGHT - 100 + j * 30))
+                inst_rect = inst_text.get_rect(
+                    center=(WIDTH // 2, HEIGHT - 100 + j * 30)
+                )
                 self.screen.blit(inst_text, inst_rect)
 
         elif self.state == GameState.PLAYING:

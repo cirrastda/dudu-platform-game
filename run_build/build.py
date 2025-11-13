@@ -185,12 +185,26 @@ class GameBuilder:
         elif target == "linux":
             cmd.extend(["--console"])
 
-        # Adicionar ícone se existir
-        icon_files = ["icon.ico", "icon.png", "icon.icns"]
-        for icon_file in icon_files:
+        # Adicionar ícone do executável
+        # Preferência: novo ícone em imagens/icones/, depois ícones na raiz
+        icon_candidates = [
+            "imagens/icones/icon_desktop_new.ico",
+            "imagens/icones/icon_desktop_new.png",
+            "icon.ico",
+            "icon.png",
+            "icon.icns",
+        ]
+        chosen_icon = None
+        for icon_file in icon_candidates:
             if (self.project_root / icon_file).exists():
-                cmd.extend(["--icon", icon_file])
+                chosen_icon = icon_file
                 break
+        if chosen_icon:
+            # Aviso de formato em Windows: PyInstaller exige .ico para ícone do .exe
+            if target == "windows" and chosen_icon.lower().endswith(".png"):
+                print("⚠️  Ícone PNG detectado para Windows. Recomenda-se usar .ico para o executável.")
+                print("    Dica: converta o PNG para ICO (32x32/64x64) e salve como imagens/icones/icon_desktop_new.ico")
+            cmd.extend(["--icon", chosen_icon])
 
         # Incluir recursos necessários (usando caminhos absolutos)
         resource_dirs = ["imagens", "musicas", "sounds", "videos"]
