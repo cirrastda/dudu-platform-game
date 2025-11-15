@@ -32,39 +32,60 @@ class Alien:
         self.shoot_animation_timer = 0
         self.shoot_animation_duration = 30
         self.lasers = []  # Lista de lasers ativos
+        # Estado de morte
+        self.is_dead = False
+        self.death_timer = 0
+        self.fly_speed = 6.0
 
     def update(self, camera_x=0):
-        # Atualizar timer de tiro
-        self.shoot_timer += 1
+        if not self.is_dead:
+            # Atualizar timer de tiro
+            self.shoot_timer += 1
 
-        # Atirar apenas quando virado para a esquerda
-        if (
-            self.shoot_timer >= self.shoot_interval
-            and not self.is_shooting
-            and self.direction == -1
-        ):
-            self.start_shooting()
+            # Atirar apenas quando virado para a esquerda
+            if (
+                self.shoot_timer >= self.shoot_interval
+                and not self.is_shooting
+                and self.direction == -1
+            ):
+                self.start_shooting()
 
-        # Atualizar estado de tiro
-        if self.is_shooting:
-            self.shoot_animation_timer += 1
-            if self.shoot_animation_timer >= self.shoot_animation_duration:
-                self.is_shooting = False
-                self.shoot_animation_timer = 0
-                self.shoot_timer = 0
-                self.shoot_interval = random.randint(120, 240)
+            # Atualizar estado de tiro
+            if self.is_shooting:
+                self.shoot_animation_timer += 1
+                if self.shoot_animation_timer >= self.shoot_animation_duration:
+                    self.is_shooting = False
+                    self.shoot_animation_timer = 0
+                    self.shoot_timer = 0
+                    self.shoot_interval = random.randint(120, 240)
+            else:
+                # Movimento apenas quando não atirando
+                self.x += self.speed * self.direction
+                if self.x <= self.platform_left:
+                    self.x = self.platform_left
+                    self.direction = 1
+                elif self.x >= self.platform_right:
+                    self.x = self.platform_right
+                    self.direction = -1
+
+            self.rect.x = self.x
+            self.animation_frame += 1
         else:
-            # Movimento apenas quando não atirando
-            self.x += self.speed * self.direction
-            if self.x <= self.platform_left:
-                self.x = self.platform_left
-                self.direction = 1
-            elif self.x >= self.platform_right:
-                self.x = self.platform_right
-                self.direction = -1
-
-        self.rect.x = self.x
-        self.animation_frame += 1
+            # Morte: voar para o canto superior direito relativo à câmera
+            target_x = camera_x + WIDTH - 20
+            target_y = 20
+            if self.x < target_x:
+                self.x += self.fly_speed
+            if self.y > target_y:
+                self.y -= self.fly_speed
+            self.rect.x = self.x
+            self.rect.y = self.y
+            self.death_timer += 1
+            # Remover quando alcançar canto ou após duração
+            if self.x >= target_x - 5 and self.y <= target_y + 5:
+                return False
+            if self.death_timer > 240:
+                return False
 
         # Atualizar lasers
         active_lasers = []
@@ -89,26 +110,47 @@ class Alien:
 
     def draw(self, screen):
         if self.alien_images:
-            if self.is_shooting:
-                images = self.alien_images.get("shot_left", [])
-            else:
-                images = (
-                    self.alien_images.get("right", [])
-                    if self.direction == 1
-                    else self.alien_images.get("left", [])
-                )
-
-            if images and len(images) > 0:
-                current_image_index = (
-                    self.animation_frame // self.animation_speed
-                ) % len(images)
-                current_image = images[current_image_index]
-                if current_image:
+            if self.is_dead:
+                # Usar sprite dedicado de morte se disponível; caso contrário, girar o primeiro da esquerda
+                dead_images = self.alien_images.get("dead", [])
+                if dead_images:
+                    current_image = dead_images[0]
                     screen.blit(current_image, (self.x, self.y))
                     return
+                else:
+                    images = self.alien_images.get("left", [])
+                    current_image = images[0] if images else None
+                    if current_image:
+                        rotated = pygame.transform.rotate(current_image, 60)
+                        screen.blit(rotated, (self.x, self.y))
+                        return
+            else:
+                if self.is_shooting:
+                    images = self.alien_images.get("shot_left", [])
+                else:
+                    images = (
+                        self.alien_images.get("right", [])
+                        if self.direction == 1
+                        else self.alien_images.get("left", [])
+                    )
+
+                if images and len(images) > 0:
+                    current_image_index = (
+                        self.animation_frame // self.animation_speed
+                    ) % len(images)
+                    current_image = images[current_image_index]
+                    if current_image:
+                        screen.blit(current_image, (self.x, self.y))
+                        return
 
         # Fallback
         color = (50, 200, 50) if not self.is_shooting else (255, 50, 50)
         pygame.draw.rect(screen, color, (self.x, self.y, self.width, self.height))
         for laser in self.lasers:
             laser.draw(screen)
+
+    def die(self):
+        # Iniciar estado de morte: parar tiro e mover para canto superior direito
+        self.is_dead = True
+        self.is_shooting = False
+        self.death_timer = 0

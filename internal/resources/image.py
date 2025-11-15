@@ -363,8 +363,8 @@ class Image:
                 print(f"Erro ao carregar imagens dos mísseis: {e}")
                 self.missile_images = None
 
-            # Carregar imagem do tiro usando cache
-            self.bullet_img = cache.get_image("imagens/elementos/tiro.png", (15, 8))
+            # Carregar imagem do tiro usando cache (seta)
+            self.bullet_img = cache.get_image("imagens/elementos/arrow.png", (15, 8))
             self.bullet_image = self.bullet_img  # Alias para compatibilidade
 
             # Carregar imagem da explosão usando cache

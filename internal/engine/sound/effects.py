@@ -90,6 +90,30 @@ class SoundEffects:
             else:
                 print("Aviso: Arquivo sounds/game-over.mp3 não encontrado")
 
+            # Carregar som de acerto em pássaro
+            bird_hit_path = "sounds/bird-hit.mp3"
+            if os.path.exists(resource_path(bird_hit_path)):
+                sound = cache.get_sound(bird_hit_path)
+                if sound:
+                    self.sound_effects["bird-hit"] = sound
+                    # ligeiramente mais alto para destacar o impacto
+                    self.sound_effects["bird-hit"].set_volume(min(1.0, self.sound_volume * 1.2))
+                    print("Som de bird-hit carregado com sucesso")
+            else:
+                print("Aviso: Arquivo sounds/bird-hit.mp3 não encontrado")
+
+            # Carregar som de jogador atingido
+            player_hit_path = "sounds/player-hit.mp3"
+            if os.path.exists(resource_path(player_hit_path)):
+                sound = cache.get_sound(player_hit_path)
+                if sound:
+                    self.sound_effects["player-hit"] = sound
+                    # manter volume padrão
+                    self.sound_effects["player-hit"].set_volume(self.sound_volume)
+                    print("Som de player-hit carregado com sucesso")
+            else:
+                print("Aviso: Arquivo sounds/player-hit.mp3 não encontrado")
+
         except pygame.error as e:
             print(f"Erro ao carregar efeitos sonoros: {e}")
 

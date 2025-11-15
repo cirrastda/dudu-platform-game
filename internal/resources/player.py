@@ -39,6 +39,7 @@ class Player:
         self.bullets = []
         self.shoot_cooldown = 0  # Cooldown entre tiros
         self.max_shoot_cooldown = 15  # 15 frames = 0.25 segundos a 60 FPS
+        self.shooting_timer = 0  # Duração temporária da animação de tiro
 
         self.load_sprites()
 
@@ -98,6 +99,14 @@ class Player:
                 load_and_scale("imagens/personagem/d1.png", (self.width, self.original_height))
             ]
 
+            # Sprites de tiro
+            self.sprites["shoot"] = [
+                load_and_scale("imagens/personagem/bow.png", (self.width, self.original_height))
+            ]
+            self.sprites["shoot_crouch"] = [
+                load_and_scale("imagens/personagem/bowD.png", (self.width, self.original_height))
+            ]
+
         except pygame.error as e:
             print(f"Erro ao carregar sprites do personagem: {e}")
             # Fallback: criar sprites coloridos simples
@@ -120,7 +129,9 @@ class Player:
     def update_animation(self):
         """Atualizar a animação do personagem baseada no estado atual"""
         # Determinar qual animação usar
-        if self.is_hit and self.hit_timer > 0:
+        if self.shooting_timer > 0:
+            new_animation = "shoot_crouch" if self.is_crouching else "shoot"
+        elif self.is_hit and self.hit_timer > 0:
             new_animation = "hit"
         elif self.is_crouching:
             new_animation = "crouch"
@@ -170,6 +181,10 @@ class Player:
             if self.hit_timer <= 0:
                 self.is_hit = False
 
+        # Atualizar timer de tiro (animação temporária)
+        if self.shooting_timer > 0:
+            self.shooting_timer -= 1
+
         # Atualizar timer de invulnerabilidade
         if self.invulnerability_timer > 0:
             self.invulnerability_timer -= 1
@@ -218,6 +233,9 @@ class Player:
 
             # Resetar cooldown
             self.shoot_cooldown = self.max_shoot_cooldown
+
+            # Disparar animação de tiro por alguns frames
+            self.shooting_timer = 10
 
             # Retornar sinal de que atirou
             return True
@@ -370,7 +388,7 @@ class Player:
 
             # Ajustar posição Y para sprites agachados (sem redimensionar)
             draw_y = self.y
-            if self.current_animation == "crouch":
+            if self.current_animation == "crouch" or self.current_animation == "shoot_crouch":
                 # Ajustar posição Y para que o sprite apareça na posição correta
                 # quando agachado (sprite mantém tamanho original)
                 draw_y = self.y + (self.height - current_sprite.get_height())

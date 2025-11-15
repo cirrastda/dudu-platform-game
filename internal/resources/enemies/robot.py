@@ -36,38 +36,61 @@ class Robot:
         self.shoot_animation_duration = 30  # Duração da animação de tiro (0.5 segundos)
         self.missiles = []  # Lista de mísseis ativos
 
+        # Estado de morte
+        self.is_dead = False
+        self.death_timer = 0
+        self.fall_speed = 0.0
+        self.rotation_angle = 0
+
     def update(self, camera_x=0):
-        # Atualizar timer de tiro
-        self.shoot_timer += 1
-        
-        # Verificar se deve atirar (apenas quando virado para a esquerda)
-        if self.shoot_timer >= self.shoot_interval and not self.is_shooting and self.direction == -1:
-            self.start_shooting(self.missile_images)
-            
-        # Atualizar animação de tiro
-        if self.is_shooting:
-            self.shoot_animation_timer += 1
-            if self.shoot_animation_timer >= self.shoot_animation_duration:
-                self.is_shooting = False
-                self.shoot_animation_timer = 0
-                self.shoot_timer = 0
-                self.shoot_interval = random.randint(120, 240)  # Novo intervalo aleatório
+        if not self.is_dead:
+            # Atualizar timer de tiro
+            self.shoot_timer += 1
+
+            # Verificar se deve atirar (apenas quando virado para a esquerda)
+            if (
+                self.shoot_timer >= self.shoot_interval
+                and not self.is_shooting
+                and self.direction == -1
+            ):
+                self.start_shooting(self.missile_images)
+
+            # Atualizar animação de tiro
+            if self.is_shooting:
+                self.shoot_animation_timer += 1
+                if self.shoot_animation_timer >= self.shoot_animation_duration:
+                    self.is_shooting = False
+                    self.shoot_animation_timer = 0
+                    self.shoot_timer = 0
+                    self.shoot_interval = random.randint(120, 240)
+            else:
+                # Mover robô apenas quando não está atirando
+                self.x += self.speed * self.direction
+
+                # Verificar limites da plataforma e inverter direção
+                if self.x <= self.platform_left:
+                    self.x = self.platform_left
+                    self.direction = 1
+                elif self.x >= self.platform_right:
+                    self.x = self.platform_right
+                    self.direction = -1
+
+            self.rect.x = self.x
+
+            # Atualizar animação
+            self.animation_frame += 1
         else:
-            # Mover robô apenas quando não está atirando
-            self.x += self.speed * self.direction
-
-            # Verificar limites da plataforma e inverter direção
-            if self.x <= self.platform_left:
-                self.x = self.platform_left
-                self.direction = 1  # Mudar para direita
-            elif self.x >= self.platform_right:
-                self.x = self.platform_right
-                self.direction = -1  # Mudar para esquerda
-
-        self.rect.x = self.x
-
-        # Atualizar animação
-        self.animation_frame += 1
+            # Morte: queda com aceleração e leve rotação
+            self.fall_speed += 0.5
+            self.y += self.fall_speed
+            self.rotation_angle = min(self.rotation_angle + 4, 40)
+            self.rect.y = self.y
+            self.death_timer += 1
+            # Remover após sair da tela ou após duração
+            if self.y > HEIGHT + 60:
+                return False
+            if self.death_timer > 240:
+                return False
 
         # Atualizar mísseis
         active_missiles = []
@@ -76,7 +99,7 @@ class Robot:
                 active_missiles.append(missile)
         self.missiles = active_missiles
 
-        return True  # Robô sempre permanece ativo
+        return True
 
     def start_shooting(self, missile_images=None):
         """Inicia a animação de tiro e cria um míssil"""
@@ -93,7 +116,19 @@ class Robot:
     def draw(self, screen):
         if self.robot_images:
             # Escolher conjunto de imagens baseado no estado
-            if self.is_shooting:
+            if self.is_dead:
+                # Usar primeira imagem da orientação atual, levemente rotacionada
+                images = (
+                    self.robot_images.get('right', []) if self.direction == 1
+                    else self.robot_images.get('left', [])
+                )
+                current_image = images[0] if images else None
+                if current_image:
+                    rotated = pygame.transform.rotate(current_image, self.rotation_angle)
+                    screen.blit(rotated, (self.x, self.y))
+                    # Não desenhar mísseis do robô morto
+                    return
+            elif self.is_shooting:
                 # Usar imagens de tiro
                 if self.direction == 1:  # Direita
                     images = self.robot_images.get('shot_right', [])
@@ -115,9 +150,18 @@ class Robot:
                     return
         
         # Fallback: desenhar retângulo se imagens não estão disponíveis
-        color = (150, 75, 0) if not self.is_shooting else (255, 100, 0)  # Marrom ou laranja quando atirando
+        color = (200, 60, 60) if self.is_dead else ((150, 75, 0) if not self.is_shooting else (255, 100, 0))
         pygame.draw.rect(screen, color, (self.x, self.y, self.width, self.height))
         
         # Desenhar mísseis
-        for missile in self.missiles:
-            missile.draw(screen)
+        if not self.is_dead:
+            for missile in self.missiles:
+                missile.draw(screen)
+
+    def die(self):
+        # Iniciar estado de morte: parar tiro e iniciar queda
+        self.is_dead = True
+        self.is_shooting = False
+        self.death_timer = 0
+        self.fall_speed = 0.0
+        self.rotation_angle = 0

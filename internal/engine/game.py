@@ -1598,40 +1598,51 @@ class Game:
                                 visible_fires.append(fire)
                     self.fires = visible_fires
 
-            # Atualizar tartarugas e aranhas com culling
+            # Atualizar tartarugas e aranhas com culling e remoção quando update retorna False
             if self.current_level <= 20:
+                visible_turtles = []
                 for turtle in self.turtles:
-                    # Culling: só atualizar tartarugas próximas à área visível
-                    if (
-                        turtle.x > self.camera_x - 100
-                        and turtle.x < self.camera_x + WIDTH + 100
-                    ):
-                        turtle.update()
+                    # Atualizar e manter apenas as ativas
+                    if turtle.update():
+                        # Culling: só manter tartarugas próximas à área visível
+                        if (
+                            turtle.x > self.camera_x - 100
+                            and turtle.x < self.camera_x + WIDTH + 100
+                        ):
+                            visible_turtles.append(turtle)
+                self.turtles = visible_turtles
             else:
+                visible_spiders = []
                 for spider in self.spiders:
-                    # Culling: só atualizar aranhas próximas à área visível
-                    if (
-                        spider.x > self.camera_x - 100
-                        and spider.x < self.camera_x + WIDTH + 100
-                    ):
-                        spider.update()
+                    # Atualizar e manter apenas as ativas
+                    if spider.update(self.camera_x):
+                        # Culling: só manter aranhas próximas à área visível
+                        if (
+                            spider.x > self.camera_x - 100
+                            and spider.x < self.camera_x + WIDTH + 100
+                        ):
+                            visible_spiders.append(spider)
+                self.spiders = visible_spiders
 
-            # Atualizar robôs (níveis 31-40)
+            # Atualizar robôs (níveis 31-40) com culling por update
             if 31 <= self.current_level <= 40:
+                active_robots = []
                 for robot in self.robots:
                     # Atualizar todos os robôs para manter o sistema de tiro ativo
                     # passando a posição da câmera para remoção correta dos mísseis
-                    robot.update(self.camera_x)
+                    if robot.update(self.camera_x):
+                        active_robots.append(robot)
+                self.robots = active_robots
 
-            # Atualizar aliens (níveis 41-50) com culling
+            # Atualizar aliens (níveis 41-50) removendo apenas os que finalizaram a morte
             if 41 <= self.current_level <= 50:
+                active_aliens = []
                 for alien in self.aliens:
-                    # Culling: só atualizar aliens próximos à área visível
-                    if (
-                        alien.x > self.camera_x - 200
-                        and alien.x < self.camera_x + WIDTH + 200
-                    ):
-                        alien.update(self.camera_x)
+                    # Atualizar e manter apenas os ativos (True)
+                    if alien.update(self.camera_x):
+                        active_aliens.append(alien)
+                # Não aplicar culling por posição aqui; o desenho já culla por visibilidade
+                self.aliens = active_aliens
 
             # Atualizar boss alien (nível 51)
             if (
@@ -1680,38 +1691,36 @@ class Game:
             if self.current_level <= 20:
                 for bullet in self.player.bullets[:]:
                     for bird in self.birds[:]:
+                        # Evitar atingir novamente pássaros já mortos
+                        if getattr(bird, "is_dead", False):
+                            continue
                         if bullet.rect.colliderect(bird.rect):
-                            # Tiro acertou pássaro
+                            # Tiro acertou pássaro: iniciar animação de morte, sem explosão
                             self.player.bullets.remove(bullet)
-                            self.birds.remove(bird)
-                            # Criar explosão usando pool
-                            explosion = self.get_pooled_explosion(
-                                bird.x, bird.y, self.image.explosion_image
-                            )
-                            self.explosions.append(explosion)
                             # Retornar bala ao pool
                             self.return_bullet_to_pool(bullet)
-                            # Tocar som de explosão
-                            self.sound_effects.play_sound_effect("explosion")
+                            # Iniciar estado de morte
+                            if hasattr(bird, "die"):
+                                bird.die()
+                            # Tocar som específico de acerto em pássaro (se disponível)
+                            self.sound_effects.play_sound_effect("bird-hit")
                             # Adicionar pontos
                             self.add_score(100)
                             break
             elif self.current_level <= 30:
                 for bullet in self.player.bullets[:]:
                     for bat in self.bats[:]:
+                        if getattr(bat, "is_dead", False):
+                            continue
                         if bullet.rect.colliderect(bat.rect):
-                            # Tiro acertou morcego
+                            # Tiro acertou morcego: iniciar animação de morte, sem explosão
                             self.player.bullets.remove(bullet)
-                            self.bats.remove(bat)
-                            # Criar explosão usando pool
-                            explosion = self.get_pooled_explosion(
-                                bat.x, bat.y, self.image.explosion_image
-                            )
-                            self.explosions.append(explosion)
                             # Retornar bala ao pool
                             self.return_bullet_to_pool(bullet)
-                            # Tocar som de explosão
-                            self.sound_effects.play_sound_effect("explosion")
+                            if hasattr(bat, "die"):
+                                bat.die()
+                            # Tocar som de morte igual ao dos pássaros
+                            self.sound_effects.play_sound_effect("bird-hit")
                             # Adicionar pontos
                             self.add_score(75)
                             break
@@ -1758,38 +1767,34 @@ class Game:
             if self.current_level <= 20:
                 for bullet in self.player.bullets[:]:
                     for turtle in self.turtles[:]:
+                        if getattr(turtle, "is_dead", False):
+                            continue
                         if bullet.rect.colliderect(turtle.rect):
-                            # Tiro acertou tartaruga
+                            # Tiro acertou tartaruga: iniciar animação de morte (sem explosão)
                             self.player.bullets.remove(bullet)
-                            self.turtles.remove(turtle)
-                            # Criar explosão usando pool
-                            explosion = self.get_pooled_explosion(
-                                turtle.x, turtle.y, self.image.explosion_image
-                            )
-                            self.explosions.append(explosion)
                             # Retornar bala ao pool
                             self.return_bullet_to_pool(bullet)
-                            # Tocar som de explosão
-                            self.sound_effects.play_sound_effect("explosion")
+                            if hasattr(turtle, "die"):
+                                turtle.die()
+                            # Tocar som de morte igual ao dos pássaros
+                            self.sound_effects.play_sound_effect("bird-hit")
                             # Adicionar pontos
                             self.add_score(70)
                             break
             else:
                 for bullet in self.player.bullets[:]:
                     for spider in self.spiders[:]:
+                        if getattr(spider, "is_dead", False):
+                            continue
                         if bullet.rect.colliderect(spider.rect):
-                            # Tiro acertou aranha
+                            # Tiro acertou aranha: iniciar animação de morte (sem explosão)
                             self.player.bullets.remove(bullet)
-                            self.spiders.remove(spider)
-                            # Criar explosão usando pool
-                            explosion = self.get_pooled_explosion(
-                                spider.x, spider.y, self.image.explosion_image
-                            )
-                            self.explosions.append(explosion)
                             # Retornar bala ao pool
                             self.return_bullet_to_pool(bullet)
-                            # Tocar som de explosão
-                            self.sound_effects.play_sound_effect("explosion")
+                            if hasattr(spider, "die"):
+                                spider.die()
+                            # Tocar som de morte igual ao dos pássaros
+                            self.sound_effects.play_sound_effect("bird-hit")
                             # Adicionar pontos
                             self.add_score(120)
                             break
@@ -1799,21 +1804,23 @@ class Game:
                 for bullet in self.player.bullets[:]:
                     for robot in self.robots[:]:
                         if bullet.rect.colliderect(robot.rect):
-                            # Tiro acertou robô
-                            self.player.bullets.remove(bullet)
-                            # Transferir mísseis ativos do robô para a lista de órfãos
-                            for missile in robot.missiles:
-                                self.orphan_missiles.append(missile)
-                            self.robots.remove(robot)
-                            # Criar explosão usando pool
+                            # Tiro acertou robô: remover com explosão e transferir mísseis
+                            if bullet in self.player.bullets:
+                                self.player.bullets.remove(bullet)
+                            self.return_bullet_to_pool(bullet)
+                            # Criar explosão na posição do robô
                             explosion = self.get_pooled_explosion(
                                 robot.x, robot.y, self.image.explosion_image
                             )
                             self.explosions.append(explosion)
-                            # Retornar bala ao pool
-                            self.return_bullet_to_pool(bullet)
-                            # Tocar som de explosão
+                            # Tocar som de explosão do robô
                             self.sound_effects.play_sound_effect("explosion")
+                            # Transferir mísseis ativos do robô para a lista de órfãos
+                            for missile in getattr(robot, "missiles", []):
+                                self.orphan_missiles.append(missile)
+                            # Remover robô
+                            if robot in self.robots:
+                                self.robots.remove(robot)
                             # Adicionar pontos
                             self.add_score(100)
                             break
@@ -1839,26 +1846,31 @@ class Game:
                                     not self.player.is_hit
                                 ):  # Só aplicar hit se não estiver já em estado de hit
                                     self.player.take_hit()
+                                    # Som de jogador atingido
+                                    self.sound_effects.play_sound_effect("player-hit")
                                     # Criar explosão na posição do míssil
                                     explosion = self.get_pooled_explosion(
-                                        missile.x, missile.y, self.image.explosion_image
-                                    )
-                                    self.explosions.append(explosion)
-                                    robot.missiles.remove(missile)
-                                    self.lives -= 1
-                                    if self.lives <= 0:
-                                        # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                        if self.ranking_manager.is_high_score(self.score):
-                                            self.state = GameState.ENTER_NAME
-                                        else:
-                                            self.state = GameState.GAME_OVER
-                                        self.start_game_over_hold()
-                                    # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                                    missile.x, missile.y, self.image.explosion_image
+                                )
+                                self.explosions.append(explosion)
+                                robot.missiles.remove(missile)
+                                self.lives -= 1
+                                if self.lives <= 0:
+                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                    if self.ranking_manager.is_high_score(self.score):
+                                        self.state = GameState.ENTER_NAME
+                                    else:
+                                        self.state = GameState.GAME_OVER
+                                    self.start_game_over_hold()
+                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
                             break
 
             # Verificar colisão entre lasers dos aliens e jogador (níveis 41-50)
             if 41 <= self.current_level <= 50 and not self.player.is_being_abducted:
                 for alien in self.aliens[:]:
+                    # Se o alien está morrendo, não processar colisões de lasers dele
+                    if hasattr(alien, "is_dead") and alien.is_dead:
+                        continue
                     for laser in alien.lasers[:]:
                         if self.player.rect.colliderect(laser.rect):
                             if self.player.is_invulnerable:
@@ -1875,6 +1887,8 @@ class Game:
                                 # Colidiu com laser, ativar animação de hit
                                 if not self.player.is_hit:
                                     self.player.take_hit()
+                                    # Som de jogador atingido
+                                    self.sound_effects.play_sound_effect("player-hit")
                                     # Criar explosão na posição do laser
                                     explosion = self.get_pooled_explosion(
                                         laser.x, laser.y, self.image.explosion_image
@@ -1897,21 +1911,25 @@ class Game:
                 for bullet in self.player.bullets[:]:
                     for alien in self.aliens[:]:
                         if bullet.rect.colliderect(alien.rect):
-                            # Tiro acertou alien
-                            self.player.bullets.remove(bullet)
-                            # Transferir lasers ativos do alien para a lista de órfãos
-                            for laser in alien.lasers:
-                                self.orphan_lasers.append(laser)
-                            self.aliens.remove(alien)
-                            # Criar explosão usando pool
-                            explosion = self.get_pooled_explosion(
-                                alien.x, alien.y, self.image.explosion_image
-                            )
-                            self.explosions.append(explosion)
-                            # Retornar bala ao pool
+                            # Evitar múltiplos acertos em alien já morto
+                            if hasattr(alien, "is_dead") and alien.is_dead:
+                                # Apenas remover a bala e retornar ao pool
+                                if bullet in self.player.bullets:
+                                    self.player.bullets.remove(bullet)
+                                self.return_bullet_to_pool(bullet)
+                                break
+                            # Tiro acertou alien: iniciar animação de morte (sem explosão)
+                            if hasattr(alien, "die"):
+                                alien.die()
+                                # Som de morte do alien (igual ao de pássaro)
+                                self.sound_effects.play_sound_effect("bird-hit")
+                            # Remover bala e retornar ao pool
+                            if bullet in self.player.bullets:
+                                self.player.bullets.remove(bullet)
                             self.return_bullet_to_pool(bullet)
-                            # Tocar som de explosão
-                            self.sound_effects.play_sound_effect("explosion")
+                            # Transferir lasers ativos do alien para a lista de órfãos
+                            for laser in getattr(alien, "lasers", []):
+                                self.orphan_lasers.append(laser)
                             # Adicionar pontos
                             self.add_score(60)
                             break
@@ -1951,6 +1969,9 @@ class Game:
 
                     # Verificar colisão direta
                     if self.player.rect.colliderect(bird.rect):
+                        # Se o inimigo está em estado de morte, ignorar colisão
+                        if hasattr(bird, "is_dead") and bird.is_dead:
+                            continue
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
@@ -1966,6 +1987,8 @@ class Game:
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
                                 self.player.take_hit()
+                                # Som de jogador atingido
+                                self.sound_effects.play_sound_effect("player-hit")
                                 # Criar explosão na posição do pássaro
                                 self.explosions.append(
                                     Explosion(
@@ -2001,6 +2024,9 @@ class Game:
 
                     # Verificar colisão direta
                     if self.player.rect.colliderect(bat.rect):
+                        # Se o inimigo está em estado de morte, ignorar colisão
+                        if hasattr(bat, "is_dead") and bat.is_dead:
+                            continue
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
@@ -2016,6 +2042,8 @@ class Game:
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
                                 self.player.take_hit()
+                                # Som de jogador atingido
+                                self.sound_effects.play_sound_effect("player-hit")
                                 # Criar explosão na posição do morcego
                                 self.explosions.append(
                                     Explosion(bat.x, bat.y, self.image.explosion_image)
@@ -2049,6 +2077,9 @@ class Game:
 
                     # Verificar colisão direta
                     if self.player.rect.colliderect(airplane.rect):
+                        # Se o inimigo está em estado de morte, ignorar colisão
+                        if hasattr(airplane, "is_dead") and airplane.is_dead:
+                            continue
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
@@ -2105,6 +2136,9 @@ class Game:
 
                     # Verificar colisão direta
                     if self.player.rect.colliderect(disk.rect):
+                        # Se o inimigo está em estado de morte, ignorar colisão
+                        if hasattr(disk, "is_dead") and disk.is_dead:
+                            continue
                         if self.player.is_invulnerable:
                             # Jogador invulnerável: explodir inimigo sem causar dano
                             self.explosions.append(
@@ -2120,6 +2154,8 @@ class Game:
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
                                 self.player.take_hit()
+                                # Som de jogador atingido
+                                self.sound_effects.play_sound_effect("player-hit")
                                 # Criar explosão na posição do disco
                                 self.explosions.append(
                                     Explosion(
@@ -2145,6 +2181,8 @@ class Game:
                         if not self.player.is_invulnerable and not self.player.is_hit:
                             # Colidiu com foguinho, ativar animação de hit
                             self.player.take_hit()
+                            # Som de jogador atingido
+                            self.sound_effects.play_sound_effect("player-hit")
                             # Foguinho não é removido - continua existindo
                             self.lives -= 1
                             if self.lives <= 0:
@@ -2162,14 +2200,15 @@ class Game:
                 for turtle in self.turtles[:]:
                     # Verificar colisão direta
                     if self.player.rect.colliderect(turtle.rect):
+                        # Se o inimigo está em estado de morte, ignorar colisão
+                        if hasattr(turtle, "is_dead") and turtle.is_dead:
+                            continue
                         if self.player.is_invulnerable:
-                            # Jogador invulnerável: explodir inimigo sem causar dano
-                            self.explosions.append(
-                                Explosion(
-                                    turtle.x, turtle.y, self.image.explosion_image
-                                )
-                            )
-                            self.turtles.remove(turtle)
+                            # Jogador invulnerável: iniciar morte do inimigo sem explosão
+                            if hasattr(turtle, "die"):
+                                turtle.die()
+                            # Tocar som de morte igual ao dos pássaros
+                            self.sound_effects.play_sound_effect("bird-hit")
                             self.add_score(
                                 20
                             )  # Pontos bônus por destruir inimigo durante invulnerabilidade
@@ -2179,13 +2218,13 @@ class Game:
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
                                 self.player.take_hit()
-                                # Criar explosão na posição da tartaruga
-                                self.explosions.append(
-                                    Explosion(
-                                        turtle.x, turtle.y, self.image.explosion_image
-                                    )
-                                )
-                                self.turtles.remove(turtle)
+                                # Som de jogador atingido
+                                self.sound_effects.play_sound_effect("player-hit")
+                                # Iniciar morte da tartaruga sem explosão
+                                if hasattr(turtle, "die"):
+                                    turtle.die()
+                                # Tocar som de morte igual ao dos pássaros
+                                self.sound_effects.play_sound_effect("bird-hit")
                                 self.lives -= 1
                                 if self.lives <= 0:
                                     # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
@@ -2200,14 +2239,15 @@ class Game:
                 for spider in self.spiders[:]:
                     # Verificar colisão direta
                     if self.player.rect.colliderect(spider.rect):
+                        # Se o inimigo está em estado de morte, ignorar colisão
+                        if hasattr(spider, "is_dead") and spider.is_dead:
+                            continue
                         if self.player.is_invulnerable:
-                            # Jogador invulnerável: explodir inimigo sem causar dano
-                            self.explosions.append(
-                                Explosion(
-                                    spider.x, spider.y, self.image.explosion_image
-                                )
-                            )
-                            self.spiders.remove(spider)
+                            # Jogador invulnerável: iniciar morte do inimigo sem explosão
+                            if hasattr(spider, "die"):
+                                spider.die()
+                            # Tocar som de morte igual ao dos pássaros
+                            self.sound_effects.play_sound_effect("bird-hit")
                             self.add_score(
                                 35
                             )  # Pontos bônus por destruir aranha durante invulnerabilidade
@@ -2217,13 +2257,13 @@ class Game:
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
                                 self.player.take_hit()
-                                # Criar explosão na posição da aranha
-                                self.explosions.append(
-                                    Explosion(
-                                        spider.x, spider.y, self.image.explosion_image
-                                    )
-                                )
-                                self.spiders.remove(spider)
+                                # Som de jogador atingido
+                                self.sound_effects.play_sound_effect("player-hit")
+                                # Iniciar morte da aranha sem explosão
+                                if hasattr(spider, "die"):
+                                    spider.die()
+                                # Tocar som de morte igual ao dos pássaros
+                                self.sound_effects.play_sound_effect("bird-hit")
                                 self.lives -= 1
                                 if self.lives <= 0:
                                     # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
@@ -2241,14 +2281,19 @@ class Game:
                     # Verificar colisão direta
                     if self.player.rect.colliderect(robot.rect):
                         if self.player.is_invulnerable:
-                            # Jogador invulnerável: explodir inimigo sem causar dano
-                            self.explosions.append(
-                                Explosion(robot.x, robot.y, self.image.explosion_image)
+                            # Jogador invulnerável: explodir robô sem causar dano
+                            explosion = self.get_pooled_explosion(
+                                robot.x, robot.y, self.image.explosion_image
                             )
+                            self.explosions.append(explosion)
+                            # Tocar som de explosão do robô
+                            self.sound_effects.play_sound_effect("explosion")
                             # Transferir mísseis ativos do robô para a lista de órfãos
-                            for missile in robot.missiles:
+                            for missile in getattr(robot, "missiles", []):
                                 self.orphan_missiles.append(missile)
-                            self.robots.remove(robot)
+                            # Remover robô
+                            if robot in self.robots:
+                                self.robots.remove(robot)
                             self.add_score(
                                 50
                             )  # Pontos bônus por destruir robô durante invulnerabilidade
@@ -2258,16 +2303,21 @@ class Game:
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
                                 self.player.take_hit()
-                                # Criar explosão na posição do robô
-                                self.explosions.append(
-                                    Explosion(
-                                        robot.x, robot.y, self.image.explosion_image
-                                    )
+                                # Som de jogador atingido
+                                self.sound_effects.play_sound_effect("player-hit")
+                                # Explodir robô
+                                explosion = self.get_pooled_explosion(
+                                    robot.x, robot.y, self.image.explosion_image
                                 )
+                                self.explosions.append(explosion)
+                                # Tocar som de explosão do robô
+                                self.sound_effects.play_sound_effect("explosion")
                                 # Transferir mísseis ativos do robô para a lista de órfãos
-                                for missile in robot.missiles:
+                                for missile in getattr(robot, "missiles", []):
                                     self.orphan_missiles.append(missile)
-                                self.robots.remove(robot)
+                                # Remover robô
+                                if robot in self.robots:
+                                    self.robots.remove(robot)
                                 self.lives -= 1
                                 if self.lives <= 0:
                                     # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
@@ -2284,15 +2334,18 @@ class Game:
                 for alien in self.aliens[:]:
                     # Verificar colisão direta
                     if self.player.rect.colliderect(alien.rect):
+                        # Se o inimigo está em estado de morte, ignorar colisão
+                        if hasattr(alien, "is_dead") and alien.is_dead:
+                            continue
                         if self.player.is_invulnerable:
-                            # Jogador invulnerável: explodir inimigo sem causar dano
-                            self.explosions.append(
-                                Explosion(alien.x, alien.y, self.image.explosion_image)
-                            )
+                            # Jogador invulnerável: iniciar morte do alien sem explosão
+                            if hasattr(alien, "die"):
+                                alien.die()
+                                # Som de morte do alien (igual ao de pássaro)
+                                self.sound_effects.play_sound_effect("bird-hit")
                             # Transferir lasers ativos do alien para a lista de órfãos
                             for laser in alien.lasers:
                                 self.orphan_lasers.append(laser)
-                            self.aliens.remove(alien)
                             self.add_score(
                                 60
                             )  # Pontos bônus por destruir alien durante invulnerabilidade
@@ -2300,16 +2353,16 @@ class Game:
                             # Colidiu com alien, ativar animação de hit
                             if not self.player.is_hit:
                                 self.player.take_hit()
-                                # Criar explosão na posição do alien
-                                self.explosions.append(
-                                    Explosion(
-                                        alien.x, alien.y, self.image.explosion_image
-                                    )
-                                )
+                                # Som de jogador atingido
+                                self.sound_effects.play_sound_effect("player-hit")
+                                # Iniciar morte do alien sem explosão
+                                if hasattr(alien, "die"):
+                                    alien.die()
+                                    # Som de morte do alien (igual ao de pássaro)
+                                    self.sound_effects.play_sound_effect("bird-hit")
                                 # Transferir lasers ativos do alien para a lista de órfãos
                                 for laser in alien.lasers:
                                     self.orphan_lasers.append(laser)
-                                self.aliens.remove(alien)
                                 self.lives -= 1
                                 if self.lives <= 0:
                                     # Sem vidas, game over - verificar se entra no ranking
