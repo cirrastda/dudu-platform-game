@@ -35,8 +35,24 @@ class ResourceCache:
             # Carregar imagem do disco usando caminho correto
             full_path = resource_path(path)
             image = pygame.image.load(full_path)
+            # Converter para formato otimizado de exibição (com alpha)
+            try:
+                image = image.convert_alpha()
+            except Exception:
+                try:
+                    image = image.convert()
+                except Exception:
+                    pass
             if scale:
                 image = pygame.transform.scale(image, scale)
+                # Garantir que a surface escalada também esteja convertida
+                try:
+                    image = image.convert_alpha()
+                except Exception:
+                    try:
+                        image = image.convert()
+                    except Exception:
+                        pass
 
             # Armazenar no cache
             self.image_cache[cache_key] = image

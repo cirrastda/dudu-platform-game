@@ -18,9 +18,7 @@ def resource_path(relative_path):
             base_path = os.path.dirname(sys.executable)
         else:
             # Modo desenvolvimento: raiz do projeto relativa a este arquivo
-            base_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "..")
-            )
+            base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
     return os.path.join(base_path, relative_path)
 

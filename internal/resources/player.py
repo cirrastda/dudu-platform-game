@@ -45,46 +45,58 @@ class Player:
     def load_sprites(self):
         """Carregar todos os sprites do personagem"""
         try:
+            # Carregar diretamente com pygame.image.load para compatibilidade com testes
+            def load_and_scale(path, size):
+                img = pygame.image.load(resource_path(path))
+                try:
+                    img = img.convert_alpha()
+                except Exception:
+                    try:
+                        img = img.convert()
+                    except Exception:
+                        pass
+                if size:
+                    img = pygame.transform.scale(img, size)
+                    try:
+                        img = img.convert_alpha()
+                    except Exception:
+                        try:
+                            img = img.convert()
+                        except Exception:
+                            pass
+                return img
+
             # Sprite parado (idle)
             self.sprites["idle"] = [
-                pygame.image.load(resource_path("imagens/personagem/1.png"))
+                load_and_scale("imagens/personagem/1.png", (self.width, self.original_height))
             ]
 
             # Sprites de caminhada
             self.sprites["walk"] = [
-                pygame.image.load(resource_path("imagens/personagem/1.png")),
-                pygame.image.load(resource_path("imagens/personagem/2.png")),
-                pygame.image.load(resource_path("imagens/personagem/3.png")),
-                pygame.image.load(resource_path("imagens/personagem/4.png")),
+                load_and_scale("imagens/personagem/1.png", (self.width, self.original_height)),
+                load_and_scale("imagens/personagem/2.png", (self.width, self.original_height)),
+                load_and_scale("imagens/personagem/3.png", (self.width, self.original_height)),
+                load_and_scale("imagens/personagem/4.png", (self.width, self.original_height)),
             ]
 
-            # Sprites de pulo
+            # Sprites de pulo (inclui aterrissagem)
             self.sprites["jump"] = [
-                pygame.image.load(resource_path("imagens/personagem/j1.png")),
-                pygame.image.load(resource_path("imagens/personagem/j2.png")),
-                pygame.image.load(resource_path("imagens/personagem/j3.png")),
-                pygame.image.load(resource_path("imagens/personagem/j4.png")),
-                pygame.image.load(
-                    resource_path("imagens/personagem/j5.png")
-                ),  # Aterrissagem
+                load_and_scale("imagens/personagem/j1.png", (self.width, self.original_height)),
+                load_and_scale("imagens/personagem/j2.png", (self.width, self.original_height)),
+                load_and_scale("imagens/personagem/j3.png", (self.width, self.original_height)),
+                load_and_scale("imagens/personagem/j4.png", (self.width, self.original_height)),
+                load_and_scale("imagens/personagem/j5.png", (self.width, self.original_height)),
             ]
 
-            # Sprite agachado
+            # Sprite agachado (mantém altura original conforme lógica atual)
             self.sprites["crouch"] = [
-                pygame.image.load(resource_path("imagens/personagem/dn1.png"))
+                load_and_scale("imagens/personagem/dn1.png", (self.width, self.original_height))
             ]
 
             # Sprite quando atingido
             self.sprites["hit"] = [
-                pygame.image.load(resource_path("imagens/personagem/d1.png"))
+                load_and_scale("imagens/personagem/d1.png", (self.width, self.original_height))
             ]
-
-            # Redimensionar todos os sprites para o tamanho do personagem
-            for animation in self.sprites:
-                for i, sprite in enumerate(self.sprites[animation]):
-                    self.sprites[animation][i] = pygame.transform.scale(
-                        sprite, (self.width, self.original_height)
-                    )
 
         except pygame.error as e:
             print(f"Erro ao carregar sprites do personagem: {e}")

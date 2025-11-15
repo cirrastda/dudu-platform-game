@@ -2,9 +2,22 @@ import os
 import json
 
 
+def _get_local_records_dir():
+    """Retorna o diretório local `records` dentro do cwd.
+
+    Compatível com os testes que esperam criação de `records/` no diretório atual.
+    """
+    try:
+        return os.path.join(os.getcwd(), "records")
+    except Exception:
+        # Fallback: ainda tentar no diretório do usuário
+        return os.path.join(os.path.expanduser("~"), "records")
+
+
 class RankingManager:
     def __init__(self):
-        self.records_dir = "records"
+        # Usar diretório local `records` (cwd) para compatibilidade com testes
+        self.records_dir = _get_local_records_dir()
         self.ranking_file = os.path.join(self.records_dir, "top10.log")
         self.rankings = []
         self.ensure_records_dir()
@@ -12,8 +25,11 @@ class RankingManager:
 
     def ensure_records_dir(self):
         """Cria o diretório records se não existir"""
-        if not os.path.exists(self.records_dir):
-            os.makedirs(self.records_dir)
+        try:
+            os.makedirs(self.records_dir, exist_ok=True)
+        except Exception as e:
+            # Se não for possível criar, degradar para in-memory
+            print(f"Erro ao criar diretório de records: {e}")
 
     def load_rankings(self):
         """Carrega os rankings do arquivo"""

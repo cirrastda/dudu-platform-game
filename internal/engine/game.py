@@ -1,4 +1,5 @@
 import pygame
+import sys
 import os
 import math
 from internal.utils.constants import *
@@ -1157,8 +1158,16 @@ class Game:
             self.state = GameState.CREDITS
             self.credits_type = "menu"
         elif selected_option == "Sair":
-            pygame.quit()
-            sys.exit()
+            # Encerrar chamando pygame.quit e sys.exit (testes podem patchar sys.exit)
+            try:
+                pygame.quit()
+            except Exception:
+                pass
+            try:
+                sys.exit()
+            except SystemExit:
+                # Propagar para quem estiver esperando a exceção
+                raise
 
     def update(self):
         if self.state == GameState.SPLASH:
@@ -3198,6 +3207,38 @@ class Game:
             self.update()
             self.draw()
             self.clock.tick(FPS)
+        # Encerramento gracioso
+        try:
+            self.shutdown()
+        except Exception:
+            pass
 
-        pygame.quit()
-        sys.exit()
+    def shutdown(self):
+        """Encerrar subsistemas e liberar recursos de forma segura."""
+        # Parar música
+        try:
+            import pygame as _pg
+            _pg.mixer.music.stop()
+        except Exception:
+            pass
+
+        # Limpar vídeo (áudio/thread)
+        try:
+            if hasattr(self, "video_player") and self.video_player:
+                self.video_player.cleanup()
+        except Exception:
+            pass
+
+        # Limpar cache de recursos
+        try:
+            from internal.resources.cache import ResourceCache
+            ResourceCache().clear_cache()
+        except Exception:
+            pass
+
+        # Finalizar pygame
+        try:
+            import pygame as _pg
+            _pg.quit()
+        except Exception:
+            pass
