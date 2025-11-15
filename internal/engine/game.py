@@ -137,6 +137,22 @@ class Game:
         self.video_player = VideoPlayer()
         self.ending_video_player = VideoPlayer()
 
+        # Código secreto: Konami Code para conceder 99 vidas iniciais
+        self.cheat_99_lives_enabled = False
+        self._cheat_buffer = []
+        self._cheat_sequence = [
+            "UP",
+            "UP",
+            "DOWN",
+            "DOWN",
+            "LEFT",
+            "RIGHT",
+            "LEFT",
+            "RIGHT",
+            "B",
+            "A",
+        ]
+
         # Sistema de splash screen e menu
         self.splash_timer = 0
         self.splash_duration = 360  # 6 segundos (60 FPS * 6)
@@ -155,6 +171,13 @@ class Game:
         self.fade_out_duration = 30  # 0.5 segundos para fade out
         self.logo_hold_time = 60  # 1 segundo para mostrar o logo
         self.music_started = False  # Controla se a música já foi iniciada
+
+        # Estado de hold para transições com esmaecimento e áudio
+        self.hold_active = False
+        self.hold_type = None  # "level_end" ou "game_over"
+        self.hold_frames_left = 0
+        self._next_level_after_hold = False
+        self._pending_state_after_hold = None
 
         # Controle de eixos do joystick para D-pad e analógicos
         self.prev_dpad_vertical = 0
@@ -302,6 +325,8 @@ class Game:
 
     def get_initial_lives(self):
         """Obter o número inicial de vidas baseado na configuração e dificuldade"""
+        if getattr(self, "cheat_99_lives_enabled", False):
+            return 99
         if ENV_CONFIG.get("environment") == "development" and "lives" in ENV_CONFIG:
             if ENV_CONFIG.get("lives").isdigit() and int(ENV_CONFIG.get("lives")) > 0:
                 return int(ENV_CONFIG["lives"])
@@ -376,6 +401,62 @@ class Game:
         # Checar vida extra conforme sistema configurado por dificuldade
         self.check_extra_life()
         return points
+
+    def _compute_sound_frames(self, sound_key, default_seconds=2.0):
+        try:
+            sound = self.sound_effects.sound_effects.get(sound_key)
+            if sound:
+                length = sound.get_length()
+                if length and length > 0:
+                    return max(1, int(length * FPS))
+        except Exception:
+            pass
+        return max(1, int(default_seconds * FPS))
+
+    def _start_hold(self, hold_type, frames, pending_state=None, next_level=False):
+        self.hold_active = True
+        self.hold_type = hold_type
+        self.hold_frames_left = frames
+        self._pending_state_after_hold = pending_state
+        self._next_level_after_hold = next_level
+
+    def start_game_over_hold(self):
+        frames = self._compute_sound_frames("game-over", 2.0)
+        self.sound_effects.play_sound_effect("game-over")
+        # Para game over, apenas ativar esmaecimento enquanto a rotina atual continua
+        self._start_hold("game_over", frames, pending_state=None, next_level=False)
+
+    def start_level_end_hold(self, is_last_level):
+        frames = self._compute_sound_frames("level-end", 2.0)
+        self.sound_effects.play_sound_effect("level-end")
+        # Apenas inicia esmaecimento; avanço de fase/estado acontece imediatamente
+        self._start_hold("level_end", frames, pending_state=None, next_level=False)
+
+    def _process_cheat_token(self, token):
+        if not token:
+            return
+        self._cheat_buffer.append(token)
+        if len(self._cheat_buffer) > len(self._cheat_sequence):
+            self._cheat_buffer = self._cheat_buffer[-len(self._cheat_sequence) :]
+        if self._cheat_buffer == self._cheat_sequence:
+            self.cheat_99_lives_enabled = True
+            self.max_lives = 99
+            self.lives = 99
+
+    def _map_key_to_cheat_token(self, key, unicode_val=""):
+        if key == pygame.K_UP:
+            return "UP"
+        if key == pygame.K_DOWN:
+            return "DOWN"
+        if key == pygame.K_LEFT:
+            return "LEFT"
+        if key == pygame.K_RIGHT:
+            return "RIGHT"
+        if key == pygame.K_b or unicode_val.lower() == "b":
+            return "B"
+        if key == pygame.K_a or unicode_val.lower() == "a":
+            return "A"
+        return None
 
     def update_bird_difficulty(self):
         """Atualiza parâmetros de spawn por faixa de nível e aplica modificadores da dificuldade.
@@ -507,6 +588,12 @@ class Game:
             if event.type == pygame.QUIT:
                 return False
             elif event.type == pygame.KEYDOWN:
+                # Código secreto: capturar token do teclado (Konami Code)
+                try:
+                    uni = event.unicode if hasattr(event, "unicode") else ""
+                except Exception:
+                    uni = ""
+                self._process_cheat_token(self._map_key_to_cheat_token(event.key, uni))
                 # Navegação do splash screen
                 if self.state == GameState.SPLASH:
                     # Só permite pular se estiver em modo development
@@ -514,46 +601,22 @@ class Game:
                         self.state = GameState.TITLE_SCREEN
                 # Navegação da tela de título
                 elif self.state == GameState.TITLE_SCREEN:
-                    # Em mobile, podemos já ter exibido o vídeo via Kivy
-                    is_dev = (
-                        ENV_CONFIG.get("environment", "production") == "development"
-                    )
-                    skip_opening = False
-                    if not is_dev:
-                        try:
-                            skip_opening = (
-                                self.env_config.get("skip-opening-video") == "1"
-                                or ENV_CONFIG.get("skip-opening-video") == "1"
-                            )
-                        except Exception:
-                            skip_opening = False
-
-                    if skip_opening:
+                    # Iniciar sempre o vídeo de abertura ao pressionar qualquer tecla
+                    self.state = GameState.OPENING_VIDEO
+                    # Carregar e iniciar o vídeo
+                    if self.video_player.load_video("videos/opening.mp4"):
+                        self.video_player.start_playback()
+                    else:
+                        # Se não conseguir carregar o vídeo, ir direto para o menu
                         self.state = GameState.MAIN_MENU
                         if not self.music_started:
                             self.music.play_menu_music(self)
                             self.music_started = True
-                    else:
-                        # Qualquer tecla vai para o vídeo de abertura
-                        self.state = GameState.OPENING_VIDEO
-                        # Carregar e iniciar o vídeo
-                        if self.video_player.load_video("videos/opening.mp4"):
-                            self.video_player.start_playback()
-                        else:
-                            # Se não conseguir carregar o vídeo, pular direto para o menu
-                            self.state = GameState.MAIN_MENU
-                            if not self.music_started:
-                                self.music.play_menu_music(self)
-                                self.music_started = True
                 # Navegação do vídeo de abertura
                 elif self.state == GameState.OPENING_VIDEO:
-                    # Qualquer tecla pula o vídeo
-                    self.video_player.stop()
-                    self.state = GameState.MAIN_MENU
-                    # Iniciar música do menu
-                    if not self.music_started:
-                        self.music.play_menu_music(self)
-                        self.music_started = True
+                    # Removido: pular o vídeo de abertura por tecla.
+                    # Ignorar entradas enquanto o vídeo estiver reproduzindo.
+                    pass
                 # Navegação do menu principal
                 elif self.state == GameState.MAIN_MENU:
                     if event.key == pygame.K_UP:
@@ -786,6 +849,11 @@ class Game:
             # Eventos do joystick
             elif event.type == pygame.JOYBUTTONDOWN:
                 if self.joystick_connected:
+                    # Código secreto: capturar token dos botões do joystick (A/B)
+                    if event.button == 1:
+                        self._process_cheat_token("B")
+                    elif event.button == 0:
+                        self._process_cheat_token("A")
                     # Navegação do splash screen com joystick
                     if self.state == GameState.SPLASH:
                         # Só permite pular se estiver em modo development
@@ -793,46 +861,22 @@ class Game:
                             self.state = GameState.TITLE_SCREEN
                     # Navegação da tela de título com joystick
                     elif self.state == GameState.TITLE_SCREEN:
-                        # Em mobile, podemos já ter exibido o vídeo via Kivy
-                        is_dev = (
-                            ENV_CONFIG.get("environment", "production") == "development"
-                        )
-                        skip_opening = False
-                        if not is_dev:
-                            try:
-                                skip_opening = (
-                                    self.env_config.get("skip-opening-video") == "1"
-                                    or ENV_CONFIG.get("skip-opening-video") == "1"
-                                )
-                            except Exception:
-                                skip_opening = False
-
-                        if skip_opening:
+                        # Iniciar sempre o vídeo de abertura ao pressionar qualquer botão
+                        self.state = GameState.OPENING_VIDEO
+                        # Carregar e iniciar o vídeo
+                        if self.video_player.load_video("videos/opening.mp4"):
+                            self.video_player.start_playback()
+                        else:
+                            # Se não conseguir carregar o vídeo, ir direto para o menu
                             self.state = GameState.MAIN_MENU
                             if not self.music_started:
                                 self.music.play_menu_music(self)
                                 self.music_started = True
-                        else:
-                            # Qualquer botão vai para o vídeo de abertura
-                            self.state = GameState.OPENING_VIDEO
-                            # Carregar e iniciar o vídeo
-                            if self.video_player.load_video("videos/opening.mp4"):
-                                self.video_player.start_playback()
-                            else:
-                                # Se não conseguir carregar o vídeo, pular direto para o menu
-                                self.state = GameState.MAIN_MENU
-                                if not self.music_started:
-                                    self.music.play_menu_music(self)
-                                    self.music_started = True
                     # Navegação do vídeo de abertura com joystick
                     elif self.state == GameState.OPENING_VIDEO:
-                        # Qualquer botão pula o vídeo
-                        self.video_player.stop()
-                        self.state = GameState.MAIN_MENU
-                        # Iniciar música do menu
-                        if not self.music_started:
-                            self.music.play_menu_music(self)
-                            self.music_started = True
+                        # Removido: pular o vídeo de abertura por botão.
+                        # Ignorar entradas enquanto o vídeo estiver reproduzindo.
+                        pass
                     # Navegação do menu principal com joystick
                     elif self.state == GameState.MAIN_MENU:
                         if event.button == 0 or event.button in [
@@ -1106,6 +1150,8 @@ class Game:
 
             # Navegação para cima (analógico ou D-pad)
             if analog_up or dpad_up:
+                # Código secreto: direção para cima
+                self._process_cheat_token("UP")
                 if self.state == GameState.MAIN_MENU:
                     self.menu_selected = (self.menu_selected - 1) % len(
                         self.menu_options
@@ -1117,6 +1163,8 @@ class Game:
 
             # Navegação para baixo (analógico ou D-pad)
             elif analog_down or dpad_down:
+                # Código secreto: direção para baixo
+                self._process_cheat_token("DOWN")
                 if self.state == GameState.MAIN_MENU:
                     self.menu_selected = (self.menu_selected + 1) % len(
                         self.menu_options
@@ -1125,6 +1173,18 @@ class Game:
                     self.game_over_selected = (self.game_over_selected + 1) % len(
                         self.game_over_options
                     )
+
+            # Detectar mudança no eixo horizontal (analógico ou D-pad)
+            analog_left = analog_horizontal < -0.5 and self.prev_analog_horizontal >= -0.5
+            analog_right = analog_horizontal > 0.5 and self.prev_analog_horizontal <= 0.5
+            dpad_left = dpad_horizontal < -0.5 and self.prev_dpad_horizontal >= -0.5
+            dpad_right = dpad_horizontal > 0.5 and self.prev_dpad_horizontal <= 0.5
+
+            # Código secreto: direções esquerda/direita
+            if analog_left or dpad_left:
+                self._process_cheat_token("LEFT")
+            if analog_right or dpad_right:
+                self._process_cheat_token("RIGHT")
 
             # Atualizar valores anteriores
             self.prev_analog_vertical = analog_vertical
@@ -1170,6 +1230,19 @@ class Game:
                 raise
 
     def update(self):
+        # Se estamos em hold, gerenciar contagem.
+        if getattr(self, "hold_active", False):
+            if self.hold_frames_left > 0:
+                self.hold_frames_left -= 1
+            else:
+                # fim do hold
+                self.hold_active = False
+                if self.hold_type == "level_end":
+                    # Para fim de fase, não bloqueamos; já avançamos imediatamente
+                    self.hold_type = None
+                elif self.hold_type == "game_over":
+                    # Para game over, não bloqueamos atualização; apenas removemos o esmaecimento
+                    self.hold_type = None
         if self.state == GameState.SPLASH:
             # Atualizar timer do splash screen
             self.splash_timer += 1
@@ -1266,11 +1339,12 @@ class Game:
                 # Jogador morreu (caiu da tela) - decrementar vida
                 self.lives -= 1
                 if self.lives <= 0:
-                    # Sem vidas, game over - verificar se entra no ranking
+                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
                     if self.ranking_manager.is_high_score(self.score):
                         self.state = GameState.ENTER_NAME
                     else:
                         self.state = GameState.GAME_OVER
+                    self.start_game_over_hold()
                 else:
                     # Ainda tem vidas, reiniciar nível atual
                     Level.init_level(self)
@@ -1728,13 +1802,12 @@ class Game:
                                     robot.missiles.remove(missile)
                                     self.lives -= 1
                                     if self.lives <= 0:
-                                        # Sem vidas, game over - verificar se entra no ranking
-                                        if self.ranking_manager.is_high_score(
-                                            self.score
-                                        ):
+                                        # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                        if self.ranking_manager.is_high_score(self.score):
                                             self.state = GameState.ENTER_NAME
                                         else:
                                             self.state = GameState.GAME_OVER
+                                        self.start_game_over_hold()
                                     # Não reiniciar o nível imediatamente, deixar o jogador continuar
                             break
 
@@ -1765,13 +1838,12 @@ class Game:
                                     alien.lasers.remove(laser)
                                     self.lives -= 1
                                     if self.lives <= 0:
-                                        # Sem vidas, game over - verificar se entra no ranking
-                                        if self.ranking_manager.is_high_score(
-                                            self.score
-                                        ):
+                                        # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                        if self.ranking_manager.is_high_score(self.score):
                                             self.state = GameState.ENTER_NAME
                                         else:
                                             self.state = GameState.GAME_OVER
+                                        self.start_game_over_hold()
                                     # Não reiniciar o nível imediatamente, deixar o jogador continuar
                             break
 
@@ -1858,11 +1930,12 @@ class Game:
                                 self.birds.remove(bird)
                                 self.lives -= 1
                                 if self.lives <= 0:
-                                    # Sem vidas, game over - verificar se entra no ranking
+                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
                                     if self.ranking_manager.is_high_score(self.score):
                                         self.state = GameState.ENTER_NAME
                                     else:
                                         self.state = GameState.GAME_OVER
+                                    self.start_game_over_hold()
                                 # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
             elif self.current_level <= 30:
@@ -1905,11 +1978,12 @@ class Game:
                                 self.bats.remove(bat)
                                 self.lives -= 1
                                 if self.lives <= 0:
-                                    # Sem vidas, game over - verificar se entra no ranking
+                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
                                     if self.ranking_manager.is_high_score(self.score):
                                         self.state = GameState.ENTER_NAME
                                     else:
                                         self.state = GameState.GAME_OVER
+                                    self.start_game_over_hold()
                                 # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
             elif self.current_level <= 40:
@@ -1958,11 +2032,12 @@ class Game:
                                 self.airplanes.remove(airplane)
                                 self.lives -= 1
                                 if self.lives <= 0:
-                                    # Sem vidas, game over - verificar se entra no ranking
+                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
                                     if self.ranking_manager.is_high_score(self.score):
                                         self.state = GameState.ENTER_NAME
                                     else:
                                         self.state = GameState.GAME_OVER
+                                    self.start_game_over_hold()
                                 # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
             else:
@@ -2028,11 +2103,12 @@ class Game:
                             # Foguinho não é removido - continua existindo
                             self.lives -= 1
                             if self.lives <= 0:
-                                # Sem vidas, game over - verificar se entra no ranking
+                                # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
                                 if self.ranking_manager.is_high_score(self.score):
                                     self.state = GameState.ENTER_NAME
                                 else:
                                     self.state = GameState.GAME_OVER
+                                self.start_game_over_hold()
                             # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
 
@@ -2067,11 +2143,12 @@ class Game:
                                 self.turtles.remove(turtle)
                                 self.lives -= 1
                                 if self.lives <= 0:
-                                    # Sem vidas, game over - verificar se entra no ranking
+                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
                                     if self.ranking_manager.is_high_score(self.score):
                                         self.state = GameState.ENTER_NAME
                                     else:
                                         self.state = GameState.GAME_OVER
+                                    self.start_game_over_hold()
                                 # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
             else:
@@ -2104,11 +2181,12 @@ class Game:
                                 self.spiders.remove(spider)
                                 self.lives -= 1
                                 if self.lives <= 0:
-                                    # Sem vidas, game over - verificar se entra no ranking
+                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
                                     if self.ranking_manager.is_high_score(self.score):
                                         self.state = GameState.ENTER_NAME
                                     else:
                                         self.state = GameState.GAME_OVER
+                                    self.start_game_over_hold()
                                 # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
 
@@ -2147,11 +2225,12 @@ class Game:
                                 self.robots.remove(robot)
                                 self.lives -= 1
                                 if self.lives <= 0:
-                                    # Sem vidas, game over - verificar se entra no ranking
+                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
                                     if self.ranking_manager.is_high_score(self.score):
                                         self.state = GameState.ENTER_NAME
                                     else:
                                         self.state = GameState.GAME_OVER
+                                    self.start_game_over_hold()
                                 # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
 
@@ -2198,6 +2277,9 @@ class Game:
 
             # Verificar se tocou a bandeira
             if self.flag and self.player.rect.colliderect(self.flag.rect):
+                # Iniciar hold de fim de fase com som e esmaecimento
+                self.start_level_end_hold(self.current_level >= self.max_levels)
+                # Avança imediatamente conforme lógica original
                 if self.current_level < self.max_levels:
                     self.current_level += 1
                     Level.init_level(self)
@@ -2219,6 +2301,9 @@ class Game:
 
                 # Após 10 segundos (600 frames) de abdução, terminar a fase
                 if self.player.abduction_timer >= 600:
+                    # Iniciar hold de fim de fase ao concluir abdução
+                    self.start_level_end_hold(self.current_level >= self.max_levels)
+                    # Avança imediatamente conforme lógica original
                     if self.current_level < self.max_levels:
                         self.current_level += 1
                         Level.init_level(self)
@@ -3194,6 +3279,16 @@ class Game:
                 center=(WIDTH // 2, HEIGHT - 50)
             )
             self.screen.blit(instruction_text, instruction_rect)
+
+        # Overlay de esmaecimento leve durante hold
+        if getattr(self, "hold_active", False):
+            try:
+                overlay = pygame.Surface((WIDTH, HEIGHT))
+                overlay.fill(BLACK)
+                overlay.set_alpha(int(255 * 0.05))  # ~5%
+                self.screen.blit(overlay, (0, 0))
+            except Exception:
+                pass
 
         Screen.present(self)
 
