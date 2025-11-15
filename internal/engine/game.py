@@ -176,6 +176,9 @@ class Game:
         self.hold_active = False
         self.hold_type = None  # "level_end" ou "game_over"
         self.hold_frames_left = 0
+        self.hold_total_frames = 0
+        # Controle de ducking de música durante holds com som
+        self._music_duck_original_volume = None
         self._next_level_after_hold = False
         self._pending_state_after_hold = None
 
@@ -417,6 +420,7 @@ class Game:
         self.hold_active = True
         self.hold_type = hold_type
         self.hold_frames_left = frames
+        self.hold_total_frames = frames
         self._pending_state_after_hold = pending_state
         self._next_level_after_hold = next_level
 
@@ -431,6 +435,20 @@ class Game:
         self.sound_effects.play_sound_effect("level-end")
         # Apenas inicia esmaecimento; avanço de fase/estado acontece imediatamente
         self._start_hold("level_end", frames, pending_state=None, next_level=False)
+        # Aplicar ducking na música para destacar o som de fim de fase
+        self._apply_hold_ducking()
+
+    def _apply_hold_ducking(self):
+        """Reduz temporariamente o volume da música durante o hold."""
+        try:
+            # Guardar volume atual apenas na primeira aplicação
+            if self._music_duck_original_volume is None:
+                self._music_duck_original_volume = pygame.mixer.music.get_volume()
+            # Reduzir volume para destacar efeitos sonoros
+            ducked = max(0.0, self._music_duck_original_volume * 0.5)
+            pygame.mixer.music.set_volume(ducked)
+        except Exception:
+            pass
 
     def _process_cheat_token(self, token):
         if not token:
@@ -1237,8 +1255,32 @@ class Game:
             else:
                 # fim do hold
                 self.hold_active = False
+                # Restaurar volume da música se foi reduzido
+                try:
+                    if self._music_duck_original_volume is not None:
+                        pygame.mixer.music.set_volume(self._music_duck_original_volume)
+                        self._music_duck_original_volume = None
+                except Exception:
+                    pass
                 if self.hold_type == "level_end":
-                    # Para fim de fase, não bloqueamos; já avançamos imediatamente
+                    # Agora avançamos de fase somente após o hold terminar
+                    try:
+                        if getattr(self, "_next_level_after_hold", False):
+                            if self.current_level < self.max_levels:
+                                self.current_level += 1
+                                Level.init_level(self)
+                                # Tocar música do novo nível
+                                self.music.play_level_music(self, self.current_level)
+                            else:
+                                # Vitória - verificar se entra no ranking
+                                if self.ranking_manager.is_high_score(self.score):
+                                    self.state = GameState.ENTER_NAME
+                                else:
+                                    self.state = GameState.VICTORY
+                    except Exception:
+                        pass
+                    finally:
+                        self._next_level_after_hold = False
                     self.hold_type = None
                 elif self.hold_type == "game_over":
                     # Para game over, não bloqueamos atualização; apenas removemos o esmaecimento
@@ -1319,6 +1361,9 @@ class Game:
                 self.credits_reset_timer = 0
 
         elif self.state == GameState.PLAYING:
+            # Congelar toda a jogabilidade durante holds de transição (fim de fase / game over)
+            if getattr(self, "hold_active", False) and self.hold_type in ("level_end", "game_over"):
+                return
             # Atualizar jogador
             player_action = self.player.update(
                 self.platforms,
@@ -2277,20 +2322,12 @@ class Game:
 
             # Verificar se tocou a bandeira
             if self.flag and self.player.rect.colliderect(self.flag.rect):
-                # Iniciar hold de fim de fase com som e esmaecimento
-                self.start_level_end_hold(self.current_level >= self.max_levels)
-                # Avança imediatamente conforme lógica original
-                if self.current_level < self.max_levels:
-                    self.current_level += 1
-                    Level.init_level(self)
-                    # Tocar música do novo nível
-                    self.music.play_level_music(self, self.current_level)
-                else:
-                    # Vitória - verificar se entra no ranking
-                    if self.ranking_manager.is_high_score(self.score):
-                        self.state = GameState.ENTER_NAME
-                    else:
-                        self.state = GameState.VICTORY
+                # Evitar retrigger do hold enquanto permanece colidindo
+                if not getattr(self, "hold_active", False):
+                    # Iniciar hold de fim de fase com som e esmaecimento
+                    self.start_level_end_hold(self.current_level >= self.max_levels)
+                    # Agendar avanço de fase apenas após o hold terminar
+                    self._next_level_after_hold = True
 
             # Verificar se entrou na área de abdução da nave (fase 50)
             if self.spaceship and self.player.rect.colliderect(
@@ -2301,20 +2338,12 @@ class Game:
 
                 # Após 10 segundos (600 frames) de abdução, terminar a fase
                 if self.player.abduction_timer >= 600:
-                    # Iniciar hold de fim de fase ao concluir abdução
-                    self.start_level_end_hold(self.current_level >= self.max_levels)
-                    # Avança imediatamente conforme lógica original
-                    if self.current_level < self.max_levels:
-                        self.current_level += 1
-                        Level.init_level(self)
-                        # Tocar música do novo nível
-                        self.music.play_level_music(self, self.current_level)
-                    else:
-                        # Vitória - verificar se entra no ranking
-                        if self.ranking_manager.is_high_score(self.score):
-                            self.state = GameState.ENTER_NAME
-                        else:
-                            self.state = GameState.VICTORY
+                    # Evitar retrigger do hold enquanto condição permanece verdadeira
+                    if not getattr(self, "hold_active", False):
+                        # Iniciar hold de fim de fase ao concluir abdução
+                        self.start_level_end_hold(self.current_level >= self.max_levels)
+                        # Agendar avanço de fase apenas após o hold terminar
+                        self._next_level_after_hold = True
 
     def draw(self):
 
@@ -3280,12 +3309,18 @@ class Game:
             )
             self.screen.blit(instruction_text, instruction_rect)
 
-        # Overlay de esmaecimento leve durante hold
+        # Overlay de esmaecimento durante hold (fade progressivo)
         if getattr(self, "hold_active", False):
             try:
                 overlay = pygame.Surface((WIDTH, HEIGHT))
                 overlay.fill(BLACK)
-                overlay.set_alpha(int(255 * 0.05))  # ~5%
+                # Progresso do fade baseado na duração do hold
+                total = max(1, getattr(self, "hold_total_frames", 1))
+                elapsed = total - max(0, self.hold_frames_left)
+                progress = min(1.0, max(0.0, elapsed / float(total)))
+                # Para fim de fase, usar um fade mais perceptível (~60%)
+                target_alpha = 0.6 if self.hold_type == "level_end" else 0.4
+                overlay.set_alpha(int(255 * target_alpha * progress))
                 self.screen.blit(overlay, (0, 0))
             except Exception:
                 pass
