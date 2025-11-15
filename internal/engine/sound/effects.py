@@ -66,6 +66,30 @@ class SoundEffects:
             else:
                 print("Aviso: Arquivo sounds/new-life.mp3 não encontrado")
 
+            # Carregar som de fim de fase
+            level_end_path = "sounds/level-end.mp3"
+            if os.path.exists(resource_path(level_end_path)):
+                sound = cache.get_sound(level_end_path)
+                if sound:
+                    self.sound_effects["level-end"] = sound
+                    # leve destaque
+                    self.sound_effects["level-end"].set_volume(min(1.0, self.sound_volume * 1.2))
+                    print("Som de fim de fase carregado com sucesso")
+            else:
+                print("Aviso: Arquivo sounds/level-end.mp3 não encontrado")
+
+            # Carregar som de game over
+            game_over_path = "sounds/game-over.mp3"
+            if os.path.exists(resource_path(game_over_path)):
+                sound = cache.get_sound(game_over_path)
+                if sound:
+                    self.sound_effects["game-over"] = sound
+                    # manter volume padrão
+                    self.sound_effects["game-over"].set_volume(self.sound_volume)
+                    print("Som de game over carregado com sucesso")
+            else:
+                print("Aviso: Arquivo sounds/game-over.mp3 não encontrado")
+
         except pygame.error as e:
             print(f"Erro ao carregar efeitos sonoros: {e}")
 
