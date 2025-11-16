@@ -13,6 +13,8 @@ class Laser:
         self.speed = 5  # Velocidade do laser
         self.direction = direction  # -1 para esquerda, 1 para direita
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        # Controle de colisão: permite desabilitar a colisão sem remover o laser
+        self.collision_enabled = True
 
         Laser._id_counter += 1
         self.id = Laser._id_counter

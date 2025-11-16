@@ -154,3 +154,10 @@ class Alien:
         self.is_dead = True
         self.is_shooting = False
         self.death_timer = 0
+        # Ao morrer, desabilitar colisão dos lasers existentes (continuam apenas visuais)
+        for laser in getattr(self, "lasers", []):
+            try:
+                laser.collision_enabled = False
+            except Exception:
+                # Caso o objeto não possua a flag, ignorar silenciosamente
+                pass

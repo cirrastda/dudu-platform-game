@@ -1864,6 +1864,9 @@ class Game:
                     if hasattr(alien, "is_dead") and alien.is_dead:
                         continue
                     for laser in alien.lasers[:]:
+                        # Ignorar lasers marcados como sem colisão (ex.: alien morto)
+                        if not getattr(laser, "collision_enabled", True):
+                            continue
                         if self.player.rect.colliderect(laser.rect):
                             if self.player.is_invulnerable:
                                 # Jogador invulnerável: explodir laser sem causar dano
