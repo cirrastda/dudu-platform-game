@@ -1598,31 +1598,23 @@ class Game:
                                 visible_fires.append(fire)
                     self.fires = visible_fires
 
-            # Atualizar tartarugas e aranhas com culling e remoção quando update retorna False
+            # Atualizar tartarugas removendo apenas as que finalizaram a morte
             if self.current_level <= 20:
-                visible_turtles = []
+                active_turtles = []
                 for turtle in self.turtles:
-                    # Atualizar e manter apenas as ativas
+                    # Atualizar e manter apenas as ativas (True)
                     if turtle.update():
-                        # Culling: só manter tartarugas próximas à área visível
-                        if (
-                            turtle.x > self.camera_x - 100
-                            and turtle.x < self.camera_x + WIDTH + 100
-                        ):
-                            visible_turtles.append(turtle)
-                self.turtles = visible_turtles
+                        active_turtles.append(turtle)
+                # Não aplicar culling por posição aqui; o desenho já culla por visibilidade
+                self.turtles = active_turtles
             else:
-                visible_spiders = []
+                active_spiders = []
                 for spider in self.spiders:
-                    # Atualizar e manter apenas as ativas
+                    # Atualizar e manter apenas as ativas (True)
                     if spider.update(self.camera_x):
-                        # Culling: só manter aranhas próximas à área visível
-                        if (
-                            spider.x > self.camera_x - 100
-                            and spider.x < self.camera_x + WIDTH + 100
-                        ):
-                            visible_spiders.append(spider)
-                self.spiders = visible_spiders
+                        active_spiders.append(spider)
+                # Não aplicar culling por posição aqui; o desenho já culla por visibilidade
+                self.spiders = active_spiders
 
             # Atualizar robôs (níveis 31-40) com culling por update
             if 31 <= self.current_level <= 40:
