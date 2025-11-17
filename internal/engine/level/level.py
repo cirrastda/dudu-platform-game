@@ -79,20 +79,39 @@ class Level:
 
     def get_background_for_level(self, level):
         """Retorna o arquivo de fundo apropriado para o nível"""
-        if 1 <= level <= 10:
-            return "imagens/fundo3.png"
-        elif 11 <= level <= 20:
-            return "imagens/fundo5.png"
-        elif 21 <= level <= 30:
-            return "imagens/fundo7.png"
-        elif 31 <= level <= 40:
-            return "imagens/fundoMundo4.2.jpg"
-        elif 41 <= level <= 50:
-            # Mundo espacial: usar fundo do espaço
-            return "imagens/fundoEspaco.png"
+        # Fases 1 a 6
+        if 1 <= level <= 6:
+            return "imagens/bg/fase 1.png"
+        # Fases 7 a 10
+        elif 7 <= level <= 10:
+            return "imagens/bg/fase 1.5.png"
+        # Fases 11 a 16
+        elif 11 <= level <= 16:
+            return "imagens/bg/fase 2.png"
+        # Fases 17 a 20
+        elif 17 <= level <= 20:
+            return "imagens/bg/fase 2.5.png"
+        # Fases 21 a 26
+        elif 21 <= level <= 26:
+            return "imagens/bg/fase 3.png"
+        # Fases 27 a 30
+        elif 27 <= level <= 30:
+            return "imagens/bg/fase 3.5.png"
+        # Fases 31 a 36
+        elif 31 <= level <= 36:
+            return "imagens/bg/fase 4.png"
+        # Fases 37 a 40
+        elif 37 <= level <= 40:
+            return "imagens/bg/fase 4.5.png"
+        # Fases 41 a 46
+        elif 41 <= level <= 46:
+            return "imagens/bg/fase 5.png"
+        # Fases 47 a 50
+        elif 47 <= level <= 50:
+            return "imagens/bg/fase 5.5.png"
+        # Fase 51
         elif level == 51:
-            # Fase final da nave
-            return "imagens/fundoNave.png"
+            return "imagens/bg/fase 6.png"
         else:
             # Fallback para níveis fora do range esperado
             return "imagens/fundo6.png"
