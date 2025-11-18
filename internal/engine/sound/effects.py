@@ -123,6 +123,18 @@ class SoundEffects:
             else:
                 print("Aviso: Arquivo sounds/bird-hit.mp3 não encontrado")
 
+            # Carregar som de acerto em gota de chuva
+            water_hit_path = "sounds/water-hit.mp3"
+            if os.path.exists(resource_path(water_hit_path)):
+                sound = cache.get_sound(water_hit_path)
+                if sound:
+                    self.sound_effects["water-hit"] = sound
+                    # um pouco mais alto para destacar o estouro da gota
+                    self.sound_effects["water-hit"].set_volume(min(1.0, self.sound_volume * 1.2))
+                    print("Som de water-hit carregado com sucesso")
+            else:
+                print("Aviso: Arquivo sounds/water-hit.mp3 não encontrado")
+
             # Carregar som de jogador atingido
             player_hit_path = "sounds/player-hit.mp3"
             if os.path.exists(resource_path(player_hit_path)):

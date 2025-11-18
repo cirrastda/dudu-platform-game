@@ -314,6 +314,12 @@ class Game:
         # Sistema de pássaros
         self.birds = []
 
+        # Sistema de gotas de chuva (fases 7-10)
+        self.raindrops = []
+        self.raindrop_spawn_timer = 0
+        self.raindrops_per_spawn = 1
+        self.raindrop_spawn_interval = 150
+
         # Sistema de tartarugas
         self.turtles = []
 
@@ -360,6 +366,8 @@ class Game:
         # Ajustar dificuldade baseada no nível
         self.birds_per_spawn = Level.get_birds_per_spawn(self.current_level)
         self.bird_spawn_interval = Level.get_bird_spawn_interval(self.current_level)
+        # Intervalo das gotas acompanha o dos pássaros por padrão
+        self.raindrop_spawn_interval = self.bird_spawn_interval
 
         # Fonte para texto (HUD mais legível e em negrito)
         try:

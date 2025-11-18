@@ -8,6 +8,7 @@ from internal.resources.enemies.bat import Bat
 from internal.resources.enemies.airplane import Airplane
 from internal.resources.enemies.flying_disk import FlyingDisk
 from internal.resources.enemies.fire import Fire
+from internal.resources.enemies.raindrop import Raindrop
 
 
 class Update:
@@ -269,6 +270,22 @@ class Update:
                         )
                         g.birds.append(Bird(bird_x, bird_y, bird_images))
                     g.bird_spawn_timer = 0
+                # Spawn de gotas de chuva nas fases 7-10
+                if 7 <= g.current_level <= 10:
+                    g.raindrop_spawn_timer += 1
+                    if g.raindrop_spawn_timer >= g.raindrop_spawn_interval:
+                        import random
+
+                        for i in range(getattr(g, "raindrops_per_spawn", 1)):
+                            drop_x = g.camera_x + random.randint(0, WIDTH)
+                            drop_y = -20 - (i * 15)
+                            drop_img = (
+                                g.image.raindrop_img
+                                if hasattr(g.image, "raindrop_img")
+                                else None
+                            )
+                            g.raindrops.append(Raindrop(drop_x, drop_y, drop_img))
+                        g.raindrop_spawn_timer = 0
             elif g.current_level <= 30:
                 # Spawn de novos morcegos (níveis 21-30)
                 g.bat_spawn_timer += 1
@@ -348,6 +365,17 @@ class Update:
                         ):
                             visible_birds.append(bird)
                 g.birds = visible_birds
+                # Atualizar gotas de chuva (7-10)
+                if 7 <= g.current_level <= 10:
+                    visible_drops = []
+                    for drop in getattr(g, "raindrops", []):
+                        if drop.update():
+                            if (
+                                drop.x > g.camera_x - 100
+                                and drop.x < g.camera_x + WIDTH + 100
+                            ):
+                                visible_drops.append(drop)
+                    g.raindrops = visible_drops
             elif g.current_level <= 30:
                 visible_bats = []
                 for bat in g.bats:
@@ -465,6 +493,18 @@ class Update:
                             g.sound_effects.play_sound_effect("bird-hit")
                             g.add_score(100)
                             break
+                    # Colisões com gotas de chuva (7-10)
+                    if 7 <= g.current_level <= 10:
+                        for drop in g.raindrops[:]:
+                            if getattr(drop, "is_dead", False):
+                                continue
+                            if bullet.rect.colliderect(drop.rect):
+                                g.player.bullets.remove(bullet)
+                                g.return_bullet_to_pool(bullet)
+                                drop.die()
+                                g.sound_effects.play_sound_effect("water-hit")
+                                g.add_score(100)
+                                break
             elif g.current_level <= 30:
                 for bullet in g.player.bullets[:]:
                     for bat in g.bats[:]:
@@ -727,6 +767,35 @@ class Update:
                                             g.state = GameState.GAME_OVER
                                         g.start_game_over_hold()
                         break
+                # Colisão com gotas de chuva (fases 7-10)
+                if 7 <= g.current_level <= 10:
+                    for drop in g.raindrops[:]:
+                        if g.player.rect.colliderect(drop.rect):
+                            if getattr(drop, "is_dead", False):
+                                continue
+                            # Pulo destrói a gota; invulnerável também destrói
+                            if g.player.is_invulnerable or not getattr(g.player, "on_ground", True):
+                                drop.die()
+                                g.sound_effects.play_sound_effect("water-hit")
+                                g.add_score(20)
+                            else:
+                                if not g.player.is_hit:
+                                    if getattr(g, "shield_active", False):
+                                        g.shield_active = False
+                                        drop.die()
+                                        g.sound_effects.play_sound_effect("water-hit")
+                                    else:
+                                        g.player.take_hit()
+                                        g.sound_effects.play_sound_effect("player-hit")
+                                        drop.die()
+                                        g.lives -= 1
+                                        if g.lives <= 0:
+                                            if g.ranking_manager.is_high_score(g.score):
+                                                g.state = GameState.ENTER_NAME
+                                            else:
+                                                g.state = GameState.GAME_OVER
+                                            g.start_game_over_hold()
+                            break
             elif g.current_level <= 30:
                 for bat in g.bats[:]:
                     distance_x = abs(bat.x - g.player.x)

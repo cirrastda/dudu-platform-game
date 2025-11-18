@@ -373,6 +373,15 @@ class Image:
             )
             self.explosion_image = self.explosion_img  # Alias para compatibilidade
 
+            # Carregar imagem da gota de chuva (elemento das fases 7-10)
+            try:
+                self.raindrop_img = cache.get_image(
+                    "imagens/elementos/chuva.png", (20, 20)
+                )
+            except pygame.error as e:
+                print(f"Erro ao carregar imagem da gota de chuva: {e}")
+                self.raindrop_img = None
+
             # Carregar imagem de vida extra (item colecionável)
             self.extra_life_img = cache.get_image(
                 "imagens/elementos/vida.png", (24, 24)

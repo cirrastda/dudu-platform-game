@@ -17,12 +17,15 @@ class DifficultyOps:
         if diff == Difficulty.EASY:
             qty_factor = 0.7
             interval_factor = 1.5
+            drop_interval_factor = 1.1
         elif diff == Difficulty.HARD:
             qty_factor = 1.4
             interval_factor = 0.7
+            drop_interval_factor = 0.8
         else:
             qty_factor = 1.0
             interval_factor = 1.0
+            drop_interval_factor = 1.0
 
         # Faixas de níveis e parâmetros base
         if g.current_level <= 20:
@@ -33,6 +36,19 @@ class DifficultyOps:
             g.birds_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
             # Respeitar limites da progressão (mínimo 60 como nas funções de Level)
             g.bird_spawn_interval = max(60, int(base_interval * interval_factor))
+            # Gotas de chuva (fases 7-10): quantidade ajustada por dificuldade 1x/2x/3x
+            if 7 <= g.current_level <= 10:
+                # Quantidade baseada na dificuldade: EASY=1, NORMAL=2, HARD=3
+                if diff == Difficulty.EASY:
+                    g.raindrops_per_spawn = 3
+                elif diff == Difficulty.HARD:
+                    g.raindrops_per_spawn = 9
+                else:
+                    g.raindrops_per_spawn = 6
+                # Intervalo acompanha o dos pássaros com fator de dificuldade
+                g.raindrop_spawn_interval = max(
+                    60, int(base_interval * drop_interval_factor)
+                )
         elif g.current_level <= 30:
             # Morcegos: seguem mesma progressão dos pássaros 11-20
             base_qty = Level.get_birds_per_spawn(g.current_level)

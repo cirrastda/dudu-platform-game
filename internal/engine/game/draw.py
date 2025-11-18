@@ -260,6 +260,19 @@ class Draw:
                         bird.draw(game.screen)
                         # Restaurar posição original
                         bird.x = original_bird_x
+                # Desenhar gotas de chuva (fases 7-10)
+                if 7 <= game.current_level <= 10 and hasattr(game, "raindrops"):
+                    for drop in game.raindrops:
+                        drop_x = drop.x - game.camera_x
+                        if drop_x > -30 and drop_x < WIDTH + 30:  # Só desenhar se visível
+                            # Salvar posição original da gota
+                            original_drop_x = drop.x
+                            # Ajustar posição para câmera
+                            drop.x = drop_x
+                            # Chamar método draw da gota
+                            drop.draw(game.screen, game.camera_x)
+                            # Restaurar posição original
+                            drop.x = original_drop_x
             elif game.current_level <= 30:
                 for bat in game.bats:
                     bat_x = bat.x - game.camera_x
