@@ -63,8 +63,29 @@ class SoundEffects:
                         min(1.0, self.sound_volume * 1.5)
                     )
                     print("Som de vida extra carregado com sucesso")
+                    # Alias para coletar powerups quando não houver som dedicado
+                    # Se existir um som específico de coletar, preferir ele
+                    collect_path = "sounds/collect.mp3"
+                    if os.path.exists(resource_path(collect_path)):
+                        collect_sound = cache.get_sound(collect_path)
+                        if collect_sound:
+                            self.sound_effects["collect"] = collect_sound
+                            self.sound_effects["collect"].set_volume(self.sound_volume)
+                            print("Som de coleta carregado com sucesso")
+                    else:
+                        # Mapear 'collect' para 'new-life' como fallback
+                        self.sound_effects["collect"] = self.sound_effects["new-life"]
+                        print("Som 'collect' não encontrado; usando fallback de 'new-life'")
             else:
                 print("Aviso: Arquivo sounds/new-life.mp3 não encontrado")
+                # Ainda tentar carregar um som dedicado de 'collect' se existir
+                collect_path = "sounds/collect.mp3"
+                if os.path.exists(resource_path(collect_path)):
+                    collect_sound = cache.get_sound(collect_path)
+                    if collect_sound:
+                        self.sound_effects["collect"] = collect_sound
+                        self.sound_effects["collect"].set_volume(self.sound_volume)
+                        print("Som de coleta carregado com sucesso")
 
             # Carregar som de fim de fase
             level_end_path = "sounds/level-end.mp3"
