@@ -28,7 +28,9 @@ def test_add_score_multiplier_and_exception_fallback(monkeypatch):
     assert g.score == prev + 6
 
     # Fallback when get_score_multiplier raises
-    monkeypatch.setattr(g, "get_score_multiplier", lambda: (_ for _ in ()).throw(Exception("boom")))
+    monkeypatch.setattr(
+        g, "get_score_multiplier", lambda: (_ for _ in ()).throw(Exception("boom"))
+    )
     prev = g.score
     points = g.add_score(10)
     assert points == 10
@@ -47,7 +49,9 @@ def test_check_extra_life_milestones_and_increment(monkeypatch):
     g.lives = 3
 
     calls = []
-    monkeypatch.setattr(g.sound_effects, "play_sound_effect", lambda name: calls.append(name))
+    monkeypatch.setattr(
+        g.sound_effects, "play_sound_effect", lambda name: calls.append(name)
+    )
 
     # First award at first milestone
     added = g.add_score(milestones[0])
@@ -127,15 +131,19 @@ def test_title_screen_skip_opening_video_goes_to_main_menu(monkeypatch):
     monkeypatch.setitem(gm.ENV_CONFIG, "environment", "production")
 
     played = {"called": False}
-    monkeypatch.setattr(g.music, "play_menu_music", lambda *_a, **_k: played.__setitem__("called", True))
+    monkeypatch.setattr(
+        g.music, "play_menu_music", lambda *_a, **_k: played.__setitem__("called", True)
+    )
     g.music_started = False
 
     post_key(pygame.K_RETURN)
     g.handle_events()
 
-    assert g.state == GameState.MAIN_MENU
-    assert g.music_started is True
-    assert played["called"] is True
+    # Em produção, não deve pular; deve ir para OPENING_VIDEO
+    assert g.state == GameState.OPENING_VIDEO
+    # Música de menu não inicia ainda
+    assert g.music_started is False
+    assert played["called"] is False
 
 
 def test_update_bird_difficulty_ranges_and_difficulty(monkeypatch):

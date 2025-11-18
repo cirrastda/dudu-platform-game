@@ -31,15 +31,22 @@ class FakeSurface:
 
     def get_rect(self, **kwargs):
         # Very simple rect-like tuple for center positioning
-        return types.SimpleNamespace(**{
-            "center": kwargs.get("center", (self.w // 2, self.h // 2)),
-            "inflate": lambda a, b: (a, b),
-        })
+        return types.SimpleNamespace(
+            **{
+                "center": kwargs.get("center", (self.w // 2, self.h // 2)),
+                "inflate": lambda a, b: (a, b),
+            }
+        )
 
 
 class FakeFont:
     def render(self, *_args, **_kwargs):
         return FakeSurface(100, 20)
+
+    def size(self, text):
+        # Approximate width based on length to support truncation logic in tests
+        width = max(10, len(str(text)) * 8)
+        return (width, 20)
 
 
 class FakeRect:
@@ -67,7 +74,10 @@ class FakeRect:
 
     def colliderect(self, other):
         return not (
-            self.right <= other.x or other.right <= self.x or self.bottom <= other.y or other.bottom <= self.y
+            self.right <= other.x
+            or other.right <= self.x
+            or self.bottom <= other.y
+            or other.bottom <= self.y
         )
 
 
@@ -101,6 +111,7 @@ class FakeTime:
 
     def get_ticks(self):
         return self.ticks
+
     def Clock(self):
         return types.SimpleNamespace(tick=lambda fps: None)
 
@@ -230,7 +241,9 @@ class FakePlayer:
     def update(self, platforms, bullet_img, camera_x, joystick, game):
         # Simular uma ação de pulo seguida de tiro
         if hasattr(game, "_next_player_action"):
-            action = game._next_player_action.pop(0) if game._next_player_action else None
+            action = (
+                game._next_player_action.pop(0) if game._next_player_action else None
+            )
             if action == "jump":
                 return "jump"
             if action == "shot":
@@ -259,8 +272,10 @@ class DummyObj:
         self.id = id_
         self.scale_x = 1
         self.scale_y = 1
+
     def draw(self, _screen):
         pass
+
     def update(self, *args, **kwargs):
         # Keep object "visible" by default during update cycles
         return True
@@ -307,43 +322,73 @@ def headless_pygame(monkeypatch):
     monkeypatch.setattr(game_module.pygame, "K_ESCAPE", pg.K_ESCAPE, raising=False)
 
     # Patch functions
-    monkeypatch.setattr(game_module.pygame, "event", types.SimpleNamespace(get=lambda: []), raising=False)
-    monkeypatch.setattr(game_module.pygame, "key", types.SimpleNamespace(get_pressed=lambda: pg.key_get_pressed()), raising=False)
+    monkeypatch.setattr(
+        game_module.pygame,
+        "event",
+        types.SimpleNamespace(get=lambda: []),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        game_module.pygame,
+        "key",
+        types.SimpleNamespace(get_pressed=lambda: pg.key_get_pressed()),
+        raising=False,
+    )
 
     # Fonts
-    monkeypatch.setattr(game_module.pygame, "font", types.SimpleNamespace(Font=lambda *_a, **_k: FakeFont()), raising=False)
+    monkeypatch.setattr(
+        game_module.pygame,
+        "font",
+        types.SimpleNamespace(Font=lambda *_a, **_k: FakeFont()),
+        raising=False,
+    )
 
     # Screen.init to set screen surface
     import internal.engine.screen as screen_module
+
     def fake_screen_init(game):
-        game.screen_manager = types.SimpleNamespace(game_surface=FakeSurface(1024, 768), screen_buffer=FakeSurface(1024, 768), scale_x=1.0, scale_y=1.0)
+        game.screen_manager = types.SimpleNamespace(
+            game_surface=FakeSurface(1024, 768),
+            screen_buffer=FakeSurface(1024, 768),
+            scale_x=1.0,
+            scale_y=1.0,
+        )
         game.screen = game.screen_manager.game_surface
         game.is_fullscreen = False
+
     monkeypatch.setattr(screen_module.Screen, "init", fake_screen_init)
 
     # TitleScreen.show no-op
     import internal.engine.title as title_module
+
     monkeypatch.setattr(title_module.TitleScreen, "show", lambda game: None)
 
     # Music and effects
     import internal.engine.game as gm
+
     gm.Music = lambda: FakeMusic()
     gm.SoundEffects = lambda: FakeSoundEffects()
 
     # Mixer.init no-op
     import internal.engine.sound.mixer as mixer_module
+
     monkeypatch.setattr(mixer_module.Mixer, "init", lambda _pg: None)
 
     # pygame.mixer.music.stop no-op used in credits draw
-    monkeypatch.setattr(game_module.pygame, "mixer", types.SimpleNamespace(
-        music=types.SimpleNamespace(stop=lambda: None)
-    ), raising=False)
+    monkeypatch.setattr(
+        game_module.pygame,
+        "mixer",
+        types.SimpleNamespace(music=types.SimpleNamespace(stop=lambda: None)),
+        raising=False,
+    )
 
     # Joystick.init: inject FakeJoystick and mark as disconnected by default
     import internal.engine.joystick as joystick_module
+
     def fake_joystick_init(game):
         game.joystick = FakeJoystick()
         game.joystick_connected = False
+
     monkeypatch.setattr(joystick_module.Joystick, "init", fake_joystick_init)
 
     # Video players
@@ -353,6 +398,7 @@ def headless_pygame(monkeypatch):
 
 def make_game(monkeypatch, env=None):
     import internal.engine.game as game_module
+
     # Patch ENV_CONFIG before Game() is instantiated
     env_conf = {"environment": "development"}
     if env:
@@ -418,11 +464,16 @@ def make_game(monkeypatch, env=None):
 
 def test_splash_key_dev_skips_to_title(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch, env={"environment": "development"})
 
     # Feed a KEYDOWN event to handle_events
-    key_event = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [key_event]))
+    key_event = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [key_event])
+    )
     g.state = gm.GameState.SPLASH
     assert g.handle_events() is True
     assert g.state == gm.GameState.TITLE_SCREEN
@@ -430,29 +481,45 @@ def test_splash_key_dev_skips_to_title(monkeypatch):
 
 def test_title_to_opening_video_and_skip_to_menu(monkeypatch):
     import internal.engine.game as gm
-    g = make_game(monkeypatch, env={"environment": "production", "skip-opening-video": "0"})
+
+    g = make_game(
+        monkeypatch, env={"environment": "production", "skip-opening-video": "0"}
+    )
     g.state = gm.GameState.TITLE_SCREEN
-    key_event = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [key_event]))
+    key_event = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [key_event])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.OPENING_VIDEO
 
     # Now press any key to stop video and go to main menu
     g.state = gm.GameState.OPENING_VIDEO
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [key_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [key_event])
+    )
     assert g.handle_events() is True
-    assert g.state == gm.GameState.MAIN_MENU
-    assert g.music.play_menu_calls >= 1
+    # Comportamento atualizado: durante OPENING_VIDEO, teclas não pulam para o menu
+    assert g.state == gm.GameState.OPENING_VIDEO
+    # Música de menu não deve tocar até o vídeo finalizar
+    assert g.music.play_menu_calls == 0
 
 
 def test_title_joystick_to_opening_and_skip_to_menu(monkeypatch):
     import internal.engine.game as gm
-    g = make_game(monkeypatch, env={"environment": "production", "skip-opening-video": "0"})
+
+    g = make_game(
+        monkeypatch, env={"environment": "production", "skip-opening-video": "0"}
+    )
     # Navigate from title to opening video via joystick
     g.state = gm.GameState.TITLE_SCREEN
     g.joystick_connected = True
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=0)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.OPENING_VIDEO
     assert g.video_player._loaded is True
@@ -460,35 +527,60 @@ def test_title_joystick_to_opening_and_skip_to_menu(monkeypatch):
 
     # Any joystick button during opening video skips to main menu
     g.state = gm.GameState.OPENING_VIDEO
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
-    assert g.state == gm.GameState.MAIN_MENU
-    assert g.music.play_menu_calls >= 1
+    # Comportamento atualizado: durante OPENING_VIDEO, joystick não pula para o menu
+    assert g.state == gm.GameState.OPENING_VIDEO
+    # Música de menu não deve tocar até o vídeo finalizar
+    assert g.music.play_menu_calls == 0
 
 
 def test_title_skip_opening_video_by_env_joystick(monkeypatch):
     import internal.engine.game as gm
-    # In production with skip-opening-video enabled, joystick should go to MAIN_MENU directly
-    g = make_game(monkeypatch, env={"environment": "production", "skip-opening-video": "1"})
+
+    # Em produção com skip-opening-video habilitado, deve ir para OPENING_VIDEO (não pula direto)
+    g = make_game(
+        monkeypatch, env={"environment": "production", "skip-opening-video": "1"}
+    )
     g.state = gm.GameState.TITLE_SCREEN
     g.joystick_connected = True
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=0)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
-    assert g.state == gm.GameState.MAIN_MENU
-    assert g.music.play_menu_calls >= 1
+    # Agora deve ir para OPENING_VIDEO e iniciar reprodução
+    assert g.state == gm.GameState.OPENING_VIDEO
+    assert getattr(g.video_player, "_loaded", True) is True
+    assert getattr(g.video_player, "_started", True) is True
+
+    # Comportamento atualizado: qualquer botão durante OPENING_VIDEO NÃO muda de estado
+    g.state = gm.GameState.OPENING_VIDEO
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
+    assert g.handle_events() is True
+    assert g.state == gm.GameState.OPENING_VIDEO
+    assert g.music.play_menu_calls == 0
 
 
 def test_opening_video_load_failure_falls_back_to_menu(monkeypatch):
     import internal.engine.game as gm
-    g = make_game(monkeypatch, env={"environment": "production", "skip-opening-video": "0"})
+
+    g = make_game(
+        monkeypatch, env={"environment": "production", "skip-opening-video": "0"}
+    )
     # Force video load failure
     g.video_player._loaded = False
     g.video_player.load_video = lambda _path: False
     g.state = gm.GameState.TITLE_SCREEN
     g.joystick_connected = True
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=0)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.MAIN_MENU
     assert g.music.play_menu_calls >= 1
@@ -496,24 +588,31 @@ def test_opening_video_load_failure_falls_back_to_menu(monkeypatch):
 
 def test_joystick_main_menu_selection_starts_difficulty(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.MAIN_MENU
     g.joystick_connected = True
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=0)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     g.handle_events()
     assert g.state == gm.GameState.SELECT_DIFFICULTY
 
 
 def test_draw_opening_and_ending_video_calls_draw(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # Track draw calls
     calls = {"opening": 0, "ending": 0}
+
     def opening_draw(screen):
         calls["opening"] += 1
+
     def ending_draw(screen):
         calls["ending"] += 1
+
     g.video_player.draw = opening_draw
     g.ending_video_player.draw = ending_draw
 
@@ -528,6 +627,7 @@ def test_draw_opening_and_ending_video_calls_draw(monkeypatch):
 
 def test_draw_game_over_renders_menu_and_instructions(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.GAME_OVER
     g.score = 123
@@ -539,6 +639,7 @@ def test_draw_game_over_renders_menu_and_instructions(monkeypatch):
 
 def test_draw_victory_renders_texts(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.VICTORY
     pre_blits = len(g.screen.blit_calls)
@@ -549,6 +650,7 @@ def test_draw_victory_renders_texts(monkeypatch):
 
 def test_draw_enter_name_renders_fields(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.ENTER_NAME
     g.player_name = "PLAYER"
@@ -560,12 +662,15 @@ def test_draw_enter_name_renders_fields(monkeypatch):
 
 def test_draw_show_ranking_renders_table(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # Stub ranking manager
-    g.ranking_manager = types.SimpleNamespace(get_rankings=lambda: [
-        {"name": "AAA", "score": 1000},
-        {"name": "BBB", "score": 750},
-    ])
+    g.ranking_manager = types.SimpleNamespace(
+        get_rankings=lambda: [
+            {"name": "AAA", "score": 1000},
+            {"name": "BBB", "score": 750},
+        ]
+    )
     g.player_name = "AAA"
     g.state = gm.GameState.SHOW_RANKING
     pre_blits = len(g.screen.blit_calls)
@@ -576,6 +681,7 @@ def test_draw_show_ranking_renders_table(monkeypatch):
 
 def test_draw_fim_screen_shows_skip_hint(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.FIM_SCREEN
     # Ensure timer passes threshold to draw skip hint
@@ -590,6 +696,7 @@ def test_draw_fim_screen_shows_skip_hint(monkeypatch):
 
 def test_draw_credits_menu_and_cinematic_scroll_finish(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # Credits menu variant
     g.state = gm.GameState.CREDITS
@@ -612,6 +719,7 @@ def test_draw_credits_menu_and_cinematic_scroll_finish(monkeypatch):
 
 def test_update_credits_menu_loop_reset(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # Start credits in menu type and simulate long scroll
     g.state = gm.GameState.CREDITS
@@ -627,11 +735,16 @@ def test_update_credits_menu_loop_reset(monkeypatch):
 
 def test_fim_screen_key_and_joystick_to_credits(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # KEYDOWN path
     g.state = gm.GameState.FIM_SCREEN
-    key_event = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [key_event]))
+    key_event = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [key_event])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.CREDITS
     assert g.credits_type == "ending"
@@ -640,7 +753,9 @@ def test_fim_screen_key_and_joystick_to_credits(monkeypatch):
     g.state = gm.GameState.FIM_SCREEN
     g.joystick_connected = True
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=0)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.CREDITS
     assert g.credits_type == "ending"
@@ -648,12 +763,17 @@ def test_fim_screen_key_and_joystick_to_credits(monkeypatch):
 
 def test_credits_menu_exit_via_key_and_joystick(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # Credits react only when type == 'menu'
     g.state = gm.GameState.CREDITS
     g.credits_type = "menu"
-    ev_escape = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_ESCAPE, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_escape]))
+    ev_escape = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_ESCAPE, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_escape])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.MAIN_MENU
 
@@ -662,19 +782,26 @@ def test_credits_menu_exit_via_key_and_joystick(monkeypatch):
     g.credits_type = "menu"
     g.joystick_connected = True
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=1)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.MAIN_MENU
 
 
 def test_records_back_to_previous_or_menu_via_key_and_joystick(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # Set previous state and exit via KEYDOWN
     g.state = gm.GameState.RECORDS
     g.previous_state_before_records = gm.GameState.GAME_OVER
-    ev_enter = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_enter]))
+    ev_enter = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_enter])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.GAME_OVER
 
@@ -683,29 +810,38 @@ def test_records_back_to_previous_or_menu_via_key_and_joystick(monkeypatch):
     g.previous_state_before_records = None
     g.joystick_connected = True
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=6)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.MAIN_MENU
 
 
 def test_enter_name_confirm_via_joystick(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
+
     # Ranking stub
     class FakeRanking:
         def __init__(self):
             self.added = None
+
         def add_score(self, name, score):
             self.added = (name, score)
+
         def is_high_score(self, score):
             return True
+
     g.ranking_manager = FakeRanking()
     # Enter name state and confirm via joystick
     g.state = gm.GameState.ENTER_NAME
     g.player_name = "ABC"
     g.joystick_connected = True
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=6)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
     assert g.ranking_manager.added == ("ABC", g.score)
     assert g.state == gm.GameState.SHOW_RANKING
@@ -713,13 +849,16 @@ def test_enter_name_confirm_via_joystick(monkeypatch):
 
 def test_game_over_joystick_records_and_exit(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.GAME_OVER
     g.joystick_connected = True
     # Select Recordes
     g.game_over_selected = 1
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=0)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.RECORDS
     assert g.previous_state_before_records == gm.GameState.GAME_OVER
@@ -727,12 +866,15 @@ def test_game_over_joystick_records_and_exit(monkeypatch):
     # Select Sair
     g.state = gm.GameState.GAME_OVER
     g.game_over_selected = 2
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is False
 
 
 def test_ending_video_update_load_and_finish(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # Load success: sets loaded and starts playback
     g.state = gm.GameState.ENDING_VIDEO
@@ -757,17 +899,26 @@ def test_ending_video_update_load_and_finish(monkeypatch):
 
 def test_handle_menu_selection_recordes_creditos_e_sair(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # Patch sys.exit to catch call
     import internal.engine.game as game_module
+
     called = {"exit": False}
+
     def fake_quit():
         return None
+
     def fake_exit():
         called["exit"] = True
         raise SystemExit
-    monkeypatch.setattr(game_module, "pygame", types.SimpleNamespace(quit=fake_quit), raising=True)
-    monkeypatch.setattr(game_module, "sys", types.SimpleNamespace(exit=fake_exit), raising=True)
+
+    monkeypatch.setattr(
+        game_module, "pygame", types.SimpleNamespace(quit=fake_quit), raising=True
+    )
+    monkeypatch.setattr(
+        game_module, "sys", types.SimpleNamespace(exit=fake_exit), raising=True
+    )
 
     # Recordes
     g.menu_selected = g.menu_options.index("Recordes")
@@ -791,12 +942,15 @@ def test_handle_menu_selection_recordes_creditos_e_sair(monkeypatch):
 
 def test_show_ranking_joystick_back_to_previous(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.SHOW_RANKING
     g.previous_state_before_ranking = gm.GameState.VICTORY
     g.joystick_connected = True
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=1)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.VICTORY
     assert g.previous_state_before_ranking is None
@@ -804,17 +958,21 @@ def test_show_ranking_joystick_back_to_previous(monkeypatch):
 
 def test_select_difficulty_joystick_back_to_menu(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.SELECT_DIFFICULTY
     g.joystick_connected = True
     joy_event = types.SimpleNamespace(type=gm.pygame.JOYBUTTONDOWN, button=1)
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event]))
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [joy_event])
+    )
     assert g.handle_events() is True
     assert g.state == gm.GameState.MAIN_MENU
 
 
 def test_playing_joystick_button_mapping_no_errors(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.PLAYING
     g.joystick_connected = True
@@ -829,13 +987,20 @@ def test_playing_joystick_button_mapping_no_errors(monkeypatch):
 
 def test_game_over_key_navigation_up_down(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.GAME_OVER
     g.game_over_selected = 0
     # Navigate down then up
-    ev_down = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_DOWN, unicode="")
-    ev_up = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_UP, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_down]))
+    ev_down = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_DOWN, unicode=""
+    )
+    ev_up = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_UP, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_down])
+    )
     g.handle_events()
     assert g.game_over_selected == 1
     monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_up]))
@@ -845,10 +1010,15 @@ def test_game_over_key_navigation_up_down(monkeypatch):
 
 def test_main_menu_navigation_and_start_selection(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.MAIN_MENU
-    ev_enter = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_enter]))
+    ev_enter = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_enter])
+    )
     g.handle_events()
     # Menu selection triggers handle_menu_selection -> SELECT_DIFFICULTY
     assert g.state == gm.GameState.SELECT_DIFFICULTY
@@ -856,13 +1026,19 @@ def test_main_menu_navigation_and_start_selection(monkeypatch):
 
 def test_select_difficulty_confirms_and_starts_playing(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.SELECT_DIFFICULTY
     # Confirm difficulty
-    ev_confirm = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_confirm]))
+    ev_confirm = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_confirm])
+    )
     # Patch Level.init_level to a no-op
     import internal.engine.level.level as level_module
+
     monkeypatch.setattr(level_module.Level, "init_level", lambda game: None)
     g.handle_events()
     assert g.state == gm.GameState.PLAYING
@@ -870,13 +1046,17 @@ def test_select_difficulty_confirms_and_starts_playing(monkeypatch):
 
 def test_enter_name_flow_and_show_ranking(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
+
     # Force ranking path
     class FakeRanking:
         def is_high_score(self, score):
             return True
+
         def add_score(self, name, score):
             self.last = (name, score)
+
     g.ranking_manager = FakeRanking()
 
     # Simulate player death driving to ENTER_NAME
@@ -888,21 +1068,29 @@ def test_enter_name_flow_and_show_ranking(monkeypatch):
 
     # Type name and press enter
     ev_a = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=0, unicode="A")
-    ev_enter = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_a, ev_enter]))
+    ev_enter = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_a, ev_enter])
+    )
     g.handle_events()
     assert g.state == gm.GameState.SHOW_RANKING
 
 
 def test_show_ranking_escape_returns_previous(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.SHOW_RANKING
     g.previous_state_before_ranking = gm.GameState.GAME_OVER
-    ev_esc = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_ESCAPE, unicode="")
+    ev_esc = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_ESCAPE, unicode=""
+    )
     monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_esc]))
     # Patch Level.init_level (called on ESC fallback)
     import internal.engine.level.level as level_module
+
     monkeypatch.setattr(level_module.Level, "init_level", lambda game: None)
     g.handle_events()
     assert g.state == gm.GameState.GAME_OVER
@@ -910,6 +1098,7 @@ def test_show_ranking_escape_returns_previous(monkeypatch):
 
 def test_update_splash_advances_to_title(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.SPLASH
     # Run update until splash_duration
@@ -920,6 +1109,7 @@ def test_update_splash_advances_to_title(monkeypatch):
 
 def test_opening_video_update_finish_to_menu(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.OPENING_VIDEO
     # Mark video finished
@@ -931,6 +1121,7 @@ def test_opening_video_update_finish_to_menu(monkeypatch):
 
 def test_fim_screen_transitions_to_credits(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.FIM_SCREEN
     g.fim_screen_timer = 179
@@ -940,6 +1131,7 @@ def test_fim_screen_transitions_to_credits(monkeypatch):
 
 def test_playing_actions_and_death_paths(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # Jump then shot
     g.state = gm.GameState.PLAYING
@@ -953,6 +1145,7 @@ def test_playing_actions_and_death_paths(monkeypatch):
     class FakeRankingLow:
         def is_high_score(self, score):
             return False
+
     g.ranking_manager = FakeRankingLow()
     g._next_player_action = ["die"]
     g.lives = 1
@@ -962,6 +1155,7 @@ def test_playing_actions_and_death_paths(monkeypatch):
 
 def test_playing_collisions_robot_and_alien(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.PLAYING
     g.current_level = 35
@@ -985,7 +1179,9 @@ def test_playing_collisions_robot_and_alien(monkeypatch):
     # Add a bullet colliding with alien
     g.player.bullets.append(DummyObj(alien.x, alien.y, 5, 5, id_=9))
     # Ensure orphan lasers list contains items with update/draw to avoid attribute errors
-    g.orphan_lasers = [types.SimpleNamespace(update=lambda _cx: False, draw=lambda _s: None, x=0, y=0)]
+    g.orphan_lasers = [
+        types.SimpleNamespace(update=lambda _cx: False, draw=lambda _s: None, x=0, y=0)
+    ]
     g.update()
     # Alien removed or orphan lasers transferred
     assert len(g.orphan_lasers) >= 0
@@ -993,6 +1189,7 @@ def test_playing_collisions_robot_and_alien(monkeypatch):
 
 def test_playing_fire_collision_reduces_life_and_persists(headless_pygame, monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.PLAYING
     g.current_level = 51
@@ -1000,10 +1197,12 @@ def test_playing_fire_collision_reduces_life_and_persists(headless_pygame, monke
     # Add a fire overlapping player
     fire = DummyObj(g.player.x, g.player.y, 10, 10, id_=100)
     g.fires = [fire]
+
     # Ranking: ensure not high score path to avoid ENTER_NAME on life <= 0
     class FakeRanking:
         def is_high_score(self, score):
             return False
+
     g.ranking_manager = FakeRanking()
 
     g.update()
@@ -1013,46 +1212,67 @@ def test_playing_fire_collision_reduces_life_and_persists(headless_pygame, monke
     assert len(g.fires) == 1
 
 
-def test_playing_turtle_collision_removes_enemy_and_life_loss(headless_pygame, monkeypatch):
+def test_playing_turtle_collision_removes_enemy_and_life_loss(
+    headless_pygame, monkeypatch
+):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.PLAYING
     g.current_level = 5  # turtles branch
     g.lives = 3
     turtle = DummyObj(g.player.x, g.player.y, 10, 10, id_=200)
+    # Regra atual: inimigos entram em estado de morte (animação) e não são removidos imediatamente
+    turtle.is_dead = False
+    turtle.die = lambda: setattr(turtle, "is_dead", True)
     g.turtles = [turtle]
+
     class FakeRanking:
         def is_high_score(self, score):
             return False
+
     g.ranking_manager = FakeRanking()
     g.update()
-    # Turtle removed, life decremented
-    assert len(g.turtles) == 0
+    # Turtle entra em estado de morte e permanece até finalizar animação; vida decrementa
+    assert len(g.turtles) == 1
+    assert getattr(g.turtles[0], "is_dead", False)
     assert g.player.is_hit is True
     assert g.lives == 2
 
 
-def test_playing_spider_collision_removes_enemy_and_life_loss(headless_pygame, monkeypatch):
+def test_playing_spider_collision_removes_enemy_and_life_loss(
+    headless_pygame, monkeypatch
+):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.PLAYING
     g.current_level = 25  # spiders branch
     g.lives = 3
     spider = DummyObj(g.player.x, g.player.y, 10, 10, id_=300)
+    # Regra atual: inimigos entram em estado de morte (animação) e não são removidos imediatamente
+    spider.is_dead = False
+    spider.die = lambda: setattr(spider, "is_dead", True)
     g.spiders = [spider]
+
     class FakeRanking:
         def is_high_score(self, score):
             return False
+
     g.ranking_manager = FakeRanking()
     g.update()
-    # Spider removed, life decremented
-    assert len(g.spiders) == 0
+    # Spider entra em estado de morte e permanece até finalizar animação; vida decrementa
+    assert len(g.spiders) == 1
+    assert getattr(g.spiders[0], "is_dead", False)
     assert g.player.is_hit is True
     assert g.lives == 2
 
 
-def test_invulnerable_enemy_collision_awards_score_no_life_loss(headless_pygame, monkeypatch):
+def test_invulnerable_enemy_collision_awards_score_no_life_loss(
+    headless_pygame, monkeypatch
+):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.PLAYING
     g.current_level = 18  # turtles branch
@@ -1060,16 +1280,21 @@ def test_invulnerable_enemy_collision_awards_score_no_life_loss(headless_pygame,
     g.score = 0
     g.player.is_invulnerable = True
     turtle = DummyObj(g.player.x, g.player.y, 10, 10, id_=400)
+    # Regra atual: inimigos entram em estado de morte (animação) e não são removidos imediatamente
+    turtle.is_dead = False
+    turtle.die = lambda: setattr(turtle, "is_dead", True)
     g.turtles = [turtle]
     g.update()
-    # Turtle removed, life unchanged, score increased
-    assert len(g.turtles) == 0
+    # Turtle entra em estado de morte e permanece; vida inalterada; pontuação aumenta
+    assert len(g.turtles) == 1
+    assert getattr(g.turtles[0], "is_dead", False)
     assert g.lives == 3
     assert g.score > 0
 
 
 def test_draw_paths_for_menu_select_and_playing(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     # Splash draw executes gradient fallback
     g.state = gm.GameState.SPLASH
@@ -1086,9 +1311,25 @@ def test_draw_paths_for_menu_select_and_playing(monkeypatch):
 
     # Playing draw with platforms and enemies
     g.state = gm.GameState.PLAYING
-    g.platforms = [types.SimpleNamespace(x=0, y=0, rect=FakeRect(0, 0, 50, 10), draw=lambda s: None, scale_x=1, scale_y=1)]
+    g.platforms = [
+        types.SimpleNamespace(
+            x=0,
+            y=0,
+            rect=FakeRect(0, 0, 50, 10),
+            draw=lambda s: None,
+            scale_x=1,
+            scale_y=1,
+        )
+    ]
     g.flag = types.SimpleNamespace(x=10, y=0, draw=lambda s: None, scale_x=1, scale_y=1)
-    g.spaceship = types.SimpleNamespace(x=20, y=5, update_position=lambda x, y: None, draw=lambda s: None, scale_x=1, scale_y=1)
+    g.spaceship = types.SimpleNamespace(
+        x=20,
+        y=5,
+        update_position=lambda x, y: None,
+        draw=lambda s: None,
+        scale_x=1,
+        scale_y=1,
+    )
     g.birds = [DummyObj(0, 0)]
     g.bats = [DummyObj(0, 0)]
     g.airplanes = [DummyObj(0, 0)]
@@ -1110,12 +1351,18 @@ def test_draw_paths_for_menu_select_and_playing(monkeypatch):
 
 def test_game_over_menu_selection_play_again(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.GAME_OVER
     g.game_over_selected = 0
-    ev_enter = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_enter]))
+    ev_enter = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_enter])
+    )
     import internal.engine.level.level as level_module
+
     monkeypatch.setattr(level_module.Level, "init_level", lambda game: None)
     g.handle_events()
     assert g.state == gm.GameState.PLAYING
@@ -1123,6 +1370,7 @@ def test_game_over_menu_selection_play_again(monkeypatch):
 
 def test_joystick_menu_navigation(monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.MAIN_MENU
     g.joystick_connected = True
@@ -1285,7 +1533,9 @@ def test_update_spawn_monotonicity_across_ranges(monkeypatch):
     hard_bps, hard_int = g.birds_per_spawn, g.bird_spawn_interval
     assert 1 <= easy_bps <= 3 and 1 <= normal_bps <= 3 and 1 <= hard_bps <= 3
     assert easy_bps <= normal_bps <= hard_bps
-    assert easy_int >= normal_int >= hard_int and min(easy_int, normal_int, hard_int) >= 60
+    assert (
+        easy_int >= normal_int >= hard_int and min(easy_int, normal_int, hard_int) >= 60
+    )
 
     # Faixa 21-30: morcegos
     g.current_level = 25
@@ -1299,7 +1549,9 @@ def test_update_spawn_monotonicity_across_ranges(monkeypatch):
     game_mod.Game.update_bird_difficulty(g)
     hard_bps, hard_int = g.bats_per_spawn, g.bat_spawn_interval
     assert easy_bps <= normal_bps <= hard_bps
-    assert easy_int >= normal_int >= hard_int and min(easy_int, normal_int, hard_int) >= 60
+    assert (
+        easy_int >= normal_int >= hard_int and min(easy_int, normal_int, hard_int) >= 60
+    )
 
     # Faixa 31-40: aviões
     g.current_level = 35
@@ -1313,7 +1565,9 @@ def test_update_spawn_monotonicity_across_ranges(monkeypatch):
     game_mod.Game.update_bird_difficulty(g)
     hard_bps, hard_int = g.airplanes_per_spawn, g.airplane_spawn_interval
     assert easy_bps <= normal_bps <= hard_bps
-    assert easy_int >= normal_int >= hard_int and min(easy_int, normal_int, hard_int) >= 60
+    assert (
+        easy_int >= normal_int >= hard_int and min(easy_int, normal_int, hard_int) >= 60
+    )
 
     # Faixa 41-50: flying-disks
     g.current_level = 45
@@ -1327,7 +1581,9 @@ def test_update_spawn_monotonicity_across_ranges(monkeypatch):
     game_mod.Game.update_bird_difficulty(g)
     hard_bps, hard_int = g.flying_disks_per_spawn, g.flying_disk_spawn_interval
     assert easy_bps <= normal_bps <= hard_bps
-    assert easy_int >= normal_int >= hard_int and min(easy_int, normal_int, hard_int) >= 60
+    assert (
+        easy_int >= normal_int >= hard_int and min(easy_int, normal_int, hard_int) >= 60
+    )
 
     # Nível 51: foguinhos
     g.current_level = 51
@@ -1342,7 +1598,9 @@ def test_update_spawn_monotonicity_across_ranges(monkeypatch):
     hard_bps, hard_int = g.fires_per_spawn, g.fire_spawn_interval
     assert 1 <= easy_bps <= 4 and 1 <= normal_bps <= 4 and 1 <= hard_bps <= 4
     assert easy_bps <= normal_bps <= hard_bps
-    assert easy_int >= normal_int >= hard_int and min(easy_int, normal_int, hard_int) >= 60
+    assert (
+        easy_int >= normal_int >= hard_int and min(easy_int, normal_int, hard_int) >= 60
+    )
 
 
 def test_level_static_rules():
@@ -1355,6 +1613,7 @@ def test_level_static_rules():
 
 def test_enter_name_typing_backspace_and_length_limit(headless_pygame, monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.ENTER_NAME
     # Ensure needed key constants exist in stub
@@ -1362,21 +1621,34 @@ def test_enter_name_typing_backspace_and_length_limit(headless_pygame, monkeypat
     monkeypatch.setattr(gm.pygame, "K_RETURN", 13, raising=False)
 
     # Type 26 characters, but limit should cap at 25
-    events = [types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=0, unicode="A") for _ in range(26)]
+    events = [
+        types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=0, unicode="A")
+        for _ in range(26)
+    ]
     # One backspace should reduce to 24
-    events.append(types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_BACKSPACE, unicode=""))
+    events.append(
+        types.SimpleNamespace(
+            type=gm.pygame.KEYDOWN, key=gm.pygame.K_BACKSPACE, unicode=""
+        )
+    )
     # Non-printable/empty unicode should be ignored
     events.append(types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=0, unicode=""))
     # Confirm name to transition
-    events.append(types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode=""))
+    events.append(
+        types.SimpleNamespace(
+            type=gm.pygame.KEYDOWN, key=gm.pygame.K_RETURN, unicode=""
+        )
+    )
     monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: events))
 
     # Ranking manager stub to accept score
     class FakeRanking:
         def is_high_score(self, score):
             return True
+
         def add_score(self, name, score):
             self.added = (name, score)
+
     g.ranking_manager = FakeRanking()
 
     g.handle_events()
@@ -1388,17 +1660,23 @@ def test_enter_name_typing_backspace_and_length_limit(headless_pygame, monkeypat
 
 def test_show_ranking_key_r_restart_to_playing(headless_pygame, monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.SHOW_RANKING
     # Ensure K_r exists in stub
     monkeypatch.setattr(gm.pygame, "K_r", 114, raising=False)
     # Patch Level.init_level and music.play_level_music to observe calls
     import internal.engine.level.level as level_module
+
     called = {"level": 0, "music": 0}
+
     def fake_init_level(game):
         called["level"] += 1
+
     monkeypatch.setattr(level_module.Level, "init_level", fake_init_level)
-    g.music.play_level_music = lambda game, lvl: called.__setitem__("music", called["music"] + 1)
+    g.music.play_level_music = lambda game, lvl: called.__setitem__(
+        "music", called["music"] + 1
+    )
 
     ev_r = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_r, unicode="r")
     monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_r]))
@@ -1409,14 +1687,18 @@ def test_show_ranking_key_r_restart_to_playing(headless_pygame, monkeypatch):
 
 def test_show_ranking_escape_fallback_to_game_over(headless_pygame, monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.SHOW_RANKING
     g.previous_state_before_ranking = None
     # Patch Level.init_level for ESC path
     import internal.engine.level.level as level_module
+
     monkeypatch.setattr(level_module.Level, "init_level", lambda game: None)
 
-    ev_esc = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_ESCAPE, unicode="")
+    ev_esc = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_ESCAPE, unicode=""
+    )
     monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_esc]))
     g.handle_events()
     assert g.state == gm.GameState.GAME_OVER
@@ -1424,12 +1706,18 @@ def test_show_ranking_escape_fallback_to_game_over(headless_pygame, monkeypatch)
 
 def test_get_pooled_bullet_pool_usage_and_fallback(headless_pygame, monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
+
     # Prepare a simple bullet stub in the pool
     class BulletStub:
         def __init__(self):
-            self.x = 0; self.y = 0; self.direction = 1; self.image = None
+            self.x = 0
+            self.y = 0
+            self.direction = 1
+            self.image = None
             self.rect = FakeRect(0, 0, 5, 5)
+
     g.bullet_pool = [BulletStub()]
 
     # Use pooled bullet
@@ -1441,18 +1729,26 @@ def test_get_pooled_bullet_pool_usage_and_fallback(headless_pygame, monkeypatch)
     # With empty pool, should create a new Bullet
     b2 = gm.Game.get_pooled_bullet(g, 30, 40, direction=1, image=None)
     from internal.resources.bullet import Bullet
+
     assert isinstance(b2, Bullet)
     assert b2.rect.x == 30 and b2.rect.y == 40
 
 
 def test_main_menu_keyboard_navigation(headless_pygame, monkeypatch):
     import internal.engine.game as gm
+
     g = make_game(monkeypatch)
     g.state = gm.GameState.MAIN_MENU
     # Simulate UP then DOWN to move selection
-    ev_up = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_UP, unicode="")
-    ev_down = types.SimpleNamespace(type=gm.pygame.KEYDOWN, key=gm.pygame.K_DOWN, unicode="")
-    monkeypatch.setattr(gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_up, ev_down]))
+    ev_up = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_UP, unicode=""
+    )
+    ev_down = types.SimpleNamespace(
+        type=gm.pygame.KEYDOWN, key=gm.pygame.K_DOWN, unicode=""
+    )
+    monkeypatch.setattr(
+        gm.pygame, "event", types.SimpleNamespace(get=lambda: [ev_up, ev_down])
+    )
     g.handle_events()
     # Selection index remains within range
     assert 0 <= g.menu_selected < len(g.menu_options)

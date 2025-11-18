@@ -8,12 +8,8 @@ class Info:
         margin = 10
         spacing = 8
 
-        # Aplicar negrito na fonte quando suportado
-        try:
-            if hasattr(font, "set_bold"):
-                font.set_bold(True)
-        except Exception:
-            pass
+        # Não modificar a fonte recebida (menu/UI geral);
+        # criar fontes específicas do HUD localmente.
 
         # Calcular tamanho da fonte superior (menor que a do rodapé)
         try:
@@ -22,7 +18,7 @@ class Info:
             base_h = 40
         # Reduzir mais a fonte do topo para ficar mais discreta
         top_h = max(24, int(base_h * 0.65))
-        # Criar fonte do topo com fallback seguro
+        # Criar fontes do HUD com fallback seguro
         try:
             top_font = pygame.font.SysFont("Segoe UI", top_h, bold=True)
         except Exception:
@@ -36,6 +32,20 @@ class Info:
                 except Exception:
                     pass
 
+        # Fonte da barra inferior (vidas, etc.) baseada na altura base
+        try:
+            bottom_font = pygame.font.SysFont("Segoe UI", base_h, bold=True)
+        except Exception:
+            try:
+                bottom_font = pygame.font.SysFont("Arial", base_h, bold=True)
+            except Exception:
+                bottom_font = pygame.font.Font(None, base_h)
+                try:
+                    if hasattr(bottom_font, "set_bold"):
+                        bottom_font.set_bold(True)
+                except Exception:
+                    pass
+
         # Topo Esquerdo: Fase atual
         level_text = top_font.render(f"Fase: {game.current_level}", True, color)
         screen.blit(level_text, (margin, margin))
@@ -46,7 +56,9 @@ class Info:
             show_difficulty = bool(getattr(game, "is_development", lambda: False)())
         except Exception:
             try:
-                show_difficulty = getattr(game, "env_config", {}).get("environment") == "development"
+                show_difficulty = (
+                    getattr(game, "env_config", {}).get("environment") == "development"
+                )
             except Exception:
                 show_difficulty = False
 
@@ -68,7 +80,7 @@ class Info:
 
         # Inferior Esquerdo: Ícone de vida + número de vidas
         life_icon = getattr(game, "extra_life_img", None)
-        lives_value_text = font.render(f"x {getattr(game, 'lives', 0)}", True, color)
+        lives_value_text = bottom_font.render(f"x {getattr(game, 'lives', 0)}", True, color)
         # Tamanho de ícones do HUD proporcional à altura da fonte
         hud_icon_size = max(32, base_h)
 
@@ -81,7 +93,7 @@ class Info:
                 c_bl = surf.get_at((0, h - 1))
                 c_br = surf.get_at((w - 1, h - 1))
                 # Se os 4 cantos têm a mesma cor opaca, assumir cor de fundo
-                same_corners = (c_tl == c_tr == c_bl == c_br)
+                same_corners = c_tl == c_tr == c_bl == c_br
                 if same_corners and getattr(c_tl, "a", 255) >= 250:
                     try:
                         surf = surf.convert()
@@ -104,9 +116,13 @@ class Info:
 
         if isinstance(life_icon, pygame.Surface):
             try:
-                scaled_life = pygame.transform.smoothscale(life_icon, (hud_icon_size, hud_icon_size))
+                scaled_life = pygame.transform.smoothscale(
+                    life_icon, (hud_icon_size, hud_icon_size)
+                )
             except Exception:
-                scaled_life = pygame.transform.scale(life_icon, (hud_icon_size, hud_icon_size))
+                scaled_life = pygame.transform.scale(
+                    life_icon, (hud_icon_size, hud_icon_size)
+                )
             # Garantir que o fundo do ícone no HUD seja transparente
             scaled_life = _transparent_background(scaled_life)
             icon_w = scaled_life.get_width()
@@ -150,7 +166,9 @@ class Info:
             # Renderizar da direita para a esquerda
             for img in reversed(powerup_icons):
                 try:
-                    scaled = pygame.transform.smoothscale(img, (hud_icon_size, hud_icon_size))
+                    scaled = pygame.transform.smoothscale(
+                        img, (hud_icon_size, hud_icon_size)
+                    )
                 except Exception:
                     scaled = pygame.transform.scale(img, (hud_icon_size, hud_icon_size))
                 # Garantir fundo transparente também nos ícones de power-up

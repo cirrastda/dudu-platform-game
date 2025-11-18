@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 import sys
 import subprocess
+import os
 
 
 def main():
     try:
         import pytest  # noqa: F401
     except ImportError:
-        print("❌ pytest não está instalado. Instale com: pip install -r requirements.txt")
+        print(
+            "❌ pytest não está instalado. Instale com: pip install -r requirements.txt"
+        )
         return 1
 
     # Configurar ambiente headless e desenvolvimento para evitar travamentos

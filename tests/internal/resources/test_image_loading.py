@@ -65,14 +65,16 @@ def test_load_images_with_game_and_scaling(monkeypatch):
             return FakeSurface(scale[0], scale[1])
         return FakeSurface(20, 10)
 
-    monkeypatch.setattr(cache_mod.ResourceCache, "get_image", fake_get_image, raising=False)
+    monkeypatch.setattr(
+        cache_mod.ResourceCache, "get_image", fake_get_image, raising=False
+    )
 
     img = image_mod.Image()
     fake_game = types.SimpleNamespace(current_level=15)
     img.load_images(fake_game)
 
-    # Background should use the level 11-20 background
-    assert calls[0][0] == "imagens/fundo5.png"
+    # Background should use the updated level 11-16 background asset
+    assert calls[0][0] == "imagens/bg/fase 2.png"
     assert calls[0][1] == (WIDTH, HEIGHT)
     assert isinstance(img.background_img, FakeSurface)
 
@@ -98,7 +100,9 @@ def test_load_images_without_game_sets_background_none(monkeypatch):
             return FakeSurface(scale[0], scale[1])
         return FakeSurface(22, 11)
 
-    monkeypatch.setattr(cache_mod.ResourceCache, "get_image", fake_get_image, raising=False)
+    monkeypatch.setattr(
+        cache_mod.ResourceCache, "get_image", fake_get_image, raising=False
+    )
 
     img = image_mod.Image()
     img.load_images(None)
@@ -114,7 +118,9 @@ def test_load_images_error_fallback(monkeypatch):
     def raising_get_image(self, path, scale=None):
         raise image_mod.pygame.error("boom")
 
-    monkeypatch.setattr(cache_mod.ResourceCache, "get_image", raising_get_image, raising=False)
+    monkeypatch.setattr(
+        cache_mod.ResourceCache, "get_image", raising_get_image, raising=False
+    )
 
     img = image_mod.Image()
     img.load_images(None)

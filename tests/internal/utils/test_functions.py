@@ -19,7 +19,14 @@ def test_resource_path_dev(monkeypatch):
 def test_load_env_config_defaults(monkeypatch):
     # Forçar resource_path a apontar para arquivo inexistente
     cwd = os.getcwd()
-    monkeypatch.setattr(fn, "resource_path", lambda relative: os.path.join(cwd, "__no_env__"))
+    monkeypatch.setattr(
+        fn, "resource_path", lambda relative: os.path.join(cwd, "__no_env__")
+    )
+    # Garantir isolamento: remover overrides de ambiente que influenciam o padrão
+    monkeypatch.delenv("PLATFORM_GAME_ENV", raising=False)
+    monkeypatch.delenv("PLATFORM_GAME_FULLSCREEN", raising=False)
+    monkeypatch.delenv("PLATFORM_GAME_INITIAL_STAGE", raising=False)
+    monkeypatch.delenv("PLATFORM_GAME_DIFFICULTY", raising=False)
     cfg = fn.load_env_config()
     assert isinstance(cfg, dict)
     assert cfg.get("environment") == "production"

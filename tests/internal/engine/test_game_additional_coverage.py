@@ -28,6 +28,7 @@ def init_pygame_display():
 def disable_mixer(monkeypatch):
     # Evita inicialização do mixer de áudio em ambientes de teste/headless
     from internal.engine.sound.mixer import Mixer
+
     monkeypatch.setattr(Mixer, "init", lambda *args, **kwargs: None)
 
 
@@ -38,6 +39,7 @@ def post_key(key):
 def test_title_screen_skip_opening_goes_to_main_menu(monkeypatch):
     # Em produção, a flag skip-opening é respeitada
     import internal.engine.game as game_module
+
     monkeypatch.setitem(game_module.ENV_CONFIG, "environment", "production")
     g = Game()
     # Garante que música não tenha iniciado
@@ -51,13 +53,16 @@ def test_title_screen_skip_opening_goes_to_main_menu(monkeypatch):
     post_key(pygame.K_RETURN)
     g.handle_events()
 
-    assert g.state == GameState.MAIN_MENU
-    assert g.music_started is True
+    # Em produção, não deve pular; deve ir para OPENING_VIDEO
+    assert g.state == GameState.OPENING_VIDEO
+    # Música de menu não inicia até entrar em MAIN_MENU
+    assert g.music_started is False
 
 
 def test_title_screen_opening_video_fallback_to_menu_on_load_fail(monkeypatch):
     # Em produção, tenta carregar o vídeo; se falhar, cai no menu
     import internal.engine.game as game_module
+
     monkeypatch.setitem(game_module.ENV_CONFIG, "environment", "production")
     g = Game()
     g.music_started = False
@@ -86,11 +91,16 @@ def test_opening_video_any_key_skips_to_menu(monkeypatch):
     post_key(pygame.K_a)
     g.handle_events()
 
-    assert g.state == GameState.MAIN_MENU
-    assert g.music_started is True
+    # Comportamento atualizado: durante OPENING_VIDEO, teclas não pulam para o menu
+    assert g.state == GameState.OPENING_VIDEO
+    # Música de menu permanece parada até o vídeo finalizar
+    assert g.music_started is False
 
 
-@pytest.mark.parametrize("selected,expected", [(0, Difficulty.EASY), (1, Difficulty.NORMAL), (2, Difficulty.HARD)])
+@pytest.mark.parametrize(
+    "selected,expected",
+    [(0, Difficulty.EASY), (1, Difficulty.NORMAL), (2, Difficulty.HARD)],
+)
 def test_select_difficulty_confirm_starts_playing(monkeypatch, selected, expected):
     g = Game()
     g.state = GameState.SELECT_DIFFICULTY
@@ -155,6 +165,7 @@ def test_draw_ocean_background_fallback_gradient_and_waves():
 def test_joystick_title_to_opening_and_fallback(monkeypatch):
     # Em produção, sem skip-opening, vai para vídeo; depois botão pula para menu
     import internal.engine.game as game_module
+
     monkeypatch.setitem(game_module.ENV_CONFIG, "environment", "production")
     g = Game()
     g.joystick_connected = True
@@ -162,17 +173,19 @@ def test_joystick_title_to_opening_and_fallback(monkeypatch):
     g.env_config["skip-opening-video"] = "0"
     # Simula load OK e start playback no-op
     monkeypatch.setattr(g.video_player, "load_video", lambda *_args, **_kwargs: True)
-    monkeypatch.setattr(g.video_player, "start_playback", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        g.video_player, "start_playback", lambda *_args, **_kwargs: None
+    )
     # Posta evento de botão A (0)
     pygame.event.post(pygame.event.Event(pygame.JOYBUTTONDOWN, button=0))
     g.handle_events()
     assert g.state == GameState.OPENING_VIDEO
 
-    # Agora simula pular o vídeo via joystick
+    # Comportamento atualizado: joystick durante OPENING_VIDEO não muda de estado
     monkeypatch.setattr(g.music, "play_menu_music", lambda *_args, **_kwargs: None)
     pygame.event.post(pygame.event.Event(pygame.JOYBUTTONDOWN, button=0))
     g.handle_events()
-    assert g.state == GameState.MAIN_MENU
+    assert g.state == GameState.OPENING_VIDEO
 
 
 def test_game_over_exit_option_returns_false(monkeypatch):
@@ -452,8 +465,10 @@ def test_game_over_dpad_navigation_wraparound_and_confirm_exit():
     class FakeJoy:
         def __init__(self):
             self.axes = {0: 0.0, 1: 0.0, 6: 0.0, 7: 0.0}
+
         def get_numaxes(self):
             return 8
+
         def get_axis(self, idx):
             return self.axes.get(idx, 0.0)
 
@@ -544,11 +559,14 @@ def test_credits_menu_reset_scroll_after_timeout(monkeypatch):
 def test_video_player_play_audio_not_available_no_thread(monkeypatch):
     from internal.engine.video import VideoPlayer
     import internal.engine.video as video_module
+
     vp = VideoPlayer()
     monkeypatch.setattr(video_module, "MOVIEPY_AVAILABLE", False)
+
     class FakeAudio:
         def preview(self):
             pass
+
     vp.has_audio = True
     vp.audio_clip = FakeAudio()
     vp.start_playback()
@@ -558,12 +576,15 @@ def test_video_player_play_audio_not_available_no_thread(monkeypatch):
 
 def test_video_player_stop_cancels_fallback_music(monkeypatch):
     from internal.engine.video import VideoPlayer
+
     vp = VideoPlayer()
     vp.fallback_mode = True
     vp.fallback_music_started = True
+
     class DummyMusic:
         def stop(self):
             pass
+
     monkeypatch.setattr(pygame.mixer, "music", DummyMusic())
     vp.stop()
     assert vp.fallback_music_started is False
@@ -571,6 +592,7 @@ def test_video_player_stop_cancels_fallback_music(monkeypatch):
 
 def test_video_player_calculate_fallback_rect_fit_width_and_height():
     from internal.engine.video import VideoPlayer
+
     vp = VideoPlayer()
     # Caso imagem mais larga que a tela: limita pela largura
     img_w, img_h = 1200, 600
@@ -595,6 +617,7 @@ def test_video_player_calculate_fallback_rect_fit_width_and_height():
 
 def test_video_player_calculate_video_rect_crop_width_and_height():
     from internal.engine.video import VideoPlayer
+
     vp = VideoPlayer()
     # Vídeo mais largo: crop pela largura (ajusta por altura)
     vid_w, vid_h = 1920, 1080
@@ -619,6 +642,7 @@ def test_video_player_calculate_video_rect_crop_width_and_height():
 
 def test_video_player_draw_single_image_fades_to_black(monkeypatch):
     from internal.engine.video import VideoPlayer
+
     vp = VideoPlayer()
     vp.fallback_mode = True
     vp.fallback_images = [pygame.Surface((50, 50))]
@@ -643,14 +667,17 @@ def test_video_player_draw_single_image_fades_to_black(monkeypatch):
 def test_video_player_play_audio_error_thread_dies(monkeypatch):
     from internal.engine.video import VideoPlayer
     import internal.engine.video as video_module
+
     vp = VideoPlayer()
     # Forçar disponibilidade de moviepy
     monkeypatch.setattr(video_module, "MOVIEPY_AVAILABLE", True)
     # Evitar efeitos colaterais de mixer
     monkeypatch.setattr(pygame.mixer, "music", types.SimpleNamespace(stop=lambda: None))
+
     class FakeAudio:
         def preview(self):
             raise RuntimeError("boom")
+
     vp.audio_clip = FakeAudio()
     vp._play_audio()
     assert vp.audio_thread is not None
@@ -660,6 +687,7 @@ def test_video_player_play_audio_error_thread_dies(monkeypatch):
 
 def test_video_player_stop_joins_audio_thread_and_sets_none():
     from internal.engine.video import VideoPlayer
+
     vp = VideoPlayer()
     # Criar uma thread simulando áudio em execução
     t = threading.Thread(target=lambda: time.sleep(0.05), daemon=True)
@@ -747,8 +775,10 @@ def test_main_menu_joystick_dpad_navigation_wraparound_and_confirm_iniciar(monke
     class FakeJoy:
         def __init__(self):
             self.axes = {0: 0.0, 1: 0.0, 6: 0.0, 7: 0.0}
+
         def get_numaxes(self):
             return 8
+
         def get_axis(self, idx):
             return self.axes.get(idx, 0.0)
 
@@ -813,6 +843,7 @@ def test_select_difficulty_escape_returns_to_main_menu():
 
 def test_video_player_load_video_file_missing_uses_fallback(monkeypatch):
     from internal.engine.video import VideoPlayer
+
     vp = VideoPlayer()
     # Garante que nenhum arquivo exista
     monkeypatch.setattr(os.path, "exists", lambda _p: False)
@@ -826,6 +857,7 @@ def test_video_player_load_video_file_missing_uses_fallback(monkeypatch):
 
 def test_video_player_start_playback_and_update_finish_quickly_in_fallback(monkeypatch):
     from internal.engine.video import VideoPlayer
+
     vp = VideoPlayer()
     # Força modo fallback com uma imagem e tempos pequenos
     vp.fallback_mode = True
@@ -852,6 +884,7 @@ def test_video_player_start_playback_and_update_finish_quickly_in_fallback(monke
 
 def test_video_player_draw_fade_between_two_images(monkeypatch):
     from internal.engine.video import VideoPlayer
+
     vp = VideoPlayer()
     vp.fallback_mode = True
     # Duas imagens para acionar crossfade
@@ -879,12 +912,15 @@ def test_video_player_draw_fade_between_two_images(monkeypatch):
 def test_video_player_play_audio_thread_starts(monkeypatch):
     from internal.engine.video import VideoPlayer
     import internal.engine.video as video_module
+
     vp = VideoPlayer()
     # Simula disponibilidade de MoviePy e áudio
     monkeypatch.setattr(video_module, "MOVIEPY_AVAILABLE", True)
+
     class FakeAudio:
         def preview(self):
             pass
+
     vp.has_audio = True
     vp.audio_clip = FakeAudio()
     vp.start_playback()
@@ -894,9 +930,11 @@ def test_video_player_play_audio_thread_starts(monkeypatch):
 
 def test_video_player_cleanup_resets_flags(monkeypatch):
     from internal.engine.video import VideoPlayer
+
     class Dummy:
         def close(self):
             pass
+
     vp = VideoPlayer()
     vp.video_clip = Dummy()
     vp.audio_clip = Dummy()

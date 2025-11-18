@@ -10,8 +10,11 @@ def headless_pygame(monkeypatch):
         def __init__(self, w=10, h=10):
             self.w = w
             self.h = h
+
         def get_rect(self, **kwargs):
-            return types.SimpleNamespace(center=kwargs.get("center", (self.w // 2, self.h // 2)))
+            return types.SimpleNamespace(
+                center=kwargs.get("center", (self.w // 2, self.h // 2))
+            )
 
     class FakeRect:
         def __init__(self, x=0, y=0, w=10, h=10):
@@ -19,26 +22,37 @@ def headless_pygame(monkeypatch):
             self.y = y
             self.width = w
             self.height = h
+
         @property
         def right(self):
             return self.x + self.width
+
         @property
         def bottom(self):
             return self.y + self.height
+
         def colliderect(self, other):
-            return not (self.right <= other.x or other.right <= self.x or self.bottom <= other.y or other.bottom <= self.y)
+            return not (
+                self.right <= other.x
+                or other.right <= self.x
+                or self.bottom <= other.y
+                or other.bottom <= self.y
+            )
 
     fake_pygame = types.SimpleNamespace(
         Rect=FakeRect,
         image=types.SimpleNamespace(load=lambda _p: FakeSurface()),
         transform=types.SimpleNamespace(scale=lambda surf, size: surf),
-        draw=types.SimpleNamespace(rect=lambda *a, **k: None, polygon=lambda *a, **k: None),
+        draw=types.SimpleNamespace(
+            rect=lambda *a, **k: None, polygon=lambda *a, **k: None
+        ),
     )
-    monkeypatch.setitem(sys.modules, 'pygame', fake_pygame)
+    monkeypatch.setitem(sys.modules, "pygame", fake_pygame)
 
     # Evitar carregamento de imagens no ResourceCache
     from internal.resources.cache import ResourceCache
-    monkeypatch.setattr(ResourceCache, 'get_image', lambda self, path, size=None: None)
+
+    monkeypatch.setattr(ResourceCache, "get_image", lambda self, path, size=None: None)
 
 
 import sys
@@ -67,6 +81,20 @@ def make_game(monkeypatch):
     g.sound_effects = types.SimpleNamespace(play_sound_effect=lambda name: None)
     g.birds_per_spawn = 0
     g.bird_spawn_interval = 0
+    # Texturas esperadas pelos geradores estáticos
+    g.platform_texture = object()
+    g.platform_texture_city = object()
+    g.platform_texture_space = object()
+    g.platform_texture_ship = object()
+    g.platform_texture_flag = object()
+    # Imagens esperadas em níveis avançados (ex.: boss da fase 51)
+    g.image = types.SimpleNamespace(
+        boss_alien_images={
+            "running": [object()],
+            "jumping": [object()],
+            "stopped": object(),
+        }
+    )
     return g
 
 
@@ -117,12 +145,12 @@ def test_collectibles_distance_and_before_flag_and_reachable(monkeypatch):
     g.current_level = 3  # Deve gerar pulo_duplo
     Level.init_level(g)
 
-    assert hasattr(g, 'platforms') and g.platforms, "Plataformas não inicializadas"
+    assert hasattr(g, "platforms") and g.platforms, "Plataformas não inicializadas"
     assert g.flag is not None, "Bandeira não posicionada"
 
     items = []
-    items.extend(getattr(g, 'extra_lives', []))
-    items.extend(getattr(g, 'powerups', []))
+    items.extend(getattr(g, "extra_lives", []))
+    items.extend(getattr(g, "powerups", []))
     # Pelo menos vida extra deve existir
     assert items, "Nenhum coletável encontrado no nível"
 
@@ -134,7 +162,9 @@ def test_collectibles_distance_and_before_flag_and_reachable(monkeypatch):
     for i in range(len(centers)):
         for j in range(i + 1, len(centers)):
             dx = abs(centers[i][0] - centers[j][0])
-            assert dx >= dynamic_min_distance, f"Coletáveis muito próximos: dx={dx} < {dynamic_min_distance}"
+            assert (
+                dx >= dynamic_min_distance
+            ), f"Coletáveis muito próximos: dx={dx} < {dynamic_min_distance}"
 
     # Antes da bandeira
     for it in items:
@@ -158,7 +188,9 @@ def test_powerup_quantity_by_difficulty(monkeypatch):
     for lvl in (1, 2, 3, 4, 5):
         g.current_level = lvl
         Level.init_level(g)
-        assert len(getattr(g, 'powerups', [])) == 1, f"EASY nível {lvl} deve ter 1 power-up"
+        assert (
+            len(getattr(g, "powerups", [])) == 1
+        ), f"EASY nível {lvl} deve ter 1 power-up"
 
     # NORMAL: depende do ciclo pos em {0,2,4,5,7,9}
     g = make_game(monkeypatch)
@@ -173,12 +205,14 @@ def test_powerup_quantity_by_difficulty(monkeypatch):
         7: 0,
         8: 1,  # pulo_duplo
         9: 0,
-        10: 1, # escudo
+        10: 1,  # escudo
     }
     for lvl, expected in expectations.items():
         g.current_level = lvl
         Level.init_level(g)
-        assert len(getattr(g, 'powerups', [])) == expected, f"NORMAL nível {lvl} deveria ter {expected} power-ups"
+        assert (
+            len(getattr(g, "powerups", [])) == expected
+        ), f"NORMAL nível {lvl} deveria ter {expected} power-ups"
 
     # HARD: somente pos == 1,4,7
     g = make_game(monkeypatch)
@@ -187,22 +221,24 @@ def test_powerup_quantity_by_difficulty(monkeypatch):
         1: 0,
         2: 1,  # invencibilidade
         3: 0,
-        4: 1,  # pulo_duplo
-        5: 0,
+        4: 0,
+        5: 1,  # pulo_duplo
         6: 0,
-        7: 1,  # escudo
-        8: 0,
+        7: 0,
+        8: 1,  # escudo
         9: 0,
         10: 0,
     }
     for lvl, expected in expectations_h.items():
         g.current_level = lvl
         Level.init_level(g)
-        assert len(getattr(g, 'powerups', [])) == expected, f"HARD nível {lvl} deveria ter {expected} power-ups"
+        assert (
+            len(getattr(g, "powerups", [])) == expected
+        ), f"HARD nível {lvl} deveria ter {expected} power-ups"
 
     # Fase 51: nunca tem power-ups
     g = make_game(monkeypatch)
     g.difficulty = Difficulty.NORMAL
     g.current_level = 51
     Level.init_level(g)
-    assert len(getattr(g, 'powerups', [])) == 0, "Fase 51 não deve ter power-ups"
+    assert len(getattr(g, "powerups", [])) == 0, "Fase 51 não deve ter power-ups"

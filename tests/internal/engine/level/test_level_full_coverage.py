@@ -8,6 +8,7 @@ class FakeSurface:
 class FakeCache:
     def __init__(self):
         self.calls = []
+
     def get_image(self, path, scale):
         self.calls.append((path, scale))
         return FakeSurface()
@@ -107,6 +108,7 @@ def test_level_value_functions_cover_branches():
 
 def test_level_value_functions_beyond_30_exact():
     from internal.engine.level.level import Level
+
     # Cobrir exatamente os retornos dos blocos else (level > 30)
     assert Level.get_birds_per_spawn(31) == 2
     assert Level.get_bird_spawn_interval(31) == 60
@@ -114,6 +116,7 @@ def test_level_value_functions_beyond_30_exact():
 
 def test_level_value_functions_exact_edges_30_31():
     from internal.engine.level.level import Level
+
     # Cobrir else interno do bloco 21..30 e o else geral
     assert Level.get_birds_per_spawn(30) == 2
     assert Level.get_bird_spawn_interval(30) == 75
@@ -121,6 +124,7 @@ def test_level_value_functions_exact_edges_30_31():
 
 def test_birds_per_spawn_21_24_and_27_precise():
     from internal.engine.level.level import Level
+
     # Cobrir retorno 2 no bloco 21..24 seguindo padrão das fases 11-20
     assert Level.get_birds_per_spawn(21) == 2
     assert Level.get_birds_per_spawn(24) == 2
@@ -166,7 +170,9 @@ def test_place_extra_life_last_resort_branch():
     # Plataformas que se sobrepõem (sem vão > 0) para forçar último recurso
     game.platforms = [
         types.SimpleNamespace(x=100, y=250, width=200, height=20),  # right=300
-        types.SimpleNamespace(x=280, y=245, width=150, height=20),  # right=430, gap_right < gap_left
+        types.SimpleNamespace(
+            x=280, y=245, width=150, height=20
+        ),  # right=430, gap_right < gap_left
     ]
     game.extra_lives = []
 
@@ -183,7 +189,7 @@ def test_place_extra_life_fallback_best_clamp_and_ensure_100():
     # Pequeno vão (>0) e plataformas baixas para acionar clamp e garantia de 100px
     game.platforms = [
         types.SimpleNamespace(x=100, y=150, width=200, height=20),  # right=300
-        types.SimpleNamespace(x=301, y=151, width=5, height=20),    # gap=1
+        types.SimpleNamespace(x=301, y=151, width=5, height=20),  # gap=1
     ]
     game.extra_lives = []
 
@@ -200,7 +206,7 @@ def test_place_extra_life_last_resort_clamp():
     # Sem vão (>0) e plataforma baixa para acionar clamp no último recurso
     game.platforms = [
         types.SimpleNamespace(x=100, y=100, width=200, height=20),  # right=300
-        types.SimpleNamespace(x=280, y=95, width=150, height=20),   # overlap
+        types.SimpleNamespace(x=280, y=95, width=150, height=20),  # overlap
     ]
     game.extra_lives = []
 
@@ -211,19 +217,22 @@ def test_place_extra_life_last_resort_clamp():
 
 def test_get_background_for_level_all_ranges():
     from internal.engine.level.level import Level
+
     game = _make_game()
 
     # Faixa cidade (<=20)
     bg_city = Level.get_background_for_level(game, 10)
-    assert isinstance(bg_city, str) and bg_city.endswith("fundo3.png")
+    assert isinstance(bg_city, str) and bg_city.endswith("fase 1.5.png")
 
     # Faixa espaço (21..40)
     bg_space = Level.get_background_for_level(game, 25)
-    assert isinstance(bg_space, str) and bg_space.endswith("fundo7.png")
+    assert isinstance(bg_space, str) and bg_space.endswith("fase 3.png")
 
     # Faixa nave (==51)
     bg_ship = Level.get_background_for_level(game, 51)
-    assert isinstance(bg_ship, str) and bg_ship.endswith("fundoNave.png")
+    assert isinstance(bg_ship, str) and bg_ship.endswith("fase 6.png")
+
+
 class DummyImage:
     def __init__(self):
         self.boss_alien_images = object()

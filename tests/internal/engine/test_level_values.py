@@ -7,12 +7,13 @@ def test_get_background_for_level_mapping():
     from internal.engine.level.level import Level
 
     lvl = Level()
-    assert lvl.get_background_for_level(1) == "imagens/fundo3.png"
-    assert lvl.get_background_for_level(15) == "imagens/fundo5.png"
-    assert lvl.get_background_for_level(25) == "imagens/fundo7.png"
-    assert lvl.get_background_for_level(35) == "imagens/fundoMundo4.2.jpg"
-    assert lvl.get_background_for_level(45) == "imagens/fundoEspaco.png"
-    assert lvl.get_background_for_level(51) == "imagens/fundoNave.png"
+    # Mapeamento atualizado para novos assets em imagens/bg
+    assert lvl.get_background_for_level(1) == "imagens/bg/fase 1.png"
+    assert lvl.get_background_for_level(15) == "imagens/bg/fase 2.png"
+    assert lvl.get_background_for_level(25) == "imagens/bg/fase 3.png"
+    assert lvl.get_background_for_level(35) == "imagens/bg/fase 4.png"
+    assert lvl.get_background_for_level(45) == "imagens/bg/fase 5.png"
+    assert lvl.get_background_for_level(51) == "imagens/bg/fase 6.png"
     assert lvl.get_background_for_level(100) == "imagens/fundo6.png"
 
 
@@ -42,7 +43,7 @@ def test_draw_level_bg_calls_cache(monkeypatch):
 
     assert isinstance(surf, FakeSurface)
     # Verify that width/height scaling is requested
-    assert instance.last_path == "imagens/fundo3.png"
+    assert instance.last_path == "imagens/bg/fase 1.png"
     assert instance.last_scale == (WIDTH, HEIGHT)
 
 

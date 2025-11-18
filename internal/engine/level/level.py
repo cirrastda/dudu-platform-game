@@ -443,7 +443,9 @@ class Level:
                 item_y = 80
         return (item_x, item_y)
 
-    def _find_collectible_spot_excluding(game, exclude_points=None, exclude_gap_ranges=None, min_distance=200):
+    def _find_collectible_spot_excluding(
+        game, exclude_points=None, exclude_gap_ranges=None, min_distance=200
+    ):
         """Como _find_collectible_spot, mas evita vãos próximos aos pontos excluídos e não reutiliza vãos.
 
         exclude_points: lista de tuplas (x, y) a evitar (apenas x é considerado para distância).
@@ -560,6 +562,7 @@ class Level:
 
     def _get_powerups_for_level(game):
         from internal.engine.difficulty import Difficulty
+
         lvl = getattr(game, "current_level", 1)
         diff = getattr(game, "difficulty", Difficulty.NORMAL)
         kinds = []

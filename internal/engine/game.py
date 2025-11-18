@@ -215,6 +215,15 @@ class Game:
         self._next_level_after_hold = False
         self._pending_state_after_hold = None
 
+        # Controles do boss alien (nível 51) — inicialização segura
+        # Alguns testes exercitam caminhos de desenho/atualização sem criar nível 51
+        # pelo gerador estático; manter atributos definidos evita AttributeError.
+        self.boss_alien = None
+        self.boss_alien_captured = False
+        self.capture_sequence_timer = 0
+        self.capture_flash_timer = 0
+        self.capture_flash_state = False
+
         # Controle de eixos do joystick para D-pad e analógicos
         self.prev_dpad_vertical = 0
         self.prev_dpad_horizontal = 0
@@ -297,6 +306,53 @@ class Game:
                 except Exception:
                     pass
         self.big_font = pygame.font.Font(None, 72)
+
+        # Fontes dedicadas ao menu (estilo mais agradável e consistente)
+        try:
+            self.menu_font = pygame.font.SysFont("Bahnschrift", 32, bold=True)
+        except Exception:
+            try:
+                self.menu_font = pygame.font.SysFont("Segoe UI", 32, bold=True)
+            except Exception:
+                self.menu_font = pygame.font.Font(None, 32)
+                try:
+                    if hasattr(self.menu_font, "set_bold"):
+                        self.menu_font.set_bold(True)
+                except Exception:
+                    pass
+        try:
+            self.menu_big_font = pygame.font.SysFont("Bahnschrift", 56, bold=True)
+        except Exception:
+            try:
+                self.menu_big_font = pygame.font.SysFont("Segoe UI", 56, bold=True)
+            except Exception:
+                self.menu_big_font = pygame.font.Font(None, 56)
+                try:
+                    if hasattr(self.menu_big_font, "set_bold"):
+                        self.menu_big_font.set_bold(True)
+                except Exception:
+                    pass
+        try:
+            self.menu_small_font = pygame.font.SysFont("Segoe UI", 22)
+        except Exception:
+            try:
+                self.menu_small_font = pygame.font.SysFont("Arial", 22)
+            except Exception:
+                self.menu_small_font = pygame.font.Font(None, 22)
+
+        # Fonte de conteúdo do menu (um pouco mais bold e menor)
+        try:
+            self.menu_content_font = pygame.font.SysFont("Segoe UI", 22, bold=True)
+        except Exception:
+            try:
+                self.menu_content_font = pygame.font.SysFont("Arial", 22, bold=True)
+            except Exception:
+                self.menu_content_font = pygame.font.Font(None, 22)
+                try:
+                    if hasattr(self.menu_content_font, "set_bold"):
+                        self.menu_content_font.set_bold(True)
+                except Exception:
+                    pass
 
         # Carregar imagens
         self.image = Image()
@@ -675,9 +731,8 @@ class Game:
                         self.state = GameState.TITLE_SCREEN
                 # Navegação da tela de título
                 elif self.state == GameState.TITLE_SCREEN:
-                    # Iniciar sempre o vídeo de abertura ao pressionar qualquer tecla
+                    # Iniciar SEMPRE o vídeo de abertura (não pode ser pulado).
                     self.state = GameState.OPENING_VIDEO
-                    # Carregar e iniciar o vídeo
                     if self.video_player.load_video("videos/opening.mp4"):
                         self.video_player.start_playback()
                     else:
@@ -688,8 +743,8 @@ class Game:
                             self.music_started = True
                 # Navegação do vídeo de abertura
                 elif self.state == GameState.OPENING_VIDEO:
-                    # Removido: pular o vídeo de abertura por tecla.
-                    # Ignorar entradas enquanto o vídeo estiver reproduzindo.
+                    # O vídeo de abertura NÃO pode ser pulado por entrada de teclado.
+                    # Ignorar teclas enquanto o vídeo está tocando.
                     pass
                 # Navegação do menu principal
                 elif self.state == GameState.MAIN_MENU:
@@ -853,20 +908,8 @@ class Game:
                     self.state == GameState.VICTORY
                     or self.state == GameState.SHOW_RANKING
                 ):
-                    # Configurar nível inicial baseado no ambiente
-                    if (
-                        ENV_CONFIG.get("environment") == "development"
-                        and "initial-stage" in ENV_CONFIG
-                    ):
-                        try:
-                            self.current_level = int(ENV_CONFIG["initial-stage"])
-                            # Validar se o nível está dentro do range válido
-                            if self.current_level < 1 or self.current_level > 50:
-                                self.current_level = 1
-                        except (ValueError, TypeError):
-                            self.current_level = 1
-                    else:
-                        self.current_level = 1
+                    # Reiniciar sempre do nível 1 ao sair da vitória/ranking
+                    self.current_level = 1
                     self.score = 0  # Resetar pontuação
                     self.platforms_jumped.clear()  # Resetar plataformas pontuadas
                     self.birds_dodged.clear()  # Resetar pássaros esquivados
@@ -935,9 +978,8 @@ class Game:
                             self.state = GameState.TITLE_SCREEN
                     # Navegação da tela de título com joystick
                     elif self.state == GameState.TITLE_SCREEN:
-                        # Iniciar sempre o vídeo de abertura ao pressionar qualquer botão
+                        # Iniciar SEMPRE o vídeo de abertura (não pode ser pulado).
                         self.state = GameState.OPENING_VIDEO
-                        # Carregar e iniciar o vídeo
                         if self.video_player.load_video("videos/opening.mp4"):
                             self.video_player.start_playback()
                         else:
@@ -948,8 +990,8 @@ class Game:
                                 self.music_started = True
                     # Navegação do vídeo de abertura com joystick
                     elif self.state == GameState.OPENING_VIDEO:
-                        # Removido: pular o vídeo de abertura por botão.
-                        # Ignorar entradas enquanto o vídeo estiver reproduzindo.
+                        # O vídeo de abertura NÃO pode ser pulado por entrada do joystick.
+                        # Ignorar botões enquanto o vídeo está tocando.
                         pass
                     # Navegação do menu principal com joystick
                     elif self.state == GameState.MAIN_MENU:
@@ -1145,25 +1187,8 @@ class Game:
                             or self.state == GameState.SHOW_RANKING
                         ):
                             # Reiniciar jogo (equivalente ao R)
-                            # Configurar nível inicial baseado no ambiente
-                            if (
-                                ENV_CONFIG.get("environment") == "development"
-                                and "initial-stage" in ENV_CONFIG
-                            ):
-                                try:
-                                    self.current_level = int(
-                                        ENV_CONFIG["initial-stage"]
-                                    )
-                                    # Validar se o nível está dentro do range válido
-                                    if (
-                                        self.current_level < 1
-                                        or self.current_level > 50
-                                    ):
-                                        self.current_level = 1
-                                except (ValueError, TypeError):
-                                    self.current_level = 1
-                            else:
-                                self.current_level = 1
+                            # Ao sair da vitória/ranking, reinicie sempre do nível 1
+                            self.current_level = 1
                             self.score = 0
                             self.platforms_jumped.clear()
                             self.birds_dodged.clear()
@@ -1249,8 +1274,12 @@ class Game:
                     )
 
             # Detectar mudança no eixo horizontal (analógico ou D-pad)
-            analog_left = analog_horizontal < -0.5 and self.prev_analog_horizontal >= -0.5
-            analog_right = analog_horizontal > 0.5 and self.prev_analog_horizontal <= 0.5
+            analog_left = (
+                analog_horizontal < -0.5 and self.prev_analog_horizontal >= -0.5
+            )
+            analog_right = (
+                analog_horizontal > 0.5 and self.prev_analog_horizontal <= 0.5
+            )
             dpad_left = dpad_horizontal < -0.5 and self.prev_dpad_horizontal >= -0.5
             dpad_right = dpad_horizontal > 0.5 and self.prev_dpad_horizontal <= 0.5
 
@@ -1418,7 +1447,10 @@ class Game:
 
         elif self.state == GameState.PLAYING:
             # Congelar toda a jogabilidade durante holds de transição (fim de fase / game over)
-            if getattr(self, "hold_active", False) and self.hold_type in ("level_end", "game_over"):
+            if getattr(self, "hold_active", False) and self.hold_type in (
+                "level_end",
+                "game_over",
+            ):
                 return
             # Atualizar jogador
             player_action = self.player.update(
@@ -1453,7 +1485,10 @@ class Game:
                     self.music.play_level_music(self, self.current_level)
 
             # Restaurar música quando a invencibilidade terminar
-            if getattr(self, "invincibility_active", False) and not self.player.is_invulnerable:
+            if (
+                getattr(self, "invincibility_active", False)
+                and not self.player.is_invulnerable
+            ):
                 self.invincibility_active = False
                 try:
                     self.music.exit_invincibility_music(self)
@@ -1941,7 +1976,9 @@ class Game:
                                         self.shield_active = False
                                         # Explodir míssil e remover
                                         explosion = self.get_pooled_explosion(
-                                            missile.x, missile.y, self.image.explosion_image
+                                            missile.x,
+                                            missile.y,
+                                            self.image.explosion_image,
                                         )
                                         self.explosions.append(explosion)
                                         if missile in robot.missiles:
@@ -1949,17 +1986,23 @@ class Game:
                                     else:
                                         self.player.take_hit()
                                         # Som de jogador atingido
-                                        self.sound_effects.play_sound_effect("player-hit")
+                                        self.sound_effects.play_sound_effect(
+                                            "player-hit"
+                                        )
                                         # Criar explosão na posição do míssil
                                         explosion = self.get_pooled_explosion(
-                                            missile.x, missile.y, self.image.explosion_image
+                                            missile.x,
+                                            missile.y,
+                                            self.image.explosion_image,
                                         )
                                         self.explosions.append(explosion)
                                         robot.missiles.remove(missile)
                                         self.lives -= 1
                                         if self.lives <= 0:
                                             # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                            if self.ranking_manager.is_high_score(self.score):
+                                            if self.ranking_manager.is_high_score(
+                                                self.score
+                                            ):
                                                 self.state = GameState.ENTER_NAME
                                             else:
                                                 self.state = GameState.GAME_OVER
@@ -2004,7 +2047,9 @@ class Game:
                                     else:
                                         self.player.take_hit()
                                         # Som de jogador atingido
-                                        self.sound_effects.play_sound_effect("player-hit")
+                                        self.sound_effects.play_sound_effect(
+                                            "player-hit"
+                                        )
                                         # Criar explosão na posição do laser
                                         explosion = self.get_pooled_explosion(
                                             laser.x, laser.y, self.image.explosion_image
@@ -2014,7 +2059,9 @@ class Game:
                                         self.lives -= 1
                                         if self.lives <= 0:
                                             # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                            if self.ranking_manager.is_high_score(self.score):
+                                            if self.ranking_manager.is_high_score(
+                                                self.score
+                                            ):
                                                 self.state = GameState.ENTER_NAME
                                             else:
                                                 self.state = GameState.GAME_OVER
@@ -2127,7 +2174,9 @@ class Game:
                                     self.lives -= 1
                                     if self.lives <= 0:
                                         # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                        if self.ranking_manager.is_high_score(self.score):
+                                        if self.ranking_manager.is_high_score(
+                                            self.score
+                                        ):
                                             self.state = GameState.ENTER_NAME
                                         else:
                                             self.state = GameState.GAME_OVER
@@ -2174,7 +2223,9 @@ class Game:
                                     self.shield_active = False
                                     # Criar explosão e remover morcego
                                     self.explosions.append(
-                                        Explosion(bat.x, bat.y, self.image.explosion_image)
+                                        Explosion(
+                                            bat.x, bat.y, self.image.explosion_image
+                                        )
                                     )
                                     if bat in self.bats:
                                         self.bats.remove(bat)
@@ -2184,13 +2235,17 @@ class Game:
                                     self.sound_effects.play_sound_effect("player-hit")
                                     # Criar explosão na posição do morcego
                                     self.explosions.append(
-                                        Explosion(bat.x, bat.y, self.image.explosion_image)
+                                        Explosion(
+                                            bat.x, bat.y, self.image.explosion_image
+                                        )
                                     )
                                     self.bats.remove(bat)
                                     self.lives -= 1
                                     if self.lives <= 0:
                                         # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                        if self.ranking_manager.is_high_score(self.score):
+                                        if self.ranking_manager.is_high_score(
+                                            self.score
+                                        ):
                                             self.state = GameState.ENTER_NAME
                                     else:
                                         self.state = GameState.GAME_OVER
@@ -2261,7 +2316,9 @@ class Game:
                                     self.lives -= 1
                                     if self.lives <= 0:
                                         # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                        if self.ranking_manager.is_high_score(self.score):
+                                        if self.ranking_manager.is_high_score(
+                                            self.score
+                                        ):
                                             self.state = GameState.ENTER_NAME
                                         else:
                                             self.state = GameState.GAME_OVER
@@ -2330,7 +2387,9 @@ class Game:
                                     self.lives -= 1
                                     if self.lives <= 0:
                                         # Sem vidas, game over - verificar se entra no ranking
-                                        if self.ranking_manager.is_high_score(self.score):
+                                        if self.ranking_manager.is_high_score(
+                                            self.score
+                                        ):
                                             self.state = GameState.ENTER_NAME
                                         else:
                                             self.state = GameState.GAME_OVER
@@ -2407,7 +2466,9 @@ class Game:
                                     self.lives -= 1
                                     if self.lives <= 0:
                                         # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                        if self.ranking_manager.is_high_score(self.score):
+                                        if self.ranking_manager.is_high_score(
+                                            self.score
+                                        ):
                                             self.state = GameState.ENTER_NAME
                                         else:
                                             self.state = GameState.GAME_OVER
@@ -2455,7 +2516,9 @@ class Game:
                                     self.lives -= 1
                                     if self.lives <= 0:
                                         # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                        if self.ranking_manager.is_high_score(self.score):
+                                        if self.ranking_manager.is_high_score(
+                                            self.score
+                                        ):
                                             self.state = GameState.ENTER_NAME
                                         else:
                                             self.state = GameState.GAME_OVER
@@ -2526,7 +2589,9 @@ class Game:
                                     self.lives -= 1
                                     if self.lives <= 0:
                                         # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                        if self.ranking_manager.is_high_score(self.score):
+                                        if self.ranking_manager.is_high_score(
+                                            self.score
+                                        ):
                                             self.state = GameState.ENTER_NAME
                                         else:
                                             self.state = GameState.GAME_OVER
@@ -2701,7 +2766,7 @@ class Game:
 
             # Título do jogo se não houver logo
             else:
-                title_text = self.big_font.render("Jump & Hit", True, WHITE)
+                title_text = self.menu_big_font.render("Jump & Hit", True, WHITE)
                 title_rect = title_text.get_rect(center=(WIDTH // 2, 150))
                 self.screen.blit(title_text, title_rect)
 
@@ -2709,7 +2774,7 @@ class Game:
             menu_start_y = 300
             for i, option in enumerate(self.menu_options):
                 color = YELLOW if i == self.menu_selected else WHITE
-                option_text = self.font.render(option, True, color)
+                option_text = self.menu_font.render(option, True, color)
                 option_rect = option_text.get_rect(
                     center=(WIDTH // 2, menu_start_y + i * 60)
                 )
@@ -2724,9 +2789,7 @@ class Game:
 
             # Rodapé com direitos autorais
             footer_text = "Desenvolvido por CirrasTec, Cirras RetroGames e Canal do Dudu. Todos os direitos reservados."
-            footer_surface = pygame.font.Font(None, 24).render(
-                footer_text, True, LIGHT_GRAY
-            )
+            footer_surface = self.menu_small_font.render(footer_text, True, LIGHT_GRAY)
             footer_rect = footer_surface.get_rect(center=(WIDTH // 2, HEIGHT - 30))
             self.screen.blit(footer_surface, footer_rect)
 
@@ -2735,7 +2798,7 @@ class Game:
             self.draw_ocean_background(self.screen)
 
             # Título da tela
-            title_text = self.big_font.render("Selecione a Dificuldade", True, YELLOW)
+            title_text = self.menu_big_font.render("Selecione a Dificuldade", True, YELLOW)
             title_rect = title_text.get_rect(center=(WIDTH // 2, 140))
             self.screen.blit(title_text, title_rect)
 
@@ -2743,7 +2806,7 @@ class Game:
             start_y = 280
             for i, option in enumerate(self.difficulty_options):
                 color = YELLOW if i == self.difficulty_selected else WHITE
-                option_text = self.font.render(option, True, color)
+                option_text = self.menu_font.render(option, True, color)
                 option_rect = option_text.get_rect(
                     center=(WIDTH // 2, start_y + i * 60)
                 )
@@ -2761,7 +2824,7 @@ class Game:
                 "ESC/B para voltar",
             ]
             for j, line in enumerate(instructions):
-                inst_text = self.font.render(line, True, LIGHT_GRAY)
+                inst_text = self.menu_small_font.render(line, True, LIGHT_GRAY)
                 inst_rect = inst_text.get_rect(
                     center=(WIDTH // 2, HEIGHT - 100 + j * 30)
                 )
@@ -3078,15 +3141,25 @@ class Game:
             # Chamar método draw do jogador
             self.player.draw(self.screen)
             # Desenhar bolha do escudo sobre o jogador
-            if getattr(self, "shield_active", False) and getattr(self, "shield_bubble_img", None):
+            if getattr(self, "shield_active", False) and getattr(
+                self, "shield_bubble_img", None
+            ):
                 try:
                     bubble_w = max(24, int(getattr(self.player, "width", 65) + 12))
                     bubble_h = max(24, int(getattr(self.player, "height", 95) + 12))
-                    bubble_img = pygame.transform.smoothscale(self.shield_bubble_img, (bubble_w, bubble_h))
+                    bubble_img = pygame.transform.smoothscale(
+                        self.shield_bubble_img, (bubble_w, bubble_h)
+                    )
                 except Exception:
-                    bubble_img = pygame.transform.scale(self.shield_bubble_img, (bubble_w, bubble_h))
-                bubble_x = int(self.player.x - (bubble_w - getattr(self.player, "width", 65)) // 2)
-                bubble_y = int(self.player.y - (bubble_h - getattr(self.player, "height", 95)) // 2)
+                    bubble_img = pygame.transform.scale(
+                        self.shield_bubble_img, (bubble_w, bubble_h)
+                    )
+                bubble_x = int(
+                    self.player.x - (bubble_w - getattr(self.player, "width", 65)) // 2
+                )
+                bubble_y = int(
+                    self.player.y - (bubble_h - getattr(self.player, "height", 95)) // 2
+                )
                 try:
                     self.screen.blit(bubble_img, (bubble_x, bubble_y))
                 except Exception:
@@ -3233,7 +3306,7 @@ class Game:
             self.draw_ocean_background(self.screen)
 
             # Tela do ranking
-            title_text = self.big_font.render("TOP 10 RANKING", True, YELLOW)
+            title_text = self.menu_font.render("TOP 10 RANKING", True, YELLOW)
             rankings = self.ranking_manager.get_rankings()
 
             # Título
@@ -3241,53 +3314,75 @@ class Game:
             self.screen.blit(title_text, title_rect)
 
             # Cabeçalho com posições fixas
-            pos_x = WIDTH // 2 - 200  # Posição inicial da tabela
-            header_pos = self.font.render("POS", True, WHITE)
-            header_name = self.font.render("NOME", True, WHITE)
-            header_score = self.font.render("PONTUAÇÃO", True, WHITE)
+            table_width = 520
+            pos_x = WIDTH // 2 - table_width // 2  # Posição inicial da tabela centralizada
+            header_pos = self.menu_content_font.render("POS", True, WHITE)
+            header_name = self.menu_content_font.render("NOME", True, WHITE)
+            header_score = self.menu_content_font.render("PONTUAÇÃO", True, WHITE)
 
             self.screen.blit(header_pos, (pos_x, 180))
             self.screen.blit(header_name, (pos_x + 60, 180))
-            self.screen.blit(header_score, (pos_x + 300, 180))
+            # Cabeçalho de pontuação alinhado pela borda direita da coluna
+            header_score_rect = header_score.get_rect()
+            header_score_rect.right = pos_x + table_width
+            header_score_rect.y = 180
+            self.screen.blit(header_score, header_score_rect)
 
-            # Linha separadora
+            # Linha separadora posicionada dinamicamente abaixo do cabeçalho
+            header_line_y = 180 + max(
+                header_pos.get_height(),
+                header_name.get_height(),
+                header_score.get_height(),
+            ) + 6
             pygame.draw.line(
-                self.screen, WHITE, (pos_x - 10, 200), (pos_x + 390, 200), 2
+                self.screen, WHITE, (pos_x, header_line_y), (pos_x + table_width, header_line_y), 2
             )
 
-            # Rankings com colunas alinhadas
-            y_offset = 230
+            # Rankings com colunas alinhadas (após a linha)
+            y_offset = header_line_y + 30
             for i, ranking in enumerate(rankings, 1):
                 # Destacar o jogador atual se estiver no ranking
                 color = YELLOW if ranking["name"] == self.player_name.strip() else WHITE
 
                 # Coluna posição
-                pos_text = self.font.render(f"{i:2d}.", True, color)
+                pos_text = self.menu_content_font.render(f"{i:2d}.", True, color)
                 self.screen.blit(pos_text, (pos_x, y_offset))
 
-                # Coluna nome (limitado a 18 chars para caber na coluna)
-                name_display = ranking["name"][:18]
-                name_text = self.font.render(name_display, True, color)
+                # Coluna nome com truncamento dinâmico por largura (reticências)
+                name_display = ranking["name"]
+                score_min_width = self.menu_content_font.size("888.888.888")[0]
+                name_max_width = table_width - 60 - score_min_width - 20
+                while (
+                    len(name_display) > 0
+                    and self.menu_content_font.size(
+                        name_display + ("…" if name_display != ranking["name"] else "")
+                    )[0]
+                    > name_max_width
+                ):
+                    name_display = name_display[:-1]
+                if name_display != ranking["name"]:
+                    name_display = name_display + "…"
+                name_text = self.menu_content_font.render(name_display, True, color)
                 self.screen.blit(name_text, (pos_x + 60, y_offset))
 
                 # Coluna pontuação (alinhada à direita)
                 score_display = f"{int(ranking['score']):,}".replace(",", ".")
-                score_text = self.font.render(score_display, True, color)
+                score_text = self.menu_content_font.render(score_display, True, color)
                 score_rect = score_text.get_rect()
-                score_rect.right = pos_x + 390
+                score_rect.right = pos_x + table_width
                 score_rect.y = y_offset
                 self.screen.blit(score_text, score_rect)
 
                 y_offset += 35
 
             # Instruções
-            restart_text = self.font.render(
+            restart_text = self.menu_small_font.render(
                 "Pressione R para jogar novamente", True, LIGHT_GRAY
             )
             restart_rect = restart_text.get_rect(center=(WIDTH // 2, HEIGHT - 80))
             self.screen.blit(restart_text, restart_rect)
 
-            back_text = self.font.render(
+            back_text = self.menu_small_font.render(
                 "Pressione ESC ou Botão B para voltar", True, LIGHT_GRAY
             )
             back_rect = back_text.get_rect(center=(WIDTH // 2, HEIGHT - 50))
@@ -3316,7 +3411,7 @@ class Game:
                 self.draw_ocean_background(self.screen)
 
                 # Título
-                title_text = self.big_font.render("CRÉDITOS", True, YELLOW)
+                title_text = self.menu_font.render("CRÉDITOS", True, YELLOW)
                 title_rect = title_text.get_rect(center=(WIDTH // 2, 100))
                 self.screen.blit(title_text, title_rect)
 
@@ -3339,13 +3434,13 @@ class Game:
                 for line in menu_credits:
                     if line.startswith("https://"):
                         # Links em azul
-                        text_surface = self.font.render(line, True, LIGHT_BLUE)
+                        text_surface = self.menu_content_font.render(line, True, LIGHT_BLUE)
                     elif line in ["CirrasTec", "Cirras RetroGames", "Canal do Dudu"]:
                         # Nomes em amarelo
-                        text_surface = self.font.render(line, True, YELLOW)
+                        text_surface = self.menu_content_font.render(line, True, YELLOW)
                     elif line != "":
                         # Texto normal em branco
-                        text_surface = self.font.render(line, True, WHITE)
+                        text_surface = self.menu_content_font.render(line, True, WHITE)
                     else:
                         y_offset += 20
                         continue
@@ -3355,7 +3450,7 @@ class Game:
                     y_offset += 40
 
                 # Instruções
-                instruction_text = self.font.render(
+                instruction_text = self.menu_small_font.render(
                     "Pressione ESC ou ENTER para voltar", True, LIGHT_GRAY
                 )
                 instruction_rect = instruction_text.get_rect(
@@ -3545,7 +3640,7 @@ class Game:
             self.draw_ocean_background(self.screen)
 
             # Título
-            title_text = self.big_font.render("RECORDES", True, YELLOW)
+            title_text = self.menu_font.render("RECORDES", True, YELLOW)
             rankings = self.ranking_manager.get_rankings()
 
             # Título
@@ -3553,46 +3648,68 @@ class Game:
             self.screen.blit(title_text, title_rect)
 
             # Cabeçalho com posições fixas
-            pos_x = WIDTH // 2 - 200  # Posição inicial da tabela
-            header_pos = self.font.render("POS", True, WHITE)
-            header_name = self.font.render("NOME", True, WHITE)
-            header_score = self.font.render("PONTUAÇÃO", True, WHITE)
+            table_width = 520
+            pos_x = WIDTH // 2 - table_width // 2  # Posição inicial da tabela centralizada
+            header_pos = self.menu_content_font.render("POS", True, WHITE)
+            header_name = self.menu_content_font.render("NOME", True, WHITE)
+            header_score = self.menu_content_font.render("PONTUAÇÃO", True, WHITE)
 
             self.screen.blit(header_pos, (pos_x, 180))
             self.screen.blit(header_name, (pos_x + 60, 180))
-            self.screen.blit(header_score, (pos_x + 300, 180))
+            # Cabeçalho de pontuação alinhado pela borda direita da coluna
+            header_score_rect = header_score.get_rect()
+            header_score_rect.right = pos_x + table_width
+            header_score_rect.y = 180
+            self.screen.blit(header_score, header_score_rect)
 
-            # Linha separadora
+            # Linha separadora posicionada dinamicamente abaixo do cabeçalho
+            header_line_y = 180 + max(
+                header_pos.get_height(),
+                header_name.get_height(),
+                header_score.get_height(),
+            ) + 6
             pygame.draw.line(
-                self.screen, WHITE, (pos_x - 10, 200), (pos_x + 390, 200), 2
+                self.screen, WHITE, (pos_x, header_line_y), (pos_x + table_width, header_line_y), 2
             )
 
-            # Rankings com colunas alinhadas
-            y_offset = 230
+            # Rankings com colunas alinhadas (após a linha)
+            y_offset = header_line_y + 30
             for i, ranking in enumerate(rankings, 1):
                 color = WHITE
 
                 # Coluna posição
-                pos_text = self.font.render(f"{i:2d}.", True, color)
+                pos_text = self.menu_content_font.render(f"{i:2d}.", True, color)
                 self.screen.blit(pos_text, (pos_x, y_offset))
 
-                # Coluna nome (limitado a 18 chars para caber na coluna)
-                name_display = ranking["name"][:18]
-                name_text = self.font.render(name_display, True, color)
+                # Coluna nome com truncamento dinâmico por largura (reticências)
+                name_display = ranking["name"]
+                score_min_width = self.menu_content_font.size("888.888.888")[0]
+                name_max_width = table_width - 60 - score_min_width - 20
+                while (
+                    len(name_display) > 0
+                    and self.menu_content_font.size(
+                        name_display + ("…" if name_display != ranking["name"] else "")
+                    )[0]
+                    > name_max_width
+                ):
+                    name_display = name_display[:-1]
+                if name_display != ranking["name"]:
+                    name_display = name_display + "…"
+                name_text = self.menu_content_font.render(name_display, True, color)
                 self.screen.blit(name_text, (pos_x + 60, y_offset))
 
                 # Coluna pontuação (alinhada à direita)
                 score_display = f"{int(ranking['score']):,}".replace(",", ".")
-                score_text = self.font.render(score_display, True, color)
+                score_text = self.menu_content_font.render(score_display, True, color)
                 score_rect = score_text.get_rect()
-                score_rect.right = pos_x + 390
+                score_rect.right = pos_x + table_width
                 score_rect.y = y_offset
                 self.screen.blit(score_text, score_rect)
 
                 y_offset += 35
 
             # Instruções
-            instruction_text = self.font.render(
+            instruction_text = self.menu_small_font.render(
                 "Pressione ESC ou ENTER para voltar", True, LIGHT_GRAY
             )
             instruction_rect = instruction_text.get_rect(
@@ -3639,6 +3756,7 @@ class Game:
         # Parar música
         try:
             import pygame as _pg
+
             _pg.mixer.music.stop()
         except Exception:
             pass
@@ -3653,6 +3771,7 @@ class Game:
         # Limpar cache de recursos
         try:
             from internal.resources.cache import ResourceCache
+
             ResourceCache().clear_cache()
         except Exception:
             pass
@@ -3660,6 +3779,7 @@ class Game:
         # Finalizar pygame
         try:
             import pygame as _pg
+
             _pg.quit()
         except Exception:
             pass

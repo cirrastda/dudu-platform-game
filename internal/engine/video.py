@@ -9,13 +9,14 @@ import threading
 # Importação opcional do moviepy
 try:
     from moviepy.editor import VideoFileClip
+
     MOVIEPY_AVAILABLE = True
 except ImportError as e:
     MOVIEPY_AVAILABLE = False
     try:
         print(f"MoviePy import falhou ({e.__class__.__name__}): {e}")
         print(f"Python: {sys.executable}")
-        print(f"Dica: \"{sys.executable}\" -m pip install -r requirements.txt")
+        print(f'Dica: "{sys.executable}" -m pip install -r requirements.txt')
     except Exception:
         print("MoviePy não está disponível. Áudio do vídeo não será reproduzido.")
 
@@ -32,18 +33,18 @@ class VideoPlayer:
         self.duration = 0
         self.fps = 30
         self.video_rect = None
-        
+
         # Áudio usando moviepy
         self.audio_clip = None
         self.audio_thread = None
         self.has_audio = False
-        
+
         # Fallback com imagens estáticas
         self.fallback_images = []
         self.fallback_mode = False
         self.fallback_index = 0
         self.fallback_delay = 4000  # 4000ms (4s) por imagem
-        self.fallback_fade = 1000   # 1000ms (1s) de transição por esmaecimento
+        self.fallback_fade = 1000  # 1000ms (1s) de transição por esmaecimento
         self.last_fallback_time = 0
 
         # Áudio para fallback (pygame.mixer)
@@ -52,28 +53,46 @@ class VideoPlayer:
         self.fallback_music_started = False
         # Contexto do fallback: 'opening' (padrão) ou 'ending'
         self.fallback_context = "opening"
-        
+
     def load_video(self, video_path):
         """Carregar vídeo para reprodução usando moviepy"""
         try:
             # Verificar se o arquivo existe
             full_path = resource_path(video_path)
             try:
-                print(f"[VideoPlayer] Resolvido caminho do vídeo: {full_path} | MOVIEPY_AVAILABLE={MOVIEPY_AVAILABLE}")
+                print(
+                    f"[VideoPlayer] Resolvido caminho do vídeo: {full_path} | MOVIEPY_AVAILABLE={MOVIEPY_AVAILABLE}"
+                )
             except Exception:
                 pass
 
             # Definir contexto pelo nome do arquivo
             try:
                 base = os.path.basename(video_path).lower()
-                self.fallback_context = "ending" if ("ending" in base or "final" in base) else "opening"
+                self.fallback_context = (
+                    "ending" if ("ending" in base or "final" in base) else "opening"
+                )
             except Exception:
                 self.fallback_context = "opening"
+
+            # Preparar trilha de áudio externa por contexto (intro/final)
+            try:
+                if self.fallback_context == "ending":
+                    music_path = resource_path("videos/final.mp3")
+                else:
+                    music_path = resource_path("videos/intro.mp3")
+                if os.path.exists(music_path):
+                    self.fallback_music_path = music_path
+                    self.has_fallback_music = True
+                else:
+                    self.has_fallback_music = False
+            except Exception:
+                self.has_fallback_music = False
 
             if not os.path.exists(full_path):
                 print(f"Arquivo de vídeo não encontrado: {full_path}")
                 return self.load_fallback_video()
-                
+
             # Tentar carregar com moviepy se disponível
             if MOVIEPY_AVAILABLE:
                 try:
@@ -81,11 +100,11 @@ class VideoPlayer:
                     self.video_clip = VideoFileClip(full_path)
                     self.duration = self.video_clip.duration
                     self.fps = self.video_clip.fps or 30
-                    
+
                     # Calcular posição e tamanho para manter aspect ratio
                     video_size = self.video_clip.size  # (width, height)
                     self._calculate_video_rect(video_size)
-                    
+
                     # Carregar áudio se disponível
                     if self.video_clip.audio:
                         self.audio_clip = self.video_clip.audio
@@ -94,15 +113,13 @@ class VideoPlayer:
                     else:
                         self.has_audio = False
 
-                    
-
-                    
                     return True
-                    
+
                 except Exception as e:
                     print(f"Erro ao carregar vídeo com MoviePy: {e}")
                     try:
                         import traceback
+
                         traceback.print_exc()
                     except Exception:
                         pass
@@ -110,17 +127,17 @@ class VideoPlayer:
             else:
                 print("MoviePy não disponível, usando modo fallback")
                 return self.load_fallback_video()
-                
+
         except Exception as e:
             print(f"Erro ao carregar vídeo: {e}")
             return self.load_fallback_video()
-    
+
     def _calculate_video_rect(self, video_size):
         """Calcular posição e tamanho do vídeo para ocupar toda a tela"""
         video_width, video_height = video_size
         video_aspect = video_width / video_height
         screen_aspect = self.screen_width / self.screen_height
-        
+
         # Fazer o vídeo ocupar toda a tela, cortando se necessário para manter aspect ratio
         if video_aspect > screen_aspect:
             # Vídeo é mais largo que a tela - ajustar pela altura
@@ -134,9 +151,8 @@ class VideoPlayer:
             new_height = int(self.screen_width / video_aspect)
             x = 0
             y = (self.screen_height - new_height) // 2
-        
-        self.video_rect = pygame.Rect(x, y, new_width, new_height)
 
+        self.video_rect = pygame.Rect(x, y, new_width, new_height)
 
     def _calculate_fallback_rect(self, image_size):
         """Calcular posição e tamanho para imagens de fallback (fit dentro da tela, centralizado)."""
@@ -159,8 +175,10 @@ class VideoPlayer:
             y = 0
 
         self.video_rect = pygame.Rect(x, y, new_width, new_height)
-        print(f"Fallback será exibido em: {x}, {y} com tamanho {new_width}x{new_height}")
-    
+        print(
+            f"Fallback será exibido em: {x}, {y} com tamanho {new_width}x{new_height}"
+        )
+
     def load_fallback_video(self):
         """Carregar vídeo alternativo usando imagens estáticas"""
         self.fallback_mode = True
@@ -191,7 +209,9 @@ class VideoPlayer:
                         self.fallback_images.append(img)
                         loaded += 1
                     except Exception as e:
-                        print(f"Erro ao carregar imagem fallback ({label}) {img_path}: {e}")
+                        print(
+                            f"Erro ao carregar imagem fallback ({label}) {img_path}: {e}"
+                        )
             if loaded:
                 print(f"Fallback: carregadas {loaded} imagens de '{label}'")
             return loaded
@@ -221,7 +241,9 @@ class VideoPlayer:
                     if os.path.exists(intro_dir):
                         try_load_series(intro_dir, "imagens/intro")
         except Exception as e:
-            print(f"Fallback: erro ao selecionar imagens ({self.fallback_context}): {e}")
+            print(
+                f"Fallback: erro ao selecionar imagens ({self.fallback_context}): {e}"
+            )
 
         # Música de fallback conforme contexto
         try:
@@ -234,31 +256,37 @@ class VideoPlayer:
                 self.has_fallback_music = True
                 print(f"Fallback: música '{os.path.relpath(music_path)}' disponível")
             else:
-                print(f"Fallback: música não encontrada para contexto '{self.fallback_context}'")
+                print(
+                    f"Fallback: música não encontrada para contexto '{self.fallback_context}'"
+                )
         except Exception as e:
             print(f"Fallback: erro ao localizar música ({self.fallback_context}): {e}")
 
         # 3) Último recurso: uma tela preta centralizada
         if not self.fallback_images:
             self._calculate_fallback_rect((400, 300))
-            black_surface = pygame.Surface((self.video_rect.width, self.video_rect.height), pygame.SRCALPHA)
+            black_surface = pygame.Surface(
+                (self.video_rect.width, self.video_rect.height), pygame.SRCALPHA
+            )
             black_surface.fill((0, 0, 0))
             self.fallback_images.append(black_surface.convert_alpha())
             print("Fallback: nenhuma imagem encontrada; usando tela preta")
 
         # Duração: 5s por imagem + 1s de fade entre pares
         num_imgs = len(self.fallback_images)
-        self.duration = num_imgs * (self.fallback_delay / 1000.0) + max(0, num_imgs - 1) * (self.fallback_fade / 1000.0)
+        self.duration = num_imgs * (self.fallback_delay / 1000.0) + max(
+            0, num_imgs - 1
+        ) * (self.fallback_fade / 1000.0)
         print(f"Modo fallback ativado com {len(self.fallback_images)} imagens")
         return True
-    
+
     def start_playback(self):
         """Iniciar reprodução do vídeo"""
         if not self.is_playing:
             self.is_playing = True
             self.finished = False
             self.start_time = time.time()
-            
+
             if self.fallback_mode:
                 self.fallback_index = 0
                 self.last_fallback_time = pygame.time.get_ticks()
@@ -279,47 +307,83 @@ class VideoPlayer:
                     except Exception as e:
                         print(f"Fallback: erro ao iniciar música: {e}")
                         self.fallback_music_started = False
-            
-            # Iniciar áudio se disponível
-            if self.has_audio and self.audio_clip:
-                self._play_audio()
-    
+
+            # Iniciar áudio do vídeo
+            if not self.fallback_mode:
+                # Priorizar trilha externa mapeada por contexto (intro/final)
+                if self.has_fallback_music and self.fallback_music_path:
+                    try:
+                        pygame.mixer.music.stop()
+                        pygame.mixer.music.load(self.fallback_music_path)
+                        try:
+                            pygame.mixer.music.set_volume(0.8)
+                        except Exception:
+                            pass
+                        pygame.mixer.music.play()
+                        print("Vídeo: áudio externo iniciado")
+                    except Exception as e:
+                        print(f"Vídeo: erro ao iniciar áudio externo: {e}")
+                else:
+                    # Fallback para reprodução via moviepy se habilitado
+                    if self.has_audio and self.audio_clip:
+                        self._play_audio()
+
     def _play_audio(self):
         """Reproduz o áudio do vídeo usando moviepy em thread separada"""
         if not MOVIEPY_AVAILABLE or not self.audio_clip or self.audio_thread:
             return
-        # Evitar reprodução de áudio em ambientes de teste/headless para prevenir crashes
-        # Detecta execução sob pytest ou quando variável de ambiente desativa áudio
+        # Evitar reprodução de áudio apenas quando variável de ambiente explícita desativa áudio
         try:
-            if os.environ.get("DISABLE_VIDEO_AUDIO") == "1" or "PYTEST_CURRENT_TEST" in os.environ:
+            if os.environ.get("DISABLE_VIDEO_AUDIO") == "1":
                 return
         except Exception:
             # Se não conseguir ler env, prosseguir normalmente
             pass
-            
+
+        # Evitar chamar preview() do MoviePy em ambientes Windows/headless para prevenir crashes.
+        # Só permite quando um opt-in explícito estiver presente.
         try:
+            clip_mod = getattr(self.audio_clip, "__module__", "") or ""
+            clip_name = getattr(
+                self.audio_clip, "__class__", type(self.audio_clip)
+            ).__name__.lower()
+            is_moviepy_audio = ("moviepy" in clip_mod) or ("audioclip" in clip_name)
+        except Exception:
+            is_moviepy_audio = True
+
+        try:
+            enable_audio = os.environ.get("ENABLE_VIDEO_AUDIO") == "1"
+        except Exception:
+            enable_audio = False
+
+        if is_moviepy_audio and not enable_audio:
+            # Não iniciar thread de áudio real para evitar falha nativa.
+            return
+
+        try:
+
             def play_audio():
                 try:
                     # Parar qualquer música que esteja tocando
                     pygame.mixer.music.stop()
-                    
+
                     # Reproduzir áudio usando moviepy
                     self.audio_clip.preview()
 
                 except Exception as e:
                     print(f"Erro ao reproduzir áudio: {e}")
-            
+
             self.audio_thread = threading.Thread(target=play_audio, daemon=True)
             self.audio_thread.start()
 
         except Exception as e:
             print(f"Erro ao iniciar thread de áudio: {e}")
-    
+
     def update(self):
         """Atualizar o estado do vídeo"""
         if not self.is_playing:
             return
-        
+
         if self.fallback_mode:
             # Modo fallback com imagens (5s por imagem + fade de 1s)
             current_time = pygame.time.get_ticks()
@@ -339,7 +403,7 @@ class VideoPlayer:
         else:
             # Modo vídeo real com moviepy
             elapsed_time = time.time() - self.start_time
-            
+
             if elapsed_time >= self.duration:
                 self.finished = True
                 self.is_playing = False
@@ -350,35 +414,51 @@ class VideoPlayer:
                         # Obter frame no tempo atual
                         frame_array = self.video_clip.get_frame(elapsed_time)
                         # Converter para surface do pygame
-                        frame_surface = pygame.surfarray.make_surface(frame_array.swapaxes(0, 1))
+                        frame_surface = pygame.surfarray.make_surface(
+                            frame_array.swapaxes(0, 1)
+                        )
                         # Redimensionar para o tamanho correto
-                        self.current_frame = pygame.transform.scale(frame_surface, 
-                                                                  (self.video_rect.width, self.video_rect.height))
+                        self.current_frame = pygame.transform.scale(
+                            frame_surface,
+                            (self.video_rect.width, self.video_rect.height),
+                        )
                 except Exception as e:
                     print(f"Erro ao obter frame do vídeo: {e}")
                     self.finished = True
                     self.is_playing = False
-    
+
     def draw(self, screen):
         """Desenhar o frame atual do vídeo"""
         if not self.is_playing and not self.finished:
             return
-        
+
         if self.fallback_mode:
             # Desenhar imagem fallback com transição por esmaecimento
             if self.fallback_index < len(self.fallback_images):
                 elapsed = pygame.time.get_ticks() - self.last_fallback_time
                 if elapsed < self.fallback_delay or self.fallback_fade <= 0:
                     # Exibir imagem atual normalmente (centralizada e ajustada)
-                    screen.blit(self.fallback_images[self.fallback_index], self.video_rect)
+                    screen.blit(
+                        self.fallback_images[self.fallback_index], self.video_rect
+                    )
                 else:
                     # Crossfade entre imagem atual e próxima
-                    fade_elapsed = min(self.fallback_fade, elapsed - self.fallback_delay)
-                    t = fade_elapsed / float(self.fallback_fade) if self.fallback_fade > 0 else 1.0
+                    fade_elapsed = min(
+                        self.fallback_fade, elapsed - self.fallback_delay
+                    )
+                    t = (
+                        fade_elapsed / float(self.fallback_fade)
+                        if self.fallback_fade > 0
+                        else 1.0
+                    )
 
                     cur_img = self.fallback_images[self.fallback_index]
                     next_index = self.fallback_index + 1
-                    next_img = self.fallback_images[next_index] if next_index < len(self.fallback_images) else None
+                    next_img = (
+                        self.fallback_images[next_index]
+                        if next_index < len(self.fallback_images)
+                        else None
+                    )
 
                     # Esmaecer imagem atual (fade-out)
                     alpha_cur = int(255 * (1.0 - t))
@@ -394,7 +474,9 @@ class VideoPlayer:
                         next_img.set_alpha(255)
                     else:
                         # Sem próxima imagem: esmaecer para preto
-                        black = pygame.Surface((self.video_rect.width, self.video_rect.height))
+                        black = pygame.Surface(
+                            (self.video_rect.width, self.video_rect.height)
+                        )
                         black.fill((0, 0, 0))
                         black.set_alpha(int(255 * t))
                         screen.blit(black, self.video_rect)
@@ -402,11 +484,11 @@ class VideoPlayer:
             # Desenhar frame do vídeo
             if self.current_frame and self.video_rect:
                 screen.blit(self.current_frame, self.video_rect)
-    
+
     def stop(self):
         """Parar reprodução do vídeo"""
         self.is_playing = False
-        
+
         # Parar áudio se estiver tocando
         if self.audio_thread and self.audio_thread.is_alive():
             try:
@@ -422,36 +504,36 @@ class VideoPlayer:
             except Exception:
                 pass
             self.fallback_music_started = False
-    
+
     def is_finished(self):
         """Verificar se o vídeo terminou"""
         return self.finished
-    
+
     def cleanup(self):
         """Limpar recursos do vídeo"""
         self.stop()
-        
+
         if self.video_clip:
             try:
                 self.video_clip.close()
             except:
                 pass
             self.video_clip = None
-        
+
         if self.audio_clip:
             try:
                 self.audio_clip.close()
             except:
                 pass
             self.audio_clip = None
-        
+
         if self.audio_thread and self.audio_thread.is_alive():
             try:
                 self.audio_thread.join(timeout=1.0)
             except:
                 pass
             self.audio_thread = None
-        
+
         self.current_frame = None
         self.fallback_images.clear()
         self.finished = False

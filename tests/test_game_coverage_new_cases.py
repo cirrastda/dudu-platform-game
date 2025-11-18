@@ -112,7 +112,8 @@ def test_joystick_title_skip_opening_in_production(monkeypatch):
     pygame.event.post(evt)
     g.handle_events()
 
-    assert g.state == GameState.MAIN_MENU
+    # Em produção, não deve pular: vai para OPENING_VIDEO
+    assert g.state == GameState.OPENING_VIDEO
 
 
 def test_joystick_splash_advances_in_development(monkeypatch):
@@ -190,14 +191,15 @@ def test_keyboard_title_skip_opening_to_menu(monkeypatch):
 
     # Produção com skip-opening ativado via ENV_CONFIG
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "production"
     game_module.ENV_CONFIG["skip-opening-video"] = "1"
 
     evt = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)
     pygame.event.post(evt)
     g.handle_events()
-
-    assert g.state == GameState.MAIN_MENU
+    # Regra atual: em produção, mesmo com skip-opening ativo, segue para OPENING_VIDEO
+    assert g.state == GameState.OPENING_VIDEO
 
 
 def test_keyboard_title_opening_video_load_fails_fallback_to_menu(monkeypatch):
@@ -206,6 +208,7 @@ def test_keyboard_title_opening_video_load_fails_fallback_to_menu(monkeypatch):
 
     # Produção sem skip; forçar falha de load_video
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "production"
     game_module.ENV_CONFIG.pop("skip-opening-video", None)
 
@@ -229,7 +232,8 @@ def test_keyboard_opening_video_any_key_skips_to_menu(monkeypatch):
     pygame.event.post(evt)
     g.handle_events()
 
-    assert g.state == GameState.MAIN_MENU
+    # Comportamento atualizado: durante OPENING_VIDEO, teclas não pulam para o menu
+    assert g.state == GameState.OPENING_VIDEO
 
 
 def test_keyboard_fim_screen_to_credits_ending(monkeypatch):
@@ -264,8 +268,10 @@ def test_keyboard_main_menu_navigation_calls_selection(monkeypatch):
     g.menu_options = ["Jogar", "Recordes", "Sair"]
 
     called = {"select": False}
+
     def fake_handle_selection():
         called["select"] = True
+
     g.handle_menu_selection = fake_handle_selection
 
     # Navegar para baixo e confirmar
@@ -282,6 +288,7 @@ def test_keyboard_title_skip_opening_env_exception_path(monkeypatch):
     g.music_started = False
 
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "production"
     game_module.ENV_CONFIG.pop("skip-opening-video", None)
 
@@ -301,6 +308,7 @@ def test_keyboard_select_difficulty_apply_invalid_initial_stage_dev(monkeypatch)
     g.difficulty_selected = 1
 
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "development"
     game_module.ENV_CONFIG["initial-stage"] = "abc"  # inválido para acionar except
 
@@ -320,6 +328,7 @@ def test_keyboard_game_over_restart_invalid_initial_stage_dev(monkeypatch):
     g.game_over_selected = 0
 
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "development"
     game_module.ENV_CONFIG["initial-stage"] = "x"  # inválido
 
@@ -339,6 +348,7 @@ def test_keyboard_show_ranking_restart_to_playing_production(monkeypatch):
     g.max_lives = 3
 
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "production"  # aciona ramo else
 
     Level.init_level = lambda *_a, **_k: None
@@ -358,6 +368,7 @@ def test_joystick_title_skip_opening_env_exception_path(monkeypatch):
     g.env_config = None  # provocar exceção
 
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "production"
 
     evt = pygame.event.Event(pygame.JOYBUTTONDOWN, button=0)
@@ -374,6 +385,7 @@ def test_joystick_select_difficulty_confirm_starts_game(monkeypatch):
     g.joystick_connected = True
 
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "production"
 
     Level.init_level = lambda *_a, **_k: None
@@ -417,6 +429,7 @@ def test_joystick_select_difficulty_confirm_normal_starts_game(monkeypatch):
     g.joystick_connected = True
 
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "production"
 
     Level.init_level = lambda *_a, **_k: None
@@ -434,6 +447,7 @@ def test_joystick_restart_invalid_initial_stage_dev(monkeypatch):
     g.joystick_connected = True
 
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "development"
     game_module.ENV_CONFIG["initial-stage"] = "bad"  # inválido
 
@@ -488,6 +502,7 @@ def test_joystick_game_over_restart_invalid_initial_stage_dev(monkeypatch):
     g.joystick_connected = True
 
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "development"
     game_module.ENV_CONFIG["initial-stage"] = "bad"  # inválido
 
@@ -522,6 +537,7 @@ def test_joystick_restart_clears_collected_items(monkeypatch):
     g.max_lives = 3
 
     import internal.engine.game as game_module
+
     game_module.ENV_CONFIG["environment"] = "production"
 
     Level.init_level = lambda *_a, **_k: None
