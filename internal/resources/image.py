@@ -378,6 +378,22 @@ class Image:
                 "imagens/elementos/vida.png", (24, 24)
             )
 
+            # Carregar imagens de power-ups (itens colecionáveis)
+            # Tamanho igual ao da vida extra para consistência visual
+            self.powerup_invincibility_img = cache.get_image(
+                "imagens/elementos/invencibilidade.png", (24, 24)
+            )
+            self.powerup_double_jump_img = cache.get_image(
+                "imagens/elementos/superpulo.png", (24, 24)
+            )
+            self.powerup_shield_img = cache.get_image(
+                "imagens/elementos/protecao.png", (24, 24)
+            )
+
+            # Bolha do escudo (overlay que envolve o personagem)
+            # Carregada sem escala para permitir ajuste dinâmico conforme tamanho do player
+            self.shield_bubble_img = cache.get_image("imagens/elementos/bolha.png")
+
             # Carregar logos para splash screen usando cache
             logo_files = ["cirrastec.png", "cirrasretrogames.png", "canaldodudu.png"]
             self.logos = []

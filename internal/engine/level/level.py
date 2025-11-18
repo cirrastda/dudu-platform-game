@@ -7,6 +7,7 @@ from internal.engine.level.generator.static import StaticLevelGenerator
 from internal.resources.player import Player
 from internal.resources.enemies.turtle import Turtle
 from internal.resources.extra_life import ExtraLife
+from internal.resources.powerup import PowerUp, PowerUpSpec
 
 
 class Level:
@@ -283,6 +284,10 @@ class Level:
         ):
             Level.place_extra_life(game)
 
+        # Resetar e posicionar power-ups conforme dificuldade
+        game.powerups = []
+        Level.place_powerups(game)
+
     def place_extra_life(game):
         """Posiciona um item de vida em uma plataforma, exigindo um salto para alcançar"""
         if not hasattr(game, "platforms") or not game.platforms:
@@ -382,6 +387,295 @@ class Level:
                     item_y = 80
                 item_image = getattr(game, "extra_life_img", None)
                 game.extra_lives.append(ExtraLife(item_x, item_y, image=item_image))
+
+    def _find_collectible_spot(game):
+        """Encontrar um vão apropriado para posicionamento de itens colecionáveis."""
+        if not hasattr(game, "platforms") or not game.platforms:
+            return None
+        platforms_sorted = sorted(game.platforms, key=lambda p: p.x)
+        min_x = platforms_sorted[0].x
+        max_x = max(p.x + p.width for p in platforms_sorted)
+        mid_x = (min_x + max_x) / 2
+        best = None
+        min_gap_sizes = [60, 40, 20]
+        for min_gap in min_gap_sizes:
+            for i in range(len(platforms_sorted) - 1):
+                a = platforms_sorted[i]
+                b = platforms_sorted[i + 1]
+                gap_left = a.x + a.width
+                gap_right = b.x
+                gap_width = gap_right - gap_left
+                if gap_width >= min_gap:
+                    center_x = gap_left + gap_width / 2
+                    distance = abs(center_x - mid_x)
+                    if best is None or distance < best[4]:
+                        best = (a, b, gap_left, gap_width, distance)
+            if best is not None:
+                break
+        if best is None:
+            fallback_best = None
+            for i in range(len(platforms_sorted) - 1):
+                a = platforms_sorted[i]
+                b = platforms_sorted[i + 1]
+                gap_left = a.x + a.width
+                gap_right = b.x
+                gap_width = gap_right - gap_left
+                if gap_width > 0:
+                    center_x = gap_left + gap_width / 2
+                    distance = abs(center_x - mid_x)
+                    if fallback_best is None or distance < fallback_best[4]:
+                        fallback_best = (a, b, gap_left, gap_width, distance)
+            if fallback_best is None:
+                return None
+            a, b, gap_left, gap_width, _ = fallback_best
+        else:
+            a, b, gap_left, gap_width, _ = best
+        vertical_base = min(a.y, b.y)
+        item_x = int(gap_left + gap_width / 2 - 12)
+        extra_offset = int(140 + min(60, gap_width * 0.25))
+        item_y = int(vertical_base - extra_offset)
+        if item_y < 80:
+            item_y = 80
+        highest_platform_y = min(a.y, b.y)
+        if highest_platform_y - item_y < 120:
+            item_y = highest_platform_y - 120
+            if item_y < 80:
+                item_y = 80
+        return (item_x, item_y)
+
+    def _find_collectible_spot_excluding(game, exclude_points=None, exclude_gap_ranges=None, min_distance=200):
+        """Como _find_collectible_spot, mas evita vãos próximos aos pontos excluídos e não reutiliza vãos.
+
+        exclude_points: lista de tuplas (x, y) a evitar (apenas x é considerado para distância).
+        exclude_gap_ranges: lista de tuplas (gap_left, gap_right) para vãos já utilizados.
+        min_distance: distância mínima em X entre o centro do vão escolhido e qualquer ponto excluído.
+        """
+        if exclude_points is None:
+            exclude_points = []
+        if exclude_gap_ranges is None:
+            exclude_gap_ranges = []
+        if not hasattr(game, "platforms") or not game.platforms:
+            return None
+
+        platforms_sorted = sorted(game.platforms, key=lambda p: p.x)
+        min_x = platforms_sorted[0].x
+        max_x = max(p.x + p.width for p in platforms_sorted)
+        mid_x = (min_x + max_x) / 2
+
+        candidates = []  # (a, b, gap_left, gap_width, distance)
+        min_gap_sizes = [60, 40, 20]
+        for min_gap in min_gap_sizes:
+            for i in range(len(platforms_sorted) - 1):
+                a = platforms_sorted[i]
+                b = platforms_sorted[i + 1]
+                gap_left = a.x + a.width
+                gap_right = b.x
+                gap_width = gap_right - gap_left
+                if gap_width >= min_gap:
+                    center_x = gap_left + gap_width / 2
+                    distance = abs(center_x - mid_x)
+                    candidates.append((a, b, gap_left, gap_width, distance))
+            if candidates:
+                break
+
+        if not candidates:
+            # Fallback para qualquer vão positivo
+            for i in range(len(platforms_sorted) - 1):
+                a = platforms_sorted[i]
+                b = platforms_sorted[i + 1]
+                gap_left = a.x + a.width
+                gap_right = b.x
+                gap_width = gap_right - gap_left
+                if gap_width > 0:
+                    center_x = gap_left + gap_width / 2
+                    distance = abs(center_x - mid_x)
+                    candidates.append((a, b, gap_left, gap_width, distance))
+
+        # Ordenar por proximidade ao meio
+        candidates.sort(key=lambda c: c[4])
+
+        # Escolher primeiro candidato que respeite a distância mínima de exclusão
+        selected = None
+        for a, b, gap_left, gap_width, _ in candidates:
+            center_x = gap_left + gap_width / 2
+            conflict = False
+            for ex in exclude_points:
+                ex_x = ex[0]
+                if abs(center_x - ex_x) < min_distance:
+                    conflict = True
+                    break
+            # Evitar reutilizar o mesmo vão
+            if not conflict:
+                candidate_gr = gap_left + gap_width
+                for gl, gr in exclude_gap_ranges:
+                    if gl == gap_left and gr == candidate_gr:
+                        conflict = True
+                        break
+            if conflict:
+                continue
+            selected = (a, b, gap_left, gap_width)
+            break
+
+        # Se não encontramos respeitando min_distance, relaxar gradativamente
+        if selected is None:
+            for relax_frac in (0.75, 0.6, 0.5, 0.35, 0.25, 0.1, 0.05):
+                relax = max(0, int(min_distance * relax_frac))
+                for a, b, gap_left, gap_width, _ in candidates:
+                    center_x = gap_left + gap_width / 2
+                    conflict = False
+                    for ex in exclude_points:
+                        ex_x = ex[0]
+                        if abs(center_x - ex_x) < relax:
+                            conflict = True
+                            break
+                    if not conflict:
+                        candidate_gr = gap_left + gap_width
+                        for gl, gr in exclude_gap_ranges:
+                            if gl == gap_left and gr == candidate_gr:
+                                conflict = True
+                                break
+                    if conflict:
+                        continue
+                    selected = (a, b, gap_left, gap_width)
+                    break
+                if selected is not None:
+                    break
+
+        if selected is None:
+            return None
+
+        a, b, gap_left, gap_width = selected
+        vertical_base = min(a.y, b.y)
+        item_x = int(gap_left + gap_width / 2 - 12)
+        extra_offset = int(140 + min(60, gap_width * 0.25))
+        item_y = int(vertical_base - extra_offset)
+        if item_y < 80:
+            item_y = 80
+        highest_platform_y = min(a.y, b.y)
+        if highest_platform_y - item_y < 120:
+            item_y = highest_platform_y - 120
+            if item_y < 80:
+                item_y = 80
+        return (item_x, item_y, gap_left, gap_right)
+
+    def _get_powerups_for_level(game):
+        from internal.engine.difficulty import Difficulty
+        lvl = getattr(game, "current_level", 1)
+        diff = getattr(game, "difficulty", Difficulty.NORMAL)
+        kinds = []
+        # Fase 51: não deve haver power-ups
+        if lvl == 51:
+            return kinds
+        if diff == Difficulty.EASY:
+            cycle = ["invencibilidade", "pulo_duplo", "escudo"]
+            kinds.append(cycle[(lvl - 1) % len(cycle)])
+        elif diff == Difficulty.NORMAL:
+            pos = (lvl - 1) % 10
+            if pos in (0, 5):
+                kinds.append("invencibilidade")
+            elif pos in (2, 7):
+                kinds.append("pulo_duplo")
+            elif pos in (4, 9):
+                kinds.append("escudo")
+        else:
+            pos = (lvl - 1) % 10
+            if pos == 1:
+                kinds.append("invencibilidade")
+            elif pos == 4:
+                kinds.append("pulo_duplo")
+            elif pos == 7:
+                kinds.append("escudo")
+        return kinds
+
+    def place_powerups(game):
+        # Construir lista de vãos disponíveis e vãos já utilizados (vidas extras) para garantir separação
+        kinds = Level._get_powerups_for_level(game)
+        if not kinds:
+            return
+
+        # Excluir vãos próximos à vida extra e os próprios vãos usados por ela
+        exclude_points = []
+        exclude_gap_ranges = []
+        if hasattr(game, "platforms") and game.platforms:
+            platforms_sorted = sorted(game.platforms, key=lambda p: p.x)
+            gaps = []
+            for i in range(len(platforms_sorted) - 1):
+                a = platforms_sorted[i]
+                b = platforms_sorted[i + 1]
+                gap_left = a.x + a.width
+                gap_right = b.x
+                gap_width = gap_right - gap_left
+                if gap_width > 0:
+                    gaps.append((gap_left, gap_right))
+            if hasattr(game, "extra_lives") and game.extra_lives:
+                for item in game.extra_lives:
+                    exclude_points.append((item.x, item.y))
+                    # Mapear vida extra ao vão mais próximo do seu X
+                    closest = None
+                    cx = item.x + 12  # aproximar ao centro do item
+                    for gl, gr in gaps:
+                        center = (gl + gr) / 2
+                        dist = abs(center - cx)
+                        if closest is None or dist < closest[0]:
+                            closest = (dist, gl, gr)
+                    if closest is not None:
+                        _, gl, gr = closest
+                        exclude_gap_ranges.append((gl, gr))
+
+        # Calcular distância mínima equivalente a ~8 plataformas
+        dynamic_min_distance = 200
+        if hasattr(game, "platforms") and game.platforms:
+            platforms_sorted = sorted(game.platforms, key=lambda p: p.x)
+            spans = []
+            for i in range(len(platforms_sorted) - 1):
+                span = platforms_sorted[i + 1].x - platforms_sorted[i].x
+                if span > 0:
+                    spans.append(span)
+            if spans:
+                avg_span = sum(spans) / len(spans)
+                dynamic_min_distance = int(avg_span * 8)
+
+        # Selecionar um vão distinto para cada power-up
+        chosen_spots = []  # (x, y)
+        used_gap_ranges = list(exclude_gap_ranges)
+        for idx, kind in enumerate(kinds):
+            found = Level._find_collectible_spot_excluding(
+                game,
+                exclude_points=exclude_points + chosen_spots,
+                exclude_gap_ranges=used_gap_ranges,
+                min_distance=dynamic_min_distance,
+            )
+            if found is None:
+                # Último recurso: tentar um spot padrão e garantir deslocamento em X fora do vão mapeado
+                base = Level._find_collectible_spot(game)
+                if base is None:
+                    continue
+                # Evitar reutilizar o mesmo vão: procurar outro gap por aproximação de centro
+                # Deslocar 96px para fora do centro atual (tende a cair em outro vão em níveis com múltiplos)
+                spot_x, spot_y = base[0] + (96 * (idx + 1)), base[1]
+                chosen_spots.append((spot_x, spot_y))
+            else:
+                spot_x, spot_y, gl, gr = found
+                chosen_spots.append((spot_x, spot_y))
+                used_gap_ranges.append((gl, gr))
+
+        if not chosen_spots:
+            return
+
+        # Criar os power-ups nas posições escolhidas
+        for (spot_x, spot_y), kind in zip(chosen_spots, kinds):
+            if kind == "invencibilidade":
+                img = getattr(game, "powerup_invincibility_img", None)
+            elif kind == "pulo_duplo":
+                img = getattr(game, "powerup_double_jump_img", None)
+            elif kind == "escudo":
+                img = getattr(game, "powerup_shield_img", None)
+            else:
+                img = None
+            x = spot_x
+            y = spot_y
+            spec = PowerUpSpec(kind=kind, image=img, width=24, height=24)
+            game.powerups.append(PowerUp(x, y, spec))
 
     def drawTurtle(game, platform):
         turtle = Turtle(

@@ -288,6 +288,14 @@ class VideoPlayer:
         """Reproduz o áudio do vídeo usando moviepy em thread separada"""
         if not MOVIEPY_AVAILABLE or not self.audio_clip or self.audio_thread:
             return
+        # Evitar reprodução de áudio em ambientes de teste/headless para prevenir crashes
+        # Detecta execução sob pytest ou quando variável de ambiente desativa áudio
+        try:
+            if os.environ.get("DISABLE_VIDEO_AUDIO") == "1" or "PYTEST_CURRENT_TEST" in os.environ:
+                return
+        except Exception:
+            # Se não conseguir ler env, prosseguir normalmente
+            pass
             
         try:
             def play_audio():

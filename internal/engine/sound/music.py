@@ -140,3 +140,31 @@ class Music:
             pygame.mixer.music.stop()
         except Exception:
             pass
+
+    def enter_invincibility_music(self, game):
+        """Durante invencibilidade, simula aceleração trocando para faixa mais rápida em loop."""
+        try:
+            # Guardar música atual para restaurar depois
+            game._saved_level_music = getattr(game, "current_music", None)
+            # Tocar faixa especial "capture" em loop contínuo
+            special = "musicas/capture.mp3"
+            full_music_path = self.check_music_exists(special)
+            if not full_music_path:
+                return
+            pygame.mixer.music.stop()
+            pygame.mixer.music.load(full_music_path)
+            pygame.mixer.music.set_volume(0.8)
+            pygame.mixer.music.play(-1)
+        except Exception:
+            pass
+
+    def exit_invincibility_music(self, game):
+        """Restaurar música do nível ao terminar invencibilidade."""
+        try:
+            prev = getattr(game, "_saved_level_music", None)
+            if prev and self.check_music_exists(prev):
+                full_music_path = resource_path(prev)
+                volume = game.music_volumes.get(prev, game.music_volume)
+                self.play(game, prev, full_music_path, volume)
+        except Exception:
+            pass

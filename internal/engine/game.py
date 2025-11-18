@@ -111,6 +111,39 @@ class Game:
         self.difficulty_options = ["Fácil", "Normal", "Difícil"]
         self.difficulty_selected = 1
 
+        # Em modo development, aplicar dificuldade definida no .env, se presente
+        try:
+            if self.env_config.get("environment") == "development":
+                raw_diff = self.env_config.get("difficulty")
+                if isinstance(raw_diff, str) and raw_diff.strip():
+                    key = raw_diff.strip().upper()
+                    # Aceitar também nomes em PT-BR e índices 0/1/2
+                    mapping = {
+                        "EASY": Difficulty.EASY,
+                        "FACIL": Difficulty.EASY,
+                        "FÁCIL": Difficulty.EASY,
+                        "NORMAL": Difficulty.NORMAL,
+                        "HARD": Difficulty.HARD,
+                        "DIFICIL": Difficulty.HARD,
+                        "DIFÍCIL": Difficulty.HARD,
+                        "0": Difficulty.EASY,
+                        "1": Difficulty.NORMAL,
+                        "2": Difficulty.HARD,
+                    }
+                    chosen = mapping.get(key)
+                    if chosen is not None:
+                        self.difficulty = chosen
+                        # Alinhar seleção do menu de dificuldade à configuração
+                        if self.difficulty == Difficulty.EASY:
+                            self.difficulty_selected = 0
+                        elif self.difficulty == Difficulty.HARD:
+                            self.difficulty_selected = 2
+                        else:
+                            self.difficulty_selected = 1
+        except Exception:
+            # Não interromper inicialização do jogo caso .env esteja inválido
+            pass
+
         # Sistema de pontuação
         self.score = 0
         self.platforms_jumped = (
@@ -248,8 +281,21 @@ class Game:
         self.birds_per_spawn = Level.get_birds_per_spawn(self.current_level)
         self.bird_spawn_interval = Level.get_bird_spawn_interval(self.current_level)
 
-        # Fonte para texto
-        self.font = pygame.font.Font(None, 36)
+        # Fonte para texto (HUD mais legível e em negrito)
+        try:
+            # Preferir fonte do sistema para melhor nitidez
+            self.font = pygame.font.SysFont("Segoe UI", 48, bold=True)
+        except Exception:
+            try:
+                self.font = pygame.font.SysFont("Arial", 48, bold=True)
+            except Exception:
+                # Fallback mantendo compatibilidade com ambientes de teste
+                self.font = pygame.font.Font(None, 48)
+                try:
+                    if hasattr(self.font, "set_bold"):
+                        self.font.set_bold(True)
+                except Exception:
+                    pass
         self.big_font = pygame.font.Font(None, 72)
 
         # Carregar imagens
@@ -295,6 +341,15 @@ class Game:
         self.fire_image = getattr(self.image, "fire_image", None)
         self.extra_life_img = getattr(self.image, "extra_life_img", None)
         self.explosion_image = getattr(self.image, "explosion_image", None)
+        # Imagens dos power-ups e bolha do escudo
+        self.powerup_invincibility_img = getattr(
+            self.image, "powerup_invincibility_img", None
+        )
+        self.powerup_double_jump_img = getattr(
+            self.image, "powerup_double_jump_img", None
+        )
+        self.powerup_shield_img = getattr(self.image, "powerup_shield_img", None)
+        self.shield_bubble_img = getattr(self.image, "shield_bubble_img", None)
 
         # Transferir logo do jogo
         self.game_logo = self.image.game_logo
@@ -307,6 +362,7 @@ class Game:
 
         # Itens colecionáveis
         self.extra_lives = []
+        self.powerups = []
 
         # Se estiver em modo desenvolvimento e iniciando em uma fase específica,
         # pular para o estado PLAYING e tocar música do nível
@@ -1396,6 +1452,14 @@ class Game:
                     # Tocar música do nível atual
                     self.music.play_level_music(self, self.current_level)
 
+            # Restaurar música quando a invencibilidade terminar
+            if getattr(self, "invincibility_active", False) and not self.player.is_invulnerable:
+                self.invincibility_active = False
+                try:
+                    self.music.exit_invincibility_music(self)
+                except Exception:
+                    pass
+
             # Atualizar câmera para seguir o jogador
             target_camera_x = self.player.x - CAMERA_OFFSET_X
             if target_camera_x > self.camera_x:
@@ -1431,6 +1495,41 @@ class Game:
                 # Remover atributo de plataforma pousada se existir, para evitar recontagem
                 if hasattr(self.player, "landed_platform_id"):
                     delattr(self.player, "landed_platform_id")
+
+            # Atualizar e verificar coleta de power-ups
+            if hasattr(self, "powerups") and self.powerups:
+                remaining_powerups = []
+                for pu in self.powerups:
+                    pu.update()
+                    if self.player.rect.colliderect(pu.rect):
+                        kind = pu.spec.kind
+                        if kind == "invencibilidade":
+                            # 20 segundos de invencibilidade
+                            self.player.is_invulnerable = True
+                            self.player.invulnerability_timer = 20 * FPS
+                            self.invincibility_active = True
+                            # Música acelerada simulada: trocar para faixa rápida
+                            try:
+                                self.music.enter_invincibility_music(self)
+                            except Exception:
+                                pass
+                        elif kind == "pulo_duplo":
+                            # 70 segundos de pulo duplo
+                            self.player.double_jump_enabled = True
+                            self.player.double_jump_frames_left = 70 * FPS
+                            # Reset dos saltos disponíveis no próximo pouso
+                        elif kind == "escudo":
+                            # Ativar escudo até ser consumido
+                            self.shield_active = True
+                        # Efeito sonoro de coleta
+                        if hasattr(self, "sound_effects"):
+                            try:
+                                self.sound_effects.play_sound_effect("collect")
+                            except Exception:
+                                pass
+                    else:
+                        remaining_powerups.append(pu)
+                self.powerups = remaining_powerups
 
             # Sistema de pássaros e morcegos
             if self.current_level <= 20:
@@ -1833,28 +1932,39 @@ class Game:
                                     15
                                 )  # Pontos bônus por destruir míssil durante invulnerabilidade
                             else:
-                                # Colidiu com míssil, ativar animação de hit
+                                # Colidiu com míssil, ativar animação de hit ou consumir escudo
                                 if (
                                     not self.player.is_hit
                                 ):  # Só aplicar hit se não estiver já em estado de hit
-                                    self.player.take_hit()
-                                    # Som de jogador atingido
-                                    self.sound_effects.play_sound_effect("player-hit")
-                                    # Criar explosão na posição do míssil
-                                    explosion = self.get_pooled_explosion(
-                                    missile.x, missile.y, self.image.explosion_image
-                                )
-                                self.explosions.append(explosion)
-                                robot.missiles.remove(missile)
-                                self.lives -= 1
-                                if self.lives <= 0:
-                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                    if self.ranking_manager.is_high_score(self.score):
-                                        self.state = GameState.ENTER_NAME
+                                    if getattr(self, "shield_active", False):
+                                        # Consumir escudo e evitar perda de vida
+                                        self.shield_active = False
+                                        # Explodir míssil e remover
+                                        explosion = self.get_pooled_explosion(
+                                            missile.x, missile.y, self.image.explosion_image
+                                        )
+                                        self.explosions.append(explosion)
+                                        if missile in robot.missiles:
+                                            robot.missiles.remove(missile)
                                     else:
-                                        self.state = GameState.GAME_OVER
-                                    self.start_game_over_hold()
-                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                                        self.player.take_hit()
+                                        # Som de jogador atingido
+                                        self.sound_effects.play_sound_effect("player-hit")
+                                        # Criar explosão na posição do míssil
+                                        explosion = self.get_pooled_explosion(
+                                            missile.x, missile.y, self.image.explosion_image
+                                        )
+                                        self.explosions.append(explosion)
+                                        robot.missiles.remove(missile)
+                                        self.lives -= 1
+                                        if self.lives <= 0:
+                                            # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                            if self.ranking_manager.is_high_score(self.score):
+                                                self.state = GameState.ENTER_NAME
+                                            else:
+                                                self.state = GameState.GAME_OVER
+                                            self.start_game_over_hold()
+                                        # Não reiniciar o nível imediatamente, deixar o jogador continuar
                             break
 
             # Verificar colisão entre lasers dos aliens e jogador (níveis 41-50)
@@ -1879,26 +1989,37 @@ class Game:
                                     15
                                 )  # Pontos bônus por destruir laser durante invulnerabilidade
                             else:
-                                # Colidiu com laser, ativar animação de hit
+                                # Colidiu com laser, ativar animação de hit ou consumir escudo
                                 if not self.player.is_hit:
-                                    self.player.take_hit()
-                                    # Som de jogador atingido
-                                    self.sound_effects.play_sound_effect("player-hit")
-                                    # Criar explosão na posição do laser
-                                    explosion = self.get_pooled_explosion(
-                                        laser.x, laser.y, self.image.explosion_image
-                                    )
-                                    self.explosions.append(explosion)
-                                    alien.lasers.remove(laser)
-                                    self.lives -= 1
-                                    if self.lives <= 0:
-                                        # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                        if self.ranking_manager.is_high_score(self.score):
-                                            self.state = GameState.ENTER_NAME
-                                        else:
-                                            self.state = GameState.GAME_OVER
-                                        self.start_game_over_hold()
-                                    # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                                    if getattr(self, "shield_active", False):
+                                        # Consumir escudo e evitar perda de vida
+                                        self.shield_active = False
+                                        # Explodir laser e remover
+                                        explosion = self.get_pooled_explosion(
+                                            laser.x, laser.y, self.image.explosion_image
+                                        )
+                                        self.explosions.append(explosion)
+                                        if laser in alien.lasers:
+                                            alien.lasers.remove(laser)
+                                    else:
+                                        self.player.take_hit()
+                                        # Som de jogador atingido
+                                        self.sound_effects.play_sound_effect("player-hit")
+                                        # Criar explosão na posição do laser
+                                        explosion = self.get_pooled_explosion(
+                                            laser.x, laser.y, self.image.explosion_image
+                                        )
+                                        self.explosions.append(explosion)
+                                        alien.lasers.remove(laser)
+                                        self.lives -= 1
+                                        if self.lives <= 0:
+                                            # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                            if self.ranking_manager.is_high_score(self.score):
+                                                self.state = GameState.ENTER_NAME
+                                            else:
+                                                self.state = GameState.GAME_OVER
+                                            self.start_game_over_hold()
+                                        # Não reiniciar o nível imediatamente, deixar o jogador continuar
                             break
 
             # Verificar colisão entre tiros e aliens (níveis 41-50)
@@ -1977,29 +2098,41 @@ class Game:
                                 20
                             )  # Pontos bônus por destruir inimigo durante invulnerabilidade
                         else:
-                            # Colidiu com pássaro, ativar animação de hit
+                            # Colidiu com pássaro, ativar animação de hit ou consumir escudo
                             if (
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
-                                self.player.take_hit()
-                                # Som de jogador atingido
-                                self.sound_effects.play_sound_effect("player-hit")
-                                # Criar explosão na posição do pássaro
-                                self.explosions.append(
-                                    Explosion(
-                                        bird.x, bird.y, self.image.explosion_image
+                                if getattr(self, "shield_active", False):
+                                    # Consumir escudo e evitar perda de vida
+                                    self.shield_active = False
+                                    # Remover inimigo e criar explosão para feedback
+                                    self.explosions.append(
+                                        Explosion(
+                                            bird.x, bird.y, self.image.explosion_image
+                                        )
                                     )
-                                )
-                                self.birds.remove(bird)
-                                self.lives -= 1
-                                if self.lives <= 0:
-                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                    if self.ranking_manager.is_high_score(self.score):
-                                        self.state = GameState.ENTER_NAME
-                                    else:
-                                        self.state = GameState.GAME_OVER
-                                    self.start_game_over_hold()
-                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                                    if bird in self.birds:
+                                        self.birds.remove(bird)
+                                else:
+                                    self.player.take_hit()
+                                    # Som de jogador atingido
+                                    self.sound_effects.play_sound_effect("player-hit")
+                                    # Criar explosão na posição do pássaro
+                                    self.explosions.append(
+                                        Explosion(
+                                            bird.x, bird.y, self.image.explosion_image
+                                        )
+                                    )
+                                    self.birds.remove(bird)
+                                    self.lives -= 1
+                                    if self.lives <= 0:
+                                        # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                        if self.ranking_manager.is_high_score(self.score):
+                                            self.state = GameState.ENTER_NAME
+                                        else:
+                                            self.state = GameState.GAME_OVER
+                                        self.start_game_over_hold()
+                                    # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
             elif self.current_level <= 30:
                 for bat in self.bats[:]:
@@ -2032,23 +2165,33 @@ class Game:
                                 25
                             )  # Pontos bônus por destruir morcego durante invulnerabilidade
                         else:
-                            # Colidiu com morcego, ativar animação de hit
+                            # Colidiu com morcego, ativar animação de hit ou consumir escudo
                             if (
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
-                                self.player.take_hit()
-                                # Som de jogador atingido
-                                self.sound_effects.play_sound_effect("player-hit")
-                                # Criar explosão na posição do morcego
-                                self.explosions.append(
-                                    Explosion(bat.x, bat.y, self.image.explosion_image)
-                                )
-                                self.bats.remove(bat)
-                                self.lives -= 1
-                                if self.lives <= 0:
-                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                    if self.ranking_manager.is_high_score(self.score):
-                                        self.state = GameState.ENTER_NAME
+                                if getattr(self, "shield_active", False):
+                                    # Consumir escudo e evitar perda de vida
+                                    self.shield_active = False
+                                    # Criar explosão e remover morcego
+                                    self.explosions.append(
+                                        Explosion(bat.x, bat.y, self.image.explosion_image)
+                                    )
+                                    if bat in self.bats:
+                                        self.bats.remove(bat)
+                                else:
+                                    self.player.take_hit()
+                                    # Som de jogador atingido
+                                    self.sound_effects.play_sound_effect("player-hit")
+                                    # Criar explosão na posição do morcego
+                                    self.explosions.append(
+                                        Explosion(bat.x, bat.y, self.image.explosion_image)
+                                    )
+                                    self.bats.remove(bat)
+                                    self.lives -= 1
+                                    if self.lives <= 0:
+                                        # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                        if self.ranking_manager.is_high_score(self.score):
+                                            self.state = GameState.ENTER_NAME
                                     else:
                                         self.state = GameState.GAME_OVER
                                     self.start_game_over_hold()
@@ -2087,29 +2230,43 @@ class Game:
                                 30
                             )  # Pontos bônus por destruir avião durante invulnerabilidade
                         else:
-                            # Colidiu com avião, ativar animação de hit
+                            # Colidiu com avião, ativar animação de hit ou consumir escudo
                             if (
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
-                                self.player.take_hit()
-                                # Criar explosão na posição do avião
-                                self.explosions.append(
-                                    Explosion(
-                                        airplane.x,
-                                        airplane.y,
-                                        self.image.explosion_image,
+                                if getattr(self, "shield_active", False):
+                                    # Consumir escudo e evitar perda de vida
+                                    self.shield_active = False
+                                    # Criar explosão e remover avião
+                                    self.explosions.append(
+                                        Explosion(
+                                            airplane.x,
+                                            airplane.y,
+                                            self.image.explosion_image,
+                                        )
                                     )
-                                )
-                                self.airplanes.remove(airplane)
-                                self.lives -= 1
-                                if self.lives <= 0:
-                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                    if self.ranking_manager.is_high_score(self.score):
-                                        self.state = GameState.ENTER_NAME
-                                    else:
-                                        self.state = GameState.GAME_OVER
-                                    self.start_game_over_hold()
-                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                                    if airplane in self.airplanes:
+                                        self.airplanes.remove(airplane)
+                                else:
+                                    self.player.take_hit()
+                                    # Criar explosão na posição do avião
+                                    self.explosions.append(
+                                        Explosion(
+                                            airplane.x,
+                                            airplane.y,
+                                            self.image.explosion_image,
+                                        )
+                                    )
+                                    self.airplanes.remove(airplane)
+                                    self.lives -= 1
+                                    if self.lives <= 0:
+                                        # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                        if self.ranking_manager.is_high_score(self.score):
+                                            self.state = GameState.ENTER_NAME
+                                        else:
+                                            self.state = GameState.GAME_OVER
+                                        self.start_game_over_hold()
+                                    # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
             else:
                 for disk in self.flying_disks[:]:
@@ -2144,27 +2301,39 @@ class Game:
                                 40
                             )  # Pontos bônus por destruir disco durante invulnerabilidade
                         else:
-                            # Colidiu com disco, ativar animação de hit
+                            # Colidiu com disco, ativar animação de hit ou consumir escudo
                             if (
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
-                                self.player.take_hit()
-                                # Som de jogador atingido
-                                self.sound_effects.play_sound_effect("player-hit")
-                                # Criar explosão na posição do disco
-                                self.explosions.append(
-                                    Explosion(
-                                        disk.x, disk.y, self.image.explosion_image
+                                if getattr(self, "shield_active", False):
+                                    # Consumir escudo e evitar perda de vida
+                                    self.shield_active = False
+                                    # Criar explosão na posição do disco e remover
+                                    self.explosions.append(
+                                        Explosion(
+                                            disk.x, disk.y, self.image.explosion_image
+                                        )
                                     )
-                                )
-                                self.flying_disks.remove(disk)
-                                self.lives -= 1
-                                if self.lives <= 0:
-                                    # Sem vidas, game over - verificar se entra no ranking
-                                    if self.ranking_manager.is_high_score(self.score):
-                                        self.state = GameState.ENTER_NAME
-                                    else:
-                                        self.state = GameState.GAME_OVER
+                                    if disk in self.flying_disks:
+                                        self.flying_disks.remove(disk)
+                                else:
+                                    self.player.take_hit()
+                                    # Som de jogador atingido
+                                    self.sound_effects.play_sound_effect("player-hit")
+                                    # Criar explosão na posição do disco
+                                    self.explosions.append(
+                                        Explosion(
+                                            disk.x, disk.y, self.image.explosion_image
+                                        )
+                                    )
+                                    self.flying_disks.remove(disk)
+                                    self.lives -= 1
+                                    if self.lives <= 0:
+                                        # Sem vidas, game over - verificar se entra no ranking
+                                        if self.ranking_manager.is_high_score(self.score):
+                                            self.state = GameState.ENTER_NAME
+                                        else:
+                                            self.state = GameState.GAME_OVER
                                 # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
 
@@ -2174,20 +2343,26 @@ class Game:
                     # Verificar colisão direta
                     if self.player.rect.colliderect(fire.rect):
                         if not self.player.is_invulnerable and not self.player.is_hit:
-                            # Colidiu com foguinho, ativar animação de hit
-                            self.player.take_hit()
-                            # Som de jogador atingido
-                            self.sound_effects.play_sound_effect("player-hit")
-                            # Foguinho não é removido - continua existindo
-                            self.lives -= 1
-                            if self.lives <= 0:
-                                # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                if self.ranking_manager.is_high_score(self.score):
-                                    self.state = GameState.ENTER_NAME
-                                else:
-                                    self.state = GameState.GAME_OVER
-                                self.start_game_over_hold()
-                            # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                            # Colisão com foguinho: consumir escudo se ativo, senão aplicar hit
+                            if getattr(self, "shield_active", False):
+                                # Consumir escudo e evitar perda de vida
+                                self.shield_active = False
+                                # Foguinho permanece, sem efeitos adicionais
+                            else:
+                                # Colidiu com foguinho, ativar animação de hit
+                                self.player.take_hit()
+                                # Som de jogador atingido
+                                self.sound_effects.play_sound_effect("player-hit")
+                                # Foguinho não é removido - continua existindo
+                                self.lives -= 1
+                                if self.lives <= 0:
+                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                    if self.ranking_manager.is_high_score(self.score):
+                                        self.state = GameState.ENTER_NAME
+                                    else:
+                                        self.state = GameState.GAME_OVER
+                                    self.start_game_over_hold()
+                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
 
             # Verificar colisão com tartarugas e aranhas
@@ -2208,27 +2383,36 @@ class Game:
                                 20
                             )  # Pontos bônus por destruir inimigo durante invulnerabilidade
                         else:
-                            # Colidiu com tartaruga, ativar animação de hit
+                            # Colidiu com tartaruga: consumir escudo ou aplicar hit
                             if (
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
-                                self.player.take_hit()
-                                # Som de jogador atingido
-                                self.sound_effects.play_sound_effect("player-hit")
-                                # Iniciar morte da tartaruga sem explosão
-                                if hasattr(turtle, "die"):
-                                    turtle.die()
-                                # Tocar som de morte igual ao dos pássaros
-                                self.sound_effects.play_sound_effect("bird-hit")
-                                self.lives -= 1
-                                if self.lives <= 0:
-                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                    if self.ranking_manager.is_high_score(self.score):
-                                        self.state = GameState.ENTER_NAME
-                                    else:
-                                        self.state = GameState.GAME_OVER
-                                    self.start_game_over_hold()
-                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                                if getattr(self, "shield_active", False):
+                                    # Consumir escudo e evitar perda de vida
+                                    self.shield_active = False
+                                    # Iniciar morte da tartaruga sem explosão
+                                    if hasattr(turtle, "die"):
+                                        turtle.die()
+                                    # Tocar som de morte igual ao dos pássaros
+                                    self.sound_effects.play_sound_effect("bird-hit")
+                                else:
+                                    self.player.take_hit()
+                                    # Som de jogador atingido
+                                    self.sound_effects.play_sound_effect("player-hit")
+                                    # Iniciar morte da tartaruga sem explosão
+                                    if hasattr(turtle, "die"):
+                                        turtle.die()
+                                    # Tocar som de morte igual ao dos pássaros
+                                    self.sound_effects.play_sound_effect("bird-hit")
+                                    self.lives -= 1
+                                    if self.lives <= 0:
+                                        # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                        if self.ranking_manager.is_high_score(self.score):
+                                            self.state = GameState.ENTER_NAME
+                                        else:
+                                            self.state = GameState.GAME_OVER
+                                        self.start_game_over_hold()
+                                    # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
             else:
                 for spider in self.spiders[:]:
@@ -2247,27 +2431,36 @@ class Game:
                                 35
                             )  # Pontos bônus por destruir aranha durante invulnerabilidade
                         else:
-                            # Colidiu com aranha, ativar animação de hit
+                            # Colidiu com aranha: consumir escudo ou aplicar hit
                             if (
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
-                                self.player.take_hit()
-                                # Som de jogador atingido
-                                self.sound_effects.play_sound_effect("player-hit")
-                                # Iniciar morte da aranha sem explosão
-                                if hasattr(spider, "die"):
-                                    spider.die()
-                                # Tocar som de morte igual ao dos pássaros
-                                self.sound_effects.play_sound_effect("bird-hit")
-                                self.lives -= 1
-                                if self.lives <= 0:
-                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                    if self.ranking_manager.is_high_score(self.score):
-                                        self.state = GameState.ENTER_NAME
-                                    else:
-                                        self.state = GameState.GAME_OVER
-                                    self.start_game_over_hold()
-                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                                if getattr(self, "shield_active", False):
+                                    # Consumir escudo e evitar perda de vida
+                                    self.shield_active = False
+                                    # Iniciar morte da aranha sem explosão
+                                    if hasattr(spider, "die"):
+                                        spider.die()
+                                    # Tocar som de morte igual ao dos pássaros
+                                    self.sound_effects.play_sound_effect("bird-hit")
+                                else:
+                                    self.player.take_hit()
+                                    # Som de jogador atingido
+                                    self.sound_effects.play_sound_effect("player-hit")
+                                    # Iniciar morte da aranha sem explosão
+                                    if hasattr(spider, "die"):
+                                        spider.die()
+                                    # Tocar som de morte igual ao dos pássaros
+                                    self.sound_effects.play_sound_effect("bird-hit")
+                                    self.lives -= 1
+                                    if self.lives <= 0:
+                                        # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                        if self.ranking_manager.is_high_score(self.score):
+                                            self.state = GameState.ENTER_NAME
+                                        else:
+                                            self.state = GameState.GAME_OVER
+                                        self.start_game_over_hold()
+                                    # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
 
             # Verificar colisão com robôs (níveis 31-40)
@@ -2293,35 +2486,52 @@ class Game:
                                 50
                             )  # Pontos bônus por destruir robô durante invulnerabilidade
                         else:
-                            # Colidiu com robô, ativar animação de hit
+                            # Colidiu com robô: consumir escudo ou aplicar hit
                             if (
                                 not self.player.is_hit
                             ):  # Só aplicar hit se não estiver já em estado de hit
-                                self.player.take_hit()
-                                # Som de jogador atingido
-                                self.sound_effects.play_sound_effect("player-hit")
-                                # Explodir robô
-                                explosion = self.get_pooled_explosion(
-                                    robot.x, robot.y, self.image.explosion_image
-                                )
-                                self.explosions.append(explosion)
-                                # Tocar som de explosão do robô
-                                self.sound_effects.play_sound_effect("explosion")
-                                # Transferir mísseis ativos do robô para a lista de órfãos
-                                for missile in getattr(robot, "missiles", []):
-                                    self.orphan_missiles.append(missile)
-                                # Remover robô
-                                if robot in self.robots:
-                                    self.robots.remove(robot)
-                                self.lives -= 1
-                                if self.lives <= 0:
-                                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
-                                    if self.ranking_manager.is_high_score(self.score):
-                                        self.state = GameState.ENTER_NAME
-                                    else:
-                                        self.state = GameState.GAME_OVER
-                                    self.start_game_over_hold()
-                                # Não reiniciar o nível imediatamente, deixar o jogador continuar
+                                if getattr(self, "shield_active", False):
+                                    # Consumir escudo e evitar perda de vida
+                                    self.shield_active = False
+                                    # Explodir robô e remover
+                                    explosion = self.get_pooled_explosion(
+                                        robot.x, robot.y, self.image.explosion_image
+                                    )
+                                    self.explosions.append(explosion)
+                                    # Tocar som de explosão do robô
+                                    self.sound_effects.play_sound_effect("explosion")
+                                    # Transferir mísseis ativos do robô para a lista de órfãos
+                                    for missile in getattr(robot, "missiles", []):
+                                        self.orphan_missiles.append(missile)
+                                    # Remover robô
+                                    if robot in self.robots:
+                                        self.robots.remove(robot)
+                                else:
+                                    self.player.take_hit()
+                                    # Som de jogador atingido
+                                    self.sound_effects.play_sound_effect("player-hit")
+                                    # Explodir robô
+                                    explosion = self.get_pooled_explosion(
+                                        robot.x, robot.y, self.image.explosion_image
+                                    )
+                                    self.explosions.append(explosion)
+                                    # Tocar som de explosão do robô
+                                    self.sound_effects.play_sound_effect("explosion")
+                                    # Transferir mísseis ativos do robô para a lista de órfãos
+                                    for missile in getattr(robot, "missiles", []):
+                                        self.orphan_missiles.append(missile)
+                                    # Remover robô
+                                    if robot in self.robots:
+                                        self.robots.remove(robot)
+                                    self.lives -= 1
+                                    if self.lives <= 0:
+                                        # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                                        if self.ranking_manager.is_high_score(self.score):
+                                            self.state = GameState.ENTER_NAME
+                                        else:
+                                            self.state = GameState.GAME_OVER
+                                        self.start_game_over_hold()
+                                    # Não reiniciar o nível imediatamente, deixar o jogador continuar
                         break
 
             # Verificar colisão com aliens (níveis 41-50)
@@ -2345,16 +2555,28 @@ class Game:
                                 60
                             )  # Pontos bônus por destruir alien durante invulnerabilidade
                         else:
-                            # Colidiu com alien, ativar animação de hit
+                            # Colidiu com alien: consumir escudo ou aplicar hit
                             if not self.player.is_hit:
-                                self.player.take_hit()
-                                # Som de jogador atingido
-                                self.sound_effects.play_sound_effect("player-hit")
-                                # Iniciar morte do alien sem explosão
-                                if hasattr(alien, "die"):
-                                    alien.die()
-                                    # Som de morte do alien (igual ao de pássaro)
-                                    self.sound_effects.play_sound_effect("bird-hit")
+                                if getattr(self, "shield_active", False):
+                                    # Consumir escudo e evitar perda de vida
+                                    self.shield_active = False
+                                    # Iniciar morte do alien sem explosão
+                                    if hasattr(alien, "die"):
+                                        alien.die()
+                                        # Som de morte do alien (igual ao de pássaro)
+                                        self.sound_effects.play_sound_effect("bird-hit")
+                                    # Transferir lasers ativos do alien para a lista de órfãos
+                                    for laser in getattr(alien, "lasers", []):
+                                        self.orphan_lasers.append(laser)
+                                else:
+                                    self.player.take_hit()
+                                    # Som de jogador atingido
+                                    self.sound_effects.play_sound_effect("player-hit")
+                                    # Iniciar morte do alien sem explosão
+                                    if hasattr(alien, "die"):
+                                        alien.die()
+                                        # Som de morte do alien (igual ao de pássaro)
+                                        self.sound_effects.play_sound_effect("bird-hit")
                                 # Transferir lasers ativos do alien para a lista de órfãos
                                 for laser in alien.lasers:
                                     self.orphan_lasers.append(laser)
@@ -2828,6 +3050,13 @@ class Game:
                         # Chamar método draw da vida extra com offset da câmera
                         extra_life.draw(self.screen, self.camera_x)
 
+            # Desenhar power-ups com offset da câmera
+            if hasattr(self, "powerups") and self.powerups:
+                for pu in self.powerups:
+                    pu_x = pu.x - self.camera_x
+                    if pu_x > -30 and pu_x < WIDTH + 30:
+                        pu.draw(self.screen, self.camera_x)
+
             # Desenhar tiros do jogador com offset da câmera
             for bullet in self.player.bullets:
                 bullet_x = bullet.x - self.camera_x
@@ -2848,11 +3077,25 @@ class Game:
             self.player.x = self.player.x - self.camera_x
             # Chamar método draw do jogador
             self.player.draw(self.screen)
+            # Desenhar bolha do escudo sobre o jogador
+            if getattr(self, "shield_active", False) and getattr(self, "shield_bubble_img", None):
+                try:
+                    bubble_w = max(24, int(getattr(self.player, "width", 65) + 12))
+                    bubble_h = max(24, int(getattr(self.player, "height", 95) + 12))
+                    bubble_img = pygame.transform.smoothscale(self.shield_bubble_img, (bubble_w, bubble_h))
+                except Exception:
+                    bubble_img = pygame.transform.scale(self.shield_bubble_img, (bubble_w, bubble_h))
+                bubble_x = int(self.player.x - (bubble_w - getattr(self.player, "width", 65)) // 2)
+                bubble_y = int(self.player.y - (bubble_h - getattr(self.player, "height", 95)) // 2)
+                try:
+                    self.screen.blit(bubble_img, (bubble_x, bubble_y))
+                except Exception:
+                    pass
             # Restaurar posição original
             self.player.x = original_x
 
-            # Desenhar UI (sem offset da câmera)
-            Info.display(self, self.screen, self.font, YELLOW)
+            # Desenhar UI (sem offset da câmera) com fonte branca
+            Info.display(self, self.screen, self.font, WHITE)
 
         elif self.state == GameState.GAME_OVER:
             # Usar fundo do cenário, explicitamente na surface do jogo

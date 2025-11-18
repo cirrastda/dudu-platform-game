@@ -28,6 +28,13 @@ class Player:
         self.abduction_timer = 0  # Timer para controlar duração da abdução
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
+        # Pulo duplo (habilitado por power-up)
+        self.double_jump_enabled = False
+        self.double_jump_frames_left = 0
+        self.remaining_jumps = 1
+        # Detecção de borda de entrada para pulo (evita consumo imediato do pulo duplo)
+        self.jump_was_down = False
+
         # Sistema de animação
         self.sprites = {}
         self.current_animation = "idle"
@@ -311,14 +318,20 @@ class Player:
                 joystick_jump = True
 
         jump_sound = False
-        if (
-            ((keys[pygame.K_UP] or keys[pygame.K_w]) or joystick_jump)
-            and self.on_ground
-            and not self.is_crouching
-        ):
-            self.vel_y = JUMP_STRENGTH
-            self.on_ground = False
-            jump_sound = True
+        # Pulo baseado em detecção de PRESS (borda de subida) para permitir segundo salto quando desejado
+        want_jump = (keys[pygame.K_UP] or keys[pygame.K_w]) or joystick_jump
+        press_jump = want_jump and not self.jump_was_down
+        if press_jump:
+            if self.on_ground and not self.is_crouching:
+                # Primeiro salto a partir do chão
+                self.vel_y = JUMP_STRENGTH
+                self.on_ground = False
+                jump_sound = True
+            elif self.double_jump_enabled and self.remaining_jumps > 0:
+                # Segundo salto no ar quando habilitado
+                self.vel_y = JUMP_STRENGTH
+                self.remaining_jumps -= 1
+                jump_sound = True
 
         # Atualizar posição
         self.x += self.vel_x
@@ -352,6 +365,8 @@ class Player:
                     self.vel_y = 0
                     self.on_ground = True
                     self.rect.y = self.y
+                    # Reset dos saltos disponíveis
+                    self.remaining_jumps = 2 if self.double_jump_enabled else 1
 
         # Atualizar tiros e remover os que saíram da área visível
         for bullet in self.bullets[:]:
@@ -369,6 +384,17 @@ class Player:
 
         # Atualizar animação
         self.update_animation()
+
+        # Decaimento do power-up de pulo duplo
+        if self.double_jump_frames_left > 0:
+            self.double_jump_frames_left -= 1
+            if self.double_jump_frames_left <= 0:
+                self.double_jump_enabled = False
+                # Garantir reset de saltos ao desabilitar
+                self.remaining_jumps = 1
+
+        # Atualizar estado de borda da entrada de pulo
+        self.jump_was_down = want_jump
 
         # Retornar ação baseada nos sons
         if jump_sound:

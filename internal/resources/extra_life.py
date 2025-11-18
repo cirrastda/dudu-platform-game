@@ -49,6 +49,13 @@ class ExtraLife:
     def draw(self, screen, camera_x=0):
         if not self.image:
             return
-        # Aplicar alpha atual e desenhar com offset da câmera
-        self.image.set_alpha(self.current_alpha)
-        screen.blit(self.image, (self.x - camera_x, self.y))
+        # Aplicar alpha atual em uma cópia local para não afetar HUD/recursos compartilhados
+        try:
+            img = self.image.copy()
+        except Exception:
+            img = self.image
+        try:
+            img.set_alpha(self.current_alpha)
+        except Exception:
+            pass
+        screen.blit(img, (self.x - camera_x, self.y))
