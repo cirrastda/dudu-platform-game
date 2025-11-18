@@ -42,4 +42,26 @@ def load_env_config():
     except Exception as e:
         print(f"Erro ao carregar .env: {e}")
 
+    # Overrides por variáveis de ambiente (úteis para testes/headless)
+    try:
+        env_override = os.environ.get("PLATFORM_GAME_ENV")
+        if env_override:
+            config["environment"] = env_override.strip()
+
+        fullscreen_env = os.environ.get("PLATFORM_GAME_FULLSCREEN")
+        if fullscreen_env is not None:
+            val = fullscreen_env.strip().lower()
+            config["fullscreen"] = val in {"1", "true", "yes", "on"}
+
+        initial_stage_env = os.environ.get("PLATFORM_GAME_INITIAL_STAGE")
+        if initial_stage_env:
+            config["initial-stage"] = initial_stage_env.strip()
+
+        difficulty_env = os.environ.get("PLATFORM_GAME_DIFFICULTY")
+        if difficulty_env:
+            config["difficulty"] = difficulty_env.strip()
+    except Exception:
+        # Não interromper caso variáveis estejam malformadas
+        pass
+
     return config

@@ -208,6 +208,53 @@
             },
             "problemMatcher": [],
             "detail": "Lista dispositivos Android conectados"
+        },
+        {
+            "label": "tests-headless",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "run_tests.py"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "never",
+                "focus": false,
+                "panel": "dedicated",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "options": {
+                "env": {
+                    "SDL_VIDEODRIVER": "dummy",
+                    "PLATFORM_GAME_ENV": "development",
+                    "PLATFORM_GAME_FULLSCREEN": "0"
+                }
+            },
+            "problemMatcher": [],
+            "detail": "Executa testes em modo headless sem abrir/janelas reais"
+        },
+        {
+            "label": "tests-headless-background",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "Start-Job -ScriptBlock { $env:SDL_VIDEODRIVER='dummy'; $env:PLATFORM_GAME_ENV='development'; $env:PLATFORM_GAME_FULLSCREEN='0'; python run_tests.py } | Out-Null"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "never",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Dispara testes em segundo plano via PowerShell Job"
         }
     ]
 }
