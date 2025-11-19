@@ -6,19 +6,30 @@ from internal.utils.constants import *
 from internal.utils.functions import resource_path
 import threading
 
-# Importação opcional do moviepy
+MOVIEPY_AVAILABLE = False
+VideoFileClip = None
 try:
-    from moviepy.editor import VideoFileClip
-
+    from moviepy import VideoFileClip as _VFC
+    VideoFileClip = _VFC
     MOVIEPY_AVAILABLE = True
-except ImportError as e:
-    MOVIEPY_AVAILABLE = False
+except Exception:
     try:
-        print(f"MoviePy import falhou ({e.__class__.__name__}): {e}")
-        print(f"Python: {sys.executable}")
-        print(f'Dica: "{sys.executable}" -m pip install -r requirements.txt')
-    except Exception:
-        print("MoviePy não está disponível. Áudio do vídeo não será reproduzido.")
+        from moviepy.video.io.VideoFileClip import VideoFileClip as _VFC
+        VideoFileClip = _VFC
+        MOVIEPY_AVAILABLE = True
+    except Exception as e:
+        try:
+            from moviepy.editor import VideoFileClip as _VFC
+            VideoFileClip = _VFC
+            MOVIEPY_AVAILABLE = True
+        except Exception as e:
+            MOVIEPY_AVAILABLE = False
+            try:
+                print(f"MoviePy import falhou ({e.__class__.__name__}): {e}")
+                print(f"Python: {sys.executable}")
+                print(f'Dica: "{sys.executable}" -m pip install -r requirements.txt')
+            except Exception:
+                print("MoviePy não está disponível. Áudio do vídeo não será reproduzido.")
 
 
 class VideoPlayer:
@@ -96,7 +107,6 @@ class VideoPlayer:
             # Tentar carregar com moviepy se disponível
             if MOVIEPY_AVAILABLE:
                 try:
-
                     self.video_clip = VideoFileClip(full_path)
                     self.duration = self.video_clip.duration
                     self.fps = self.video_clip.fps or 30
