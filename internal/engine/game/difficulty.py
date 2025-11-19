@@ -49,12 +49,37 @@ class DifficultyOps:
                 g.raindrop_spawn_interval = max(
                     60, int(base_interval * drop_interval_factor)
                 )
+            # A partir do nível 17, introduzir morcegos e estrelas cadentes
+            if g.current_level >= 17:
+                # Morcegos seguem a progressão dos pássaros e aplicam dificuldade
+                bat_base_qty = Level.get_birds_per_spawn(g.current_level)
+                bat_base_interval = Level.get_bird_spawn_interval(g.current_level)
+                g.bats_per_spawn = max(1, min(3, int(round(bat_base_qty * qty_factor))))
+                g.bat_spawn_interval = max(60, int(bat_base_interval * interval_factor))
+
+                # Limitar quantidade máxima de morcegos visíveis (estabiliza densidade na tela)
+                # Aplica apenas nas fases 17-20 para manter consistência de dificuldade
+                g.max_bats_visible = 8 * qty_factor
+
+                # Estrelas cadentes com presença moderada
+                star_base_qty = 1
+                star_base_interval = max(90, int(bat_base_interval * 1.2))
+                g.shooting_stars_per_spawn = max(
+                    1, min(2, int(round(star_base_qty * qty_factor)))
+                )
+                g.shooting_star_spawn_interval = max(
+                    80, int(star_base_interval * interval_factor)
+                )
         elif g.current_level <= 30:
             # Morcegos: seguem mesma progressão dos pássaros 11-20
             base_qty = Level.get_birds_per_spawn(g.current_level)
             base_interval = Level.get_bird_spawn_interval(g.current_level)
             g.bats_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
             g.bat_spawn_interval = max(60, int(base_interval * interval_factor))
+            # Fases 21–30: sem shooting stars
+            g.shooting_stars_per_spawn = 0
+            g.shooting_star_spawn_interval = 999999
+            g.max_bats_visible = 8 * qty_factor
         elif g.current_level <= 40:
             # Aviões: usar valores base fixos e aplicar dificuldade
             base_qty = 1

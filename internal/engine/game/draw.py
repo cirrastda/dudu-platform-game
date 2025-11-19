@@ -247,32 +247,44 @@ class Draw:
                         original_spaceship_x, original_spaceship_y
                     )
 
-            # Desenhar pássaros, morcegos e aviões com offset da câmera
+            # Desenhar pássaros, morcegos e estrelas (1–20) com offset da câmera
             if game.current_level <= 20:
+                # Pássaros (1–16)
                 for bird in game.birds:
                     bird_x = bird.x - game.camera_x
                     if bird_x > -50 and bird_x < WIDTH:  # Só desenhar se visível
-                        # Salvar posição original do pássaro
                         original_bird_x = bird.x
-                        # Ajustar posição para câmera
                         bird.x = bird_x
-                        # Chamar método draw do pássaro
                         bird.draw(game.screen)
-                        # Restaurar posição original
                         bird.x = original_bird_x
-                # Desenhar gotas de chuva (fases 7-10)
+                # Gotas de chuva (7–10)
                 if 7 <= game.current_level <= 10 and hasattr(game, "raindrops"):
                     for drop in game.raindrops:
                         drop_x = drop.x - game.camera_x
-                        if drop_x > -30 and drop_x < WIDTH + 30:  # Só desenhar se visível
-                            # Salvar posição original da gota
+                        if drop_x > -30 and drop_x < WIDTH + 30:
                             original_drop_x = drop.x
-                            # Ajustar posição para câmera
                             drop.x = drop_x
-                            # Chamar método draw da gota
                             drop.draw(game.screen, game.camera_x)
-                            # Restaurar posição original
                             drop.x = original_drop_x
+                # Morcegos e estrelas (17–20)
+                if game.current_level >= 17:
+                    # Morcegos
+                    for bat in game.bats:
+                        bat_x = bat.x - game.camera_x
+                        if bat_x > -50 and bat_x < WIDTH:
+                            original_bat_x = bat.x
+                            bat.x = bat_x
+                            bat.draw(game.screen)
+                            bat.x = original_bat_x
+                    # Estrelas cadentes
+                    if hasattr(game, "shooting_stars"):
+                        for star in game.shooting_stars:
+                            star_x = star.x - game.camera_x
+                            if star_x > -60 and star_x < WIDTH + 20:
+                                original_star_x = star.x
+                                star.x = star_x
+                                star.draw(game.screen)
+                                star.x = original_star_x
             elif game.current_level <= 30:
                 for bat in game.bats:
                     bat_x = bat.x - game.camera_x
@@ -285,6 +297,15 @@ class Draw:
                         bat.draw(game.screen)
                         # Restaurar posição original
                         bat.x = original_bat_x
+                # Shooting stars (21-30)
+                if hasattr(game, "shooting_stars"):
+                    for star in game.shooting_stars:
+                        star_x = star.x - game.camera_x
+                        if star_x > -60 and star_x < WIDTH + 20:
+                            original_star_x = star.x
+                            star.x = star_x
+                            star.draw(game.screen)
+                            star.x = original_star_x
             elif game.current_level <= 40:
                 for airplane in game.airplanes:
                     airplane_x = airplane.x - game.camera_x

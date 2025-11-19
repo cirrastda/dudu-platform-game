@@ -8,6 +8,7 @@ from internal.resources.enemies.bat import Bat
 from internal.resources.enemies.airplane import Airplane
 from internal.resources.enemies.flying_disk import FlyingDisk
 from internal.resources.enemies.fire import Fire
+from internal.resources.enemies.shooting_star import ShootingStar
 from internal.resources.enemies.raindrop import Raindrop
 
 
@@ -253,39 +254,86 @@ class Update:
                         remaining_powerups.append(pu)
                 g.powerups = remaining_powerups
 
-            # Sistema de pássaros e morcegos
+            # Sistema de pássaros, chuva, morcegos e estrelas
             if g.current_level <= 20:
-                # Spawn de novos pássaros (níveis 1-20)
-                g.bird_spawn_timer += 1
-                if g.bird_spawn_timer >= g.bird_spawn_interval:
-                    import random
-
-                    for i in range(g.birds_per_spawn):
-                        bird_y = random.randint(HEIGHT // 4, HEIGHT - 150)
-                        bird_x = g.camera_x + WIDTH + 50 + (i * 100)
-                        bird_images = (
-                            (g.image.bird_img1, g.image.bird_img2)
-                            if hasattr(g.image, "bird_img1")
-                            else None
-                        )
-                        g.birds.append(Bird(bird_x, bird_y, bird_images))
-                    g.bird_spawn_timer = 0
-                # Spawn de gotas de chuva nas fases 7-10
-                if 7 <= g.current_level <= 10:
-                    g.raindrop_spawn_timer += 1
-                    if g.raindrop_spawn_timer >= g.raindrop_spawn_interval:
+                if g.current_level <= 16:
+                    # Spawn de pássaros (níveis 1-16)
+                    g.bird_spawn_timer += 1
+                    if g.bird_spawn_timer >= g.bird_spawn_interval:
                         import random
 
-                        for i in range(getattr(g, "raindrops_per_spawn", 1)):
-                            drop_x = g.camera_x + random.randint(0, WIDTH)
-                            drop_y = -20 - (i * 15)
-                            drop_img = (
-                                g.image.raindrop_img
-                                if hasattr(g.image, "raindrop_img")
+                        for i in range(g.birds_per_spawn):
+                            bird_y = random.randint(HEIGHT // 4, HEIGHT - 150)
+                            bird_x = g.camera_x + WIDTH + 50 + (i * 100)
+                            bird_images = (
+                                (g.image.bird_img1, g.image.bird_img2)
+                                if hasattr(g.image, "bird_img1")
                                 else None
                             )
-                            g.raindrops.append(Raindrop(drop_x, drop_y, drop_img))
-                        g.raindrop_spawn_timer = 0
+                            g.birds.append(Bird(bird_x, bird_y, bird_images))
+                        g.bird_spawn_timer = 0
+                    # Spawn de gotas de chuva nas fases 7-10
+                    if 7 <= g.current_level <= 10:
+                        g.raindrop_spawn_timer += 1
+                        if g.raindrop_spawn_timer >= g.raindrop_spawn_interval:
+                            import random
+
+                            for i in range(getattr(g, "raindrops_per_spawn", 1)):
+                                drop_x = g.camera_x + random.randint(0, WIDTH)
+                                drop_y = -20 - (i * 15)
+                                drop_img = (
+                                    g.image.raindrop_img
+                                    if hasattr(g.image, "raindrop_img")
+                                    else None
+                                )
+                                g.raindrops.append(Raindrop(drop_x, drop_y, drop_img))
+                            g.raindrop_spawn_timer = 0
+                else:
+                    # Níveis 17-20: spawn de morcegos e estrelas cadentes
+                    # Morcegos
+                    g.bat_spawn_timer += 1
+                    if g.bat_spawn_timer >= getattr(g, "bat_spawn_interval", 999999):
+                        import random
+                        # Verificar limite de morcegos visíveis para evitar acumulação excessiva
+                        visible_count = 0
+                        for bat in getattr(g, "bats", []):
+                            if (
+                                bat.x > g.camera_x - 200
+                                and bat.x < g.camera_x + WIDTH + 200
+                            ):
+                                visible_count += 1
+
+                        max_visible = getattr(g, "max_bats_visible", None)
+                        if max_visible is None or visible_count < max_visible:
+                            for i in range(getattr(g, "bats_per_spawn", 0)):
+                                bat_y = random.randint(HEIGHT // 4, HEIGHT - 150)
+                                bat_x = g.camera_x + WIDTH + 50 + (i * 100)
+                                bat_images = (
+                                    (g.image.bat_img1, g.image.bat_img2, g.image.bat_img3)
+                                    if hasattr(g.image, "bat_img1")
+                                    else None
+                                )
+                                g.bats.append(Bat(bat_x, bat_y, bat_images))
+                            g.bat_spawn_timer = 0
+                    # Estrelas cadentes
+                    g.shooting_star_spawn_timer += 1
+                    if g.shooting_star_spawn_timer >= getattr(
+                        g, "shooting_star_spawn_interval", 999999
+                    ):
+                        import random
+
+                        for i in range(getattr(g, "shooting_stars_per_spawn", 0)):
+                            star_y = random.randint(HEIGHT // 6, HEIGHT // 2)
+                            star_x = g.camera_x + WIDTH + 50 + (i * 90)
+                            star_img = (
+                                getattr(g.image, "shooting_star_img", None)
+                                if hasattr(g, "image")
+                                else None
+                            )
+                            g.shooting_stars.append(
+                                ShootingStar(star_x, star_y, star_img)
+                            )
+                        g.shooting_star_spawn_timer = 0
             elif g.current_level <= 30:
                 # Spawn de novos morcegos (níveis 21-30)
                 g.bat_spawn_timer += 1
@@ -302,6 +350,23 @@ class Update:
                         )
                         g.bats.append(Bat(bat_x, bat_y, bat_images))
                     g.bat_spawn_timer = 0
+                # Shooting stars (níveis 21-30)
+                g.shooting_star_spawn_timer += 1
+                if g.shooting_star_spawn_timer >= getattr(
+                    g, "shooting_star_spawn_interval", 999999
+                ):
+                    import random
+
+                    for i in range(getattr(g, "shooting_stars_per_spawn", 0)):
+                        star_y = random.randint(HEIGHT // 6, HEIGHT // 2)
+                        star_x = g.camera_x + WIDTH + 50 + (i * 90)
+                        star_img = (
+                            getattr(g.image, "shooting_star_img", None)
+                            if hasattr(g, "image")
+                            else None
+                        )
+                        g.shooting_stars.append(ShootingStar(star_x, star_y, star_img))
+                    g.shooting_star_spawn_timer = 0
             elif g.current_level <= 40:
                 # Spawn de novos aviões (níveis 31-40)
                 g.airplane_spawn_timer += 1
@@ -354,28 +419,50 @@ class Update:
                             g.fires.append(Fire(fire_x, fire_y, fire_image))
                         g.fire_spawn_timer = 0
 
-            # Atualizar pássaros, morcegos e aviões com culling
+            # Atualizar inimigos com culling
             if g.current_level <= 20:
-                visible_birds = []
-                for bird in g.birds:
-                    if bird.update():
-                        if (
-                            bird.x > g.camera_x - 200
-                            and bird.x < g.camera_x + WIDTH + 200
-                        ):
-                            visible_birds.append(bird)
-                g.birds = visible_birds
-                # Atualizar gotas de chuva (7-10)
-                if 7 <= g.current_level <= 10:
-                    visible_drops = []
-                    for drop in getattr(g, "raindrops", []):
-                        if drop.update():
+                if g.current_level <= 16:
+                    visible_birds = []
+                    for bird in g.birds:
+                        if bird.update():
                             if (
-                                drop.x > g.camera_x - 100
-                                and drop.x < g.camera_x + WIDTH + 100
+                                bird.x > g.camera_x - 200
+                                and bird.x < g.camera_x + WIDTH + 200
                             ):
-                                visible_drops.append(drop)
-                    g.raindrops = visible_drops
+                                visible_birds.append(bird)
+                    g.birds = visible_birds
+                    # Atualizar gotas de chuva (7-10)
+                    if 7 <= g.current_level <= 10:
+                        visible_drops = []
+                        for drop in getattr(g, "raindrops", []):
+                            if drop.update():
+                                if (
+                                    drop.x > g.camera_x - 100
+                                    and drop.x < g.camera_x + WIDTH + 100
+                                ):
+                                    visible_drops.append(drop)
+                        g.raindrops = visible_drops
+                else:
+                    # Morcegos e estrelas (17-20)
+                    visible_bats = []
+                    for bat in g.bats:
+                        if bat.update(g.camera_x):
+                            if (
+                                bat.x > g.camera_x - 200
+                                and bat.x < g.camera_x + WIDTH + 200
+                            ):
+                                visible_bats.append(bat)
+                    g.bats = visible_bats
+
+                    visible_stars = []
+                    for star in getattr(g, "shooting_stars", []):
+                        if star.update(g.camera_x):
+                            if (
+                                star.x > g.camera_x - 200
+                                and star.x < g.camera_x + WIDTH + 200
+                            ):
+                                visible_stars.append(star)
+                    g.shooting_stars = visible_stars
             elif g.current_level <= 30:
                 visible_bats = []
                 for bat in g.bats:
@@ -386,6 +473,16 @@ class Update:
                         ):
                             visible_bats.append(bat)
                 g.bats = visible_bats
+                # Shooting stars update/culling
+                visible_stars = []
+                for star in getattr(g, "shooting_stars", []):
+                    if star.update(g.camera_x):
+                        if (
+                            star.x > g.camera_x - 200
+                            and star.x < g.camera_x + WIDTH + 200
+                        ):
+                            visible_stars.append(star)
+                g.shooting_stars = visible_stars
             elif g.current_level <= 40:
                 visible_airplanes = []
                 for airplane in g.airplanes:
@@ -481,29 +578,73 @@ class Update:
 
             # Colisões tiros vs aves/morcegos/aviões/discos
             if g.current_level <= 20:
-                for bullet in g.player.bullets[:]:
-                    for bird in g.birds[:]:
-                        if getattr(bird, "is_dead", False):
-                            continue
-                        if bullet.rect.colliderect(bird.rect):
-                            g.player.bullets.remove(bullet)
-                            g.return_bullet_to_pool(bullet)
-                            if hasattr(bird, "die"):
-                                bird.die()
-                            g.sound_effects.play_sound_effect("bird-hit")
-                            g.add_score(100)
-                            break
-                    # Colisões com gotas de chuva (7-10)
-                    if 7 <= g.current_level <= 10:
-                        for drop in g.raindrops[:]:
-                            if getattr(drop, "is_dead", False):
+                if g.current_level <= 16:
+                    for bullet in g.player.bullets[:]:
+                        for bird in g.birds[:]:
+                            if getattr(bird, "is_dead", False):
                                 continue
-                            if bullet.rect.colliderect(drop.rect):
+                            if bullet.rect.colliderect(bird.rect):
                                 g.player.bullets.remove(bullet)
                                 g.return_bullet_to_pool(bullet)
-                                drop.die()
-                                g.sound_effects.play_sound_effect("water-hit")
+                                if hasattr(bird, "die"):
+                                    bird.die()
+                                g.sound_effects.play_sound_effect("bird-hit")
                                 g.add_score(100)
+                                break
+                        # Colisões com gotas de chuva (7-10)
+                        if 7 <= g.current_level <= 10:
+                            for drop in g.raindrops[:]:
+                                if getattr(drop, "is_dead", False):
+                                    continue
+                                if bullet.rect.colliderect(drop.rect):
+                                    g.player.bullets.remove(bullet)
+                                    g.return_bullet_to_pool(bullet)
+                                    drop.die()
+                                    g.sound_effects.play_sound_effect("water-hit")
+                                    g.add_score(100)
+                                    break
+                else:
+                    # Compatibilidade de testes: se pássaros forem injetados manualmente,
+                    # ainda processar colisões com tiros nas fases 17-20.
+                    for bullet in g.player.bullets[:]:
+                        for bird in g.birds[:]:
+                            if getattr(bird, "is_dead", False):
+                                continue
+                            if bullet.rect.colliderect(bird.rect):
+                                g.player.bullets.remove(bullet)
+                                g.return_bullet_to_pool(bullet)
+                                if hasattr(bird, "die"):
+                                    bird.die()
+                                g.sound_effects.play_sound_effect("bird-hit")
+                                g.add_score(100)
+                                break
+                    for bullet in g.player.bullets[:]:
+                        for bat in g.bats[:]:
+                            if getattr(bat, "is_dead", False):
+                                continue
+                            if bullet.rect.colliderect(bat.rect):
+                                g.player.bullets.remove(bullet)
+                                g.return_bullet_to_pool(bullet)
+                                if hasattr(bat, "die"):
+                                    bat.die()
+                                g.sound_effects.play_sound_effect("bird-hit")
+                                g.add_score(75)
+                                break
+                        # Estrelas cadentes
+                        for star in getattr(g, "shooting_stars", [])[:]:
+                            if getattr(star, "is_dead", False):
+                                continue
+                            if bullet.rect.colliderect(star.rect):
+                                if bullet in g.player.bullets:
+                                    g.player.bullets.remove(bullet)
+                                g.return_bullet_to_pool(bullet)
+                                star.die()
+                                explosion = g.get_pooled_explosion(
+                                    star.x, star.y, g.image.explosion_image
+                                )
+                                g.explosions.append(explosion)
+                                g.sound_effects.play_sound_effect("explosion")
+                                g.add_score(225)
                                 break
             elif g.current_level <= 30:
                 for bullet in g.player.bullets[:]:
@@ -517,6 +658,22 @@ class Update:
                                 bat.die()
                             g.sound_effects.play_sound_effect("bird-hit")
                             g.add_score(75)
+                            break
+                    # Shooting stars bullet collisions
+                    for star in getattr(g, "shooting_stars", [])[:]:
+                        if getattr(star, "is_dead", False):
+                            continue
+                        if bullet.rect.colliderect(star.rect):
+                            if bullet in g.player.bullets:
+                                g.player.bullets.remove(bullet)
+                            g.return_bullet_to_pool(bullet)
+                            star.die()
+                            explosion = g.get_pooled_explosion(
+                                star.x, star.y, g.image.explosion_image
+                            )
+                            g.explosions.append(explosion)
+                            g.sound_effects.play_sound_effect("explosion")
+                            g.add_score(225)
                             break
             elif g.current_level <= 40:
                 for bullet in g.player.bullets[:]:
@@ -719,75 +876,238 @@ class Update:
 
             # Colisão/esquiva aves/morcegos/aviões/discos
             if g.current_level <= 20:
-                for bird in g.birds[:]:
-                    distance_x = abs(bird.x - g.player.x)
-                    distance_y = abs(bird.y - g.player.y)
-                    if (
-                        distance_x < 40
-                        and distance_y < 50
-                        and bird.x < g.player.x
-                        and bird.id not in g.birds_dodged
-                    ):
-                        g.birds_dodged.add(bird.id)
-                        g.add_score(10)
-                    if g.player.rect.colliderect(bird.rect):
-                        if hasattr(bird, "is_dead") and bird.is_dead:
-                            continue
-                        if g.player.is_invulnerable:
-                            g.explosions.append(
-                                Explosion(bird.x, bird.y, g.image.explosion_image)
-                            )
-                            g.birds.remove(bird)
-                            g.add_score(20)
-                        else:
-                            if not g.player.is_hit:
-                                if getattr(g, "shield_active", False):
-                                    g.shield_active = False
-                                    g.explosions.append(
-                                        Explosion(
-                                            bird.x, bird.y, g.image.explosion_image
-                                        )
-                                    )
-                                    if bird in g.birds:
-                                        g.birds.remove(bird)
-                                else:
-                                    g.player.take_hit()
-                                    g.sound_effects.play_sound_effect("player-hit")
-                                    g.explosions.append(
-                                        Explosion(
-                                            bird.x, bird.y, g.image.explosion_image
-                                        )
-                                    )
-                                    g.birds.remove(bird)
-                                    g.lives -= 1
-                                    if g.lives <= 0:
-                                        if g.ranking_manager.is_high_score(g.score):
-                                            g.state = GameState.ENTER_NAME
-                                        else:
-                                            g.state = GameState.GAME_OVER
-                                        g.start_game_over_hold()
-                        break
-                # Colisão com gotas de chuva (fases 7-10)
-                if 7 <= g.current_level <= 10:
-                    for drop in g.raindrops[:]:
-                        if g.player.rect.colliderect(drop.rect):
-                            if getattr(drop, "is_dead", False):
+                if g.current_level <= 16:
+                    for bird in g.birds[:]:
+                        distance_x = abs(bird.x - g.player.x)
+                        distance_y = abs(bird.y - g.player.y)
+                        if (
+                            distance_x < 40
+                            and distance_y < 50
+                            and bird.x < g.player.x
+                            and bird.id not in g.birds_dodged
+                        ):
+                            g.birds_dodged.add(bird.id)
+                            g.add_score(10)
+                        # Usar hitbox efetiva quando abaixado para inimigos voadores
+                        player_rect = g.player.get_airborne_collision_rect()
+                        if player_rect.colliderect(bird.rect):
+                            if hasattr(bird, "is_dead") and bird.is_dead:
                                 continue
-                            # Pulo destrói a gota; invulnerável também destrói
-                            if g.player.is_invulnerable or not getattr(g.player, "on_ground", True):
-                                drop.die()
-                                g.sound_effects.play_sound_effect("water-hit")
+                            if g.player.is_invulnerable:
+                                g.explosions.append(
+                                    Explosion(bird.x, bird.y, g.image.explosion_image)
+                                )
+                                g.birds.remove(bird)
                                 g.add_score(20)
                             else:
                                 if not g.player.is_hit:
                                     if getattr(g, "shield_active", False):
                                         g.shield_active = False
-                                        drop.die()
-                                        g.sound_effects.play_sound_effect("water-hit")
+                                        g.explosions.append(
+                                            Explosion(
+                                                bird.x, bird.y, g.image.explosion_image
+                                            )
+                                        )
+                                        if bird in g.birds:
+                                            g.birds.remove(bird)
                                     else:
                                         g.player.take_hit()
                                         g.sound_effects.play_sound_effect("player-hit")
-                                        drop.die()
+                                        g.explosions.append(
+                                            Explosion(
+                                                bird.x, bird.y, g.image.explosion_image
+                                            )
+                                        )
+                                        g.birds.remove(bird)
+                                        g.lives -= 1
+                                        if g.lives <= 0:
+                                            if g.ranking_manager.is_high_score(g.score):
+                                                g.state = GameState.ENTER_NAME
+                                            else:
+                                                g.state = GameState.GAME_OVER
+                                            g.start_game_over_hold()
+                            break
+                    # Colisão com gotas de chuva (fases 7-10)
+                    if 7 <= g.current_level <= 10:
+                        for drop in g.raindrops[:]:
+                            if g.player.rect.colliderect(drop.rect):
+                                if getattr(drop, "is_dead", False):
+                                    continue
+                                # Pulo destrói a gota; invulnerável também destrói
+                                if g.player.is_invulnerable or not getattr(
+                                    g.player, "on_ground", True
+                                ):
+                                    drop.die()
+                                    g.sound_effects.play_sound_effect("water-hit")
+                                    g.add_score(20)
+                                else:
+                                    if not g.player.is_hit:
+                                        if getattr(g, "shield_active", False):
+                                            g.shield_active = False
+                                            drop.die()
+                                            g.sound_effects.play_sound_effect(
+                                                "water-hit"
+                                            )
+                                        else:
+                                            g.player.take_hit()
+                                            g.sound_effects.play_sound_effect(
+                                                "player-hit"
+                                            )
+                                            drop.die()
+                                            g.lives -= 1
+                                            if g.lives <= 0:
+                                                if g.ranking_manager.is_high_score(
+                                                    g.score
+                                                ):
+                                                    g.state = GameState.ENTER_NAME
+                                                else:
+                                                    g.state = GameState.GAME_OVER
+                                                g.start_game_over_hold()
+                                break
+                else:
+                    # Compatibilidade de testes: processar colisões com pássaros se existirem nas fases 17-20
+                    for bird in g.birds[:]:
+                        distance_x = abs(bird.x - g.player.x)
+                        distance_y = abs(bird.y - g.player.y)
+                        if (
+                            distance_x < 40
+                            and distance_y < 50
+                            and bird.x < g.player.x
+                            and bird.id not in g.birds_dodged
+                        ):
+                            g.birds_dodged.add(bird.id)
+                            g.add_score(10)
+                        player_rect = g.player.get_airborne_collision_rect()
+                        if player_rect.colliderect(bird.rect):
+                            if hasattr(bird, "is_dead") and bird.is_dead:
+                                continue
+                            if g.player.is_invulnerable:
+                                g.explosions.append(
+                                    Explosion(bird.x, bird.y, g.image.explosion_image)
+                                )
+                                g.birds.remove(bird)
+                                g.add_score(20)
+                            else:
+                                if not g.player.is_hit:
+                                    if getattr(g, "shield_active", False):
+                                        g.shield_active = False
+                                        g.explosions.append(
+                                            Explosion(
+                                                bird.x, bird.y, g.image.explosion_image
+                                            )
+                                        )
+                                        if bird in g.birds:
+                                            g.birds.remove(bird)
+                                    else:
+                                        g.player.take_hit()
+                                        g.sound_effects.play_sound_effect("player-hit")
+                                        g.explosions.append(
+                                            Explosion(
+                                                bird.x, bird.y, g.image.explosion_image
+                                            )
+                                        )
+                                        g.birds.remove(bird)
+                                        g.lives -= 1
+                                        if g.lives <= 0:
+                                            if g.ranking_manager.is_high_score(g.score):
+                                                g.state = GameState.ENTER_NAME
+                                            else:
+                                                g.state = GameState.GAME_OVER
+                                            g.start_game_over_hold()
+                            break
+                    # Morcegos
+                    for bat in g.bats[:]:
+                        distance_x = abs(bat.x - g.player.x)
+                        distance_y = abs(bat.y - g.player.y)
+                        if (
+                            distance_x < 40
+                            and distance_y < 50
+                            and bat.x < g.player.x
+                            and bat.id not in g.birds_dodged
+                        ):
+                            g.birds_dodged.add(bat.id)
+                            g.add_score(15)
+                        player_rect = g.player.get_airborne_collision_rect()
+                        if player_rect.colliderect(bat.rect):
+                            if hasattr(bat, "is_dead") and bat.is_dead:
+                                continue
+                            if g.player.is_invulnerable:
+                                g.explosions.append(
+                                    Explosion(bat.x, bat.y, g.image.explosion_image)
+                                )
+                                g.bats.remove(bat)
+                                g.add_score(25)
+                            else:
+                                if not g.player.is_hit:
+                                    if getattr(g, "shield_active", False):
+                                        g.shield_active = False
+                                        g.explosions.append(
+                                            Explosion(
+                                                bat.x, bat.y, g.image.explosion_image
+                                            )
+                                        )
+                                        if bat in g.bats:
+                                            g.bats.remove(bat)
+                                    else:
+                                        g.player.take_hit()
+                                        g.sound_effects.play_sound_effect("player-hit")
+                                        g.explosions.append(
+                                            Explosion(
+                                                bat.x, bat.y, g.image.explosion_image
+                                            )
+                                        )
+                                        g.bats.remove(bat)
+                                        g.lives -= 1
+                                        if g.lives <= 0:
+                                            if g.ranking_manager.is_high_score(g.score):
+                                                g.state = GameState.ENTER_NAME
+                                            else:
+                                                g.state = GameState.GAME_OVER
+                                            g.start_game_over_hold()
+                            break
+                    # Estrelas cadentes
+                    for star in getattr(g, "shooting_stars", [])[:]:
+                        distance_x = abs(star.x - g.player.x)
+                        distance_y = abs(star.y - g.player.y)
+                        if (
+                            distance_x < 45
+                            and distance_y < 55
+                            and star.x < g.player.x
+                            and star.id not in g.birds_dodged
+                        ):
+                            g.birds_dodged.add(star.id)
+                            g.add_score(45)
+                        player_rect = g.player.get_airborne_collision_rect()
+                        if player_rect.colliderect(star.rect):
+                            if hasattr(star, "is_dead") and star.is_dead:
+                                continue
+                            if g.player.is_invulnerable:
+                                explosion = g.get_pooled_explosion(
+                                    star.x, star.y, g.image.explosion_image
+                                )
+                                g.explosions.append(explosion)
+                                if star in g.shooting_stars:
+                                    g.shooting_stars.remove(star)
+                                g.add_score(75)
+                            else:
+                                if not g.player.is_hit:
+                                    if getattr(g, "shield_active", False):
+                                        g.shield_active = False
+                                        explosion = g.get_pooled_explosion(
+                                            star.x, star.y, g.image.explosion_image
+                                        )
+                                        g.explosions.append(explosion)
+                                        if star in g.shooting_stars:
+                                            g.shooting_stars.remove(star)
+                                    else:
+                                        g.player.take_hit()
+                                        g.sound_effects.play_sound_effect("player-hit")
+                                        explosion = g.get_pooled_explosion(
+                                            star.x, star.y, g.image.explosion_image
+                                        )
+                                        g.explosions.append(explosion)
+                                        if star in g.shooting_stars:
+                                            g.shooting_stars.remove(star)
                                         g.lives -= 1
                                         if g.lives <= 0:
                                             if g.ranking_manager.is_high_score(g.score):
@@ -841,6 +1161,56 @@ class Update:
                                             g.state = GameState.GAME_OVER
                                     g.start_game_over_hold()
                         break
+                # Shooting stars dodge/collision
+                for star in getattr(g, "shooting_stars", [])[:]:
+                    distance_x = abs(star.x - g.player.x)
+                    distance_y = abs(star.y - g.player.y)
+                    if (
+                        distance_x < 45
+                        and distance_y < 55
+                        and star.x < g.player.x
+                        and star.id not in g.birds_dodged
+                    ):
+                        g.birds_dodged.add(star.id)
+                        g.add_score(45)
+                    if g.player.rect.colliderect(star.rect):
+                        if hasattr(star, "is_dead") and star.is_dead:
+                            continue
+                        if g.player.is_invulnerable:
+                            explosion = g.get_pooled_explosion(
+                                star.x, star.y, g.image.explosion_image
+                            )
+                            g.explosions.append(explosion)
+                            if star in g.shooting_stars:
+                                g.shooting_stars.remove(star)
+                            g.add_score(75)
+                        else:
+                            if not g.player.is_hit:
+                                if getattr(g, "shield_active", False):
+                                    g.shield_active = False
+                                    explosion = g.get_pooled_explosion(
+                                        star.x, star.y, g.image.explosion_image
+                                    )
+                                    g.explosions.append(explosion)
+                                    if star in g.shooting_stars:
+                                        g.shooting_stars.remove(star)
+                                else:
+                                    g.player.take_hit()
+                                    g.sound_effects.play_sound_effect("player-hit")
+                                    explosion = g.get_pooled_explosion(
+                                        star.x, star.y, g.image.explosion_image
+                                    )
+                                    g.explosions.append(explosion)
+                                    if star in g.shooting_stars:
+                                        g.shooting_stars.remove(star)
+                                    g.lives -= 1
+                                    if g.lives <= 0:
+                                        if g.ranking_manager.is_high_score(g.score):
+                                            g.state = GameState.ENTER_NAME
+                                        else:
+                                            g.state = GameState.GAME_OVER
+                                        g.start_game_over_hold()
+                        break
             elif g.current_level <= 40:
                 for airplane in g.airplanes[:]:
                     distance_x = abs(airplane.x - g.player.x)
@@ -853,7 +1223,8 @@ class Update:
                     ):
                         g.birds_dodged.add(airplane.id)
                         g.add_score(20)
-                    if g.player.rect.colliderect(airplane.rect):
+                    player_rect = g.player.get_airborne_collision_rect()
+                    if player_rect.colliderect(airplane.rect):
                         if hasattr(airplane, "is_dead") and airplane.is_dead:
                             continue
                         if g.player.is_invulnerable:
@@ -907,7 +1278,8 @@ class Update:
                     ):
                         g.birds_dodged.add(disk.id)
                         g.add_score(25)
-                    if g.player.rect.colliderect(disk.rect):
+                    player_rect = g.player.get_airborne_collision_rect()
+                    if player_rect.colliderect(disk.rect):
                         if hasattr(disk, "is_dead") and disk.is_dead:
                             continue
                         if g.player.is_invulnerable:

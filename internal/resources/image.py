@@ -87,6 +87,26 @@ class Image:
                 print(f"Erro ao carregar imagens do flying-disk: {e}")
                 self.flying_disk_images = None
 
+            # Carregar imagem da estrela cadente (shooting star) com fallback
+            try:
+                self.shooting_star_img = None
+                # Caminho correto informado pelo projeto
+                path = "imagens/elementos/estrelaCadente.png"
+                try:
+                    img = cache.get_image(path, (26, 26))
+                except Exception:
+                    img = None
+                if img:
+                    self.shooting_star_img = img
+                # Fallback: desenhar um pequeno círculo branco se não houver imagem
+                if self.shooting_star_img is None:
+                    surf = pygame.Surface((26, 26), pygame.SRCALPHA)
+                    pygame.draw.circle(surf, (255, 255, 255), (13, 13), 6)
+                    self.shooting_star_img = surf
+            except Exception as e:
+                print(f"Erro ao carregar imagem da estrela cadente: {e}")
+                self.shooting_star_img = None
+
             # Carregar imagens das tartarugas usando cache
             try:
                 self.turtle_left1 = cache.get_image(
@@ -338,7 +358,9 @@ class Image:
                     orig_w, orig_h = base_fire.get_size()
                     target_h = 30
                     new_w = max(1, int(orig_w * target_h / orig_h))
-                    self.fire_image = pygame.transform.scale(base_fire, (new_w, target_h))
+                    self.fire_image = pygame.transform.scale(
+                        base_fire, (new_w, target_h)
+                    )
                 else:
                     self.fire_image = None
             except pygame.error as e:

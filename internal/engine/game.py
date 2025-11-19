@@ -18,7 +18,7 @@ from internal.engine.level.level import Level
 from internal.engine.sound.music import Music
 from internal.engine.sound.mixer import Mixer
 from internal.engine.sound.effects import SoundEffects
- 
+
 
 # Carregar módulos auxiliares da pasta internal/engine/game/ sem conflito de nome
 _GAME_SUBMODULE_DIR = os.path.join(os.path.dirname(__file__), "game")
@@ -52,7 +52,9 @@ try:
     _events_mod = _load_submodule("events.py", "internal.engine._game_events")
     _draw_mod = _load_submodule("draw.py", "internal.engine._game_draw")
     _update_mod = _load_submodule("update.py", "internal.engine._game_update")
-    _difficulty_mod = _load_submodule("difficulty.py", "internal.engine._game_difficulty")
+    _difficulty_mod = _load_submodule(
+        "difficulty.py", "internal.engine._game_difficulty"
+    )
     _pool_mod = _load_submodule("pool.py", "internal.engine._game_pool")
     _cheat_mod = _load_submodule("cheat.py", "internal.engine._game_cheat")
     _menu_mod = _load_submodule("menu.py", "internal.engine._game_menu")
@@ -332,6 +334,12 @@ class Game:
         self.bat_spawn_timer = 0
         self.bats_per_spawn = 1
         self.bat_spawn_interval = 180
+
+        # Shooting stars (níveis 21-30, junto com morcegos)
+        self.shooting_stars = []
+        self.shooting_star_spawn_timer = 0
+        self.shooting_stars_per_spawn = 1
+        self.shooting_star_spawn_interval = 220
 
         # Inicializar variáveis de spawn de aviões (níveis 31+)
         self.airplanes = []

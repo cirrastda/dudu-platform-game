@@ -240,6 +240,9 @@ class Level:
         # Reinicializar sistema de morcegos
         game.bats = []
         game.bat_spawn_timer = 0
+        # Reinicializar shooting stars (21-30)
+        game.shooting_stars = []
+        game.shooting_star_spawn_timer = 0
         # Reinicializar sistema de tartarugas
         game.turtles = []
         # Reinicializar sistema de aranhas

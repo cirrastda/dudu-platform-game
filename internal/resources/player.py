@@ -50,6 +50,19 @@ class Player:
 
         self.load_sprites()
 
+    def get_airborne_collision_rect(self):
+        """Retângulo de colisão efetivo contra inimigos voadores.
+
+        Quando abaixado, reduzimos a área inferior em alguns pixels para
+        evitar colisões por baixo sem contato visual aparente.
+        """
+        r = self.rect.copy()
+        if self.is_crouching:
+            bottom_margin = 8  # margem inferior ignorada quando agachado
+            # Reduzir apenas a altura para subir a base (sem mover o topo)
+            r.height = max(10, r.height - bottom_margin)
+        return r
+
     def load_sprites(self):
         """Carregar todos os sprites do personagem"""
         try:
@@ -76,42 +89,70 @@ class Player:
 
             # Sprite parado (idle)
             self.sprites["idle"] = [
-                load_and_scale("imagens/personagem/1.png", (self.width, self.original_height))
+                load_and_scale(
+                    "imagens/personagem/1.png", (self.width, self.original_height)
+                )
             ]
 
             # Sprites de caminhada
             self.sprites["walk"] = [
-                load_and_scale("imagens/personagem/1.png", (self.width, self.original_height)),
-                load_and_scale("imagens/personagem/2.png", (self.width, self.original_height)),
-                load_and_scale("imagens/personagem/3.png", (self.width, self.original_height)),
-                load_and_scale("imagens/personagem/4.png", (self.width, self.original_height)),
+                load_and_scale(
+                    "imagens/personagem/1.png", (self.width, self.original_height)
+                ),
+                load_and_scale(
+                    "imagens/personagem/2.png", (self.width, self.original_height)
+                ),
+                load_and_scale(
+                    "imagens/personagem/3.png", (self.width, self.original_height)
+                ),
+                load_and_scale(
+                    "imagens/personagem/4.png", (self.width, self.original_height)
+                ),
             ]
 
             # Sprites de pulo (inclui aterrissagem)
             self.sprites["jump"] = [
-                load_and_scale("imagens/personagem/j1.png", (self.width, self.original_height)),
-                load_and_scale("imagens/personagem/j2.png", (self.width, self.original_height)),
-                load_and_scale("imagens/personagem/j3.png", (self.width, self.original_height)),
-                load_and_scale("imagens/personagem/j4.png", (self.width, self.original_height)),
-                load_and_scale("imagens/personagem/j5.png", (self.width, self.original_height)),
+                load_and_scale(
+                    "imagens/personagem/j1.png", (self.width, self.original_height)
+                ),
+                load_and_scale(
+                    "imagens/personagem/j2.png", (self.width, self.original_height)
+                ),
+                load_and_scale(
+                    "imagens/personagem/j3.png", (self.width, self.original_height)
+                ),
+                load_and_scale(
+                    "imagens/personagem/j4.png", (self.width, self.original_height)
+                ),
+                load_and_scale(
+                    "imagens/personagem/j5.png", (self.width, self.original_height)
+                ),
             ]
 
             # Sprite agachado (mantém altura original conforme lógica atual)
             self.sprites["crouch"] = [
-                load_and_scale("imagens/personagem/dn1.png", (self.width, self.original_height))
+                load_and_scale(
+                    "imagens/personagem/dn1.png", (self.width, self.original_height)
+                )
             ]
 
             # Sprite quando atingido
             self.sprites["hit"] = [
-                load_and_scale("imagens/personagem/d1.png", (self.width, self.original_height))
+                load_and_scale(
+                    "imagens/personagem/d1.png", (self.width, self.original_height)
+                )
             ]
 
             # Sprites de tiro
             self.sprites["shoot"] = [
-                load_and_scale("imagens/personagem/bow.png", (self.width, self.original_height))
+                load_and_scale(
+                    "imagens/personagem/bow.png", (self.width, self.original_height)
+                )
             ]
             self.sprites["shoot_crouch"] = [
-                load_and_scale("imagens/personagem/bowD.png", (self.width, self.original_height))
+                load_and_scale(
+                    "imagens/personagem/bowD.png", (self.width, self.original_height)
+                )
             ]
 
         except pygame.error as e:
@@ -414,7 +455,10 @@ class Player:
 
             # Ajustar posição Y para sprites agachados (sem redimensionar)
             draw_y = self.y
-            if self.current_animation == "crouch" or self.current_animation == "shoot_crouch":
+            if (
+                self.current_animation == "crouch"
+                or self.current_animation == "shoot_crouch"
+            ):
                 # Ajustar posição Y para que o sprite apareça na posição correta
                 # quando agachado (sprite mantém tamanho original)
                 draw_y = self.y + (self.height - current_sprite.get_height())
@@ -428,7 +472,9 @@ class Player:
                 else:
                     # Sprite esmaecido
                     faded_sprite = current_sprite.copy()
-                    alpha_value = 80 if self.is_invulnerable else 120  # Menos transparente durante abdução
+                    alpha_value = (
+                        80 if self.is_invulnerable else 120
+                    )  # Menos transparente durante abdução
                     faded_sprite.set_alpha(alpha_value)
                     screen.blit(faded_sprite, (self.x, draw_y))
             else:
@@ -448,7 +494,9 @@ class Player:
                     fade_surface = pygame.Surface(
                         (self.width, self.height), pygame.SRCALPHA
                     )
-                    alpha_value = 80 if self.is_invulnerable else 120  # Menos transparente durante abdução
+                    alpha_value = (
+                        80 if self.is_invulnerable else 120
+                    )  # Menos transparente durante abdução
                     fade_surface.fill((*color, alpha_value))
                     screen.blit(fade_surface, (self.x, self.y))
             else:
