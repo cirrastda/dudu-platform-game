@@ -49,12 +49,14 @@ class Events:
                         game.handle_menu_selection()
                 elif game.state == GameState.SELECT_DIFFICULTY:
                     if event.key == pygame.K_UP:
-                        game.difficulty_selected = (game.difficulty_selected - 1) % len(
-                            game.difficulty_options
+                        game.difficulty_selected = (
+                            (game.difficulty_selected - 1)
+                            % len(game.difficulty_options)
                         )
                     elif event.key == pygame.K_DOWN:
-                        game.difficulty_selected = (game.difficulty_selected + 1) % len(
-                            game.difficulty_options
+                        game.difficulty_selected = (
+                            (game.difficulty_selected + 1)
+                            % len(game.difficulty_options)
                         )
                     elif event.key == pygame.K_ESCAPE:
                         game.state = GameState.MAIN_MENU
@@ -69,7 +71,9 @@ class Events:
                             game.extra_life_milestones,
                             game.extra_life_increment_after_milestones,
                         ) = game.get_extra_life_milestones_and_increment()
-                        game.next_extra_life_score = game.extra_life_milestones[0]
+                        game.next_extra_life_score = (
+                            game.extra_life_milestones[0]
+                        )
                         game.extra_lives_earned = 0
                         if (
                             env.get("environment") == "development"
@@ -77,7 +81,10 @@ class Events:
                         ):
                             try:
                                 game.current_level = int(env["initial-stage"])
-                                if game.current_level < 1 or game.current_level > 50:
+                                if (
+                                    game.current_level < 1
+                                    or game.current_level > 50
+                                ):
                                     game.current_level = 1
                             except (ValueError, TypeError):
                                 game.current_level = 1
@@ -99,8 +106,12 @@ class Events:
                     game.credits_type = "ending"
                     game.music.play_music("credits")
                 elif game.state == GameState.CREDITS:
-                    if game.credits_type == "menu" and (
-                        event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN
+                    if (
+                        game.credits_type == "menu"
+                        and (
+                            event.key == pygame.K_ESCAPE
+                            or event.key == pygame.K_RETURN
+                        )
                     ):
                         game.state = GameState.MAIN_MENU
                         return True
@@ -113,12 +124,14 @@ class Events:
                             game.state = GameState.MAIN_MENU
                 elif game.state == GameState.GAME_OVER:
                     if event.key == pygame.K_UP:
-                        game.game_over_selected = (game.game_over_selected - 1) % len(
-                            game.game_over_options
+                        game.game_over_selected = (
+                            (game.game_over_selected - 1)
+                            % len(game.game_over_options)
                         )
                     elif event.key == pygame.K_DOWN:
-                        game.game_over_selected = (game.game_over_selected + 1) % len(
-                            game.game_over_options
+                        game.game_over_selected = (
+                            (game.game_over_selected + 1)
+                            % len(game.game_over_options)
                         )
                     elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         if game.game_over_selected == 0:
@@ -127,7 +140,9 @@ class Events:
                                 and "initial-stage" in env
                             ):
                                 try:
-                                    game.current_level = int(env["initial-stage"])
+                                    game.current_level = int(
+                                        env["initial-stage"]
+                                    )
                                     if (
                                         game.current_level < 1
                                         or game.current_level > 50
@@ -145,9 +160,14 @@ class Events:
                             game.game_over_selected = 0
                             game.state = GameState.PLAYING
                             Level.init_level(game)
-                            game.music.play_level_music(game, game.current_level)
+                            game.music.play_level_music(
+                                game,
+                                game.current_level,
+                            )
                         elif game.game_over_selected == 1:
-                            game.previous_state_before_records = GameState.GAME_OVER
+                            game.previous_state_before_records = (
+                                GameState.GAME_OVER
+                            )
                             game.state = GameState.RECORDS
                         elif game.game_over_selected == 2:
                             return False
@@ -157,12 +177,17 @@ class Events:
                             game.ranking_manager.add_score(
                                 game.player_name.strip(), game.score
                             )
-                            game.previous_state_before_ranking = GameState.GAME_OVER
+                            game.previous_state_before_ranking = (
+                                GameState.GAME_OVER
+                            )
                             game.state = GameState.SHOW_RANKING
                     elif event.key == pygame.K_BACKSPACE:
                         game.player_name = game.player_name[:-1]
                     else:
-                        if len(game.player_name) < 25 and event.unicode.isprintable():
+                        if (
+                            len(game.player_name) < 25
+                            and event.unicode.isprintable()
+                        ):
                             game.player_name += event.unicode
                 elif event.key == pygame.K_r and (
                     game.state == GameState.VICTORY
@@ -194,13 +219,21 @@ class Events:
                         else:
                             pass
                     elif game.state == GameState.RECORDS:
-                        if getattr(game, "previous_state_before_records", None):
+                        if getattr(
+                            game,
+                            "previous_state_before_records",
+                            None,
+                        ):
                             game.state = game.previous_state_before_records
                             game.previous_state_before_records = None
                         else:
                             game.state = GameState.MAIN_MENU
                     elif game.state == GameState.SHOW_RANKING:
-                        if getattr(game, "previous_state_before_ranking", None):
+                        if getattr(
+                            game,
+                            "previous_state_before_ranking",
+                            None,
+                        ):
                             game.state = game.previous_state_before_ranking
                             game.previous_state_before_ranking = None
                         else:
@@ -211,7 +244,7 @@ class Events:
                         return False
 
             elif event.type == pygame.JOYBUTTONDOWN:
-                # Mapear botões para cheat tokens apenas se joystick estiver presente
+                # Mapear botões p/ cheat tokens se joystick presente
                 if getattr(game, "joystick_connected", False):
                     if event.button == 1:
                         game._process_cheat_token("B")
@@ -246,7 +279,9 @@ class Events:
                             game.extra_life_milestones,
                             game.extra_life_increment_after_milestones,
                         ) = game.get_extra_life_milestones_and_increment()
-                        game.next_extra_life_score = game.extra_life_milestones[0]
+                        game.next_extra_life_score = (
+                            game.extra_life_milestones[0]
+                        )
                         game.extra_lives_earned = 0
                         if (
                             env.get("environment") == "development"
@@ -254,7 +289,10 @@ class Events:
                         ):
                             try:
                                 game.current_level = int(env["initial-stage"])
-                                if game.current_level < 1 or game.current_level > 50:
+                                if (
+                                    game.current_level < 1
+                                    or game.current_level > 50
+                                ):
                                     game.current_level = 1
                             except (ValueError, TypeError):
                                 game.current_level = 1
@@ -292,7 +330,11 @@ class Events:
                             game.state = GameState.MAIN_MENU
                 elif game.state == GameState.SHOW_RANKING:
                     if event.button == 1 or event.button in [6, 7, 8, 9]:
-                        if getattr(game, "previous_state_before_ranking", None):
+                        if getattr(
+                            game,
+                            "previous_state_before_ranking",
+                            None,
+                        ):
                             game.state = game.previous_state_before_ranking
                             game.previous_state_before_ranking = None
                         else:
@@ -305,8 +347,13 @@ class Events:
                                 and "initial-stage" in env
                             ):
                                 try:
-                                    game.current_level = int(env["initial-stage"])
-                                    if game.current_level < 1 or game.current_level > 50:
+                                    game.current_level = int(
+                                        env["initial-stage"]
+                                    )
+                                    if (
+                                        game.current_level < 1
+                                        or game.current_level > 50
+                                    ):
                                         game.current_level = 1
                                 except (ValueError, TypeError):
                                     game.current_level = 1
@@ -322,9 +369,14 @@ class Events:
                                 game.collected_extra_life_levels.clear()
                             game.state = GameState.PLAYING
                             Level.init_level(game)
-                            game.music.play_level_music(game, game.current_level)
+                            game.music.play_level_music(
+                                game,
+                                game.current_level,
+                            )
                         elif game.game_over_selected == 1:
-                            game.previous_state_before_records = GameState.GAME_OVER
+                            game.previous_state_before_records = (
+                                GameState.GAME_OVER
+                            )
                             game.state = GameState.RECORDS
                         elif game.game_over_selected == 2:
                             return False
@@ -344,7 +396,9 @@ class Events:
                             game.ranking_manager.add_score(
                                 game.player_name.strip(), game.score
                             )
-                            game.previous_state_before_ranking = GameState.GAME_OVER
+                            game.previous_state_before_ranking = (
+                                GameState.GAME_OVER
+                            )
                             game.state = GameState.SHOW_RANKING
                     elif game.state in (
                         GameState.GAME_OVER,
@@ -361,7 +415,10 @@ class Events:
                             game.collected_extra_life_levels.clear()
                         game.state = GameState.PLAYING
                         Level.init_level(game)
-                elif event.button == 1 and game.state == GameState.SHOW_RANKING:
+                elif (
+                    event.button == 1
+                    and game.state == GameState.SHOW_RANKING
+                ):
                     if game.previous_state_before_ranking:
                         game.state = game.previous_state_before_ranking
                         game.previous_state_before_ranking = None
@@ -385,10 +442,22 @@ class Events:
                 dpad_vertical = game.joystick.get_axis(7)
             if game.joystick.get_numaxes() > 6:
                 dpad_horizontal = game.joystick.get_axis(6)
-            analog_up = analog_vertical < -0.5 and game.prev_analog_vertical >= -0.5
-            analog_down = analog_vertical > 0.5 and game.prev_analog_vertical <= 0.5
-            dpad_up = dpad_vertical < -0.5 and game.prev_dpad_vertical >= -0.5
-            dpad_down = dpad_vertical > 0.5 and game.prev_dpad_vertical <= 0.5
+            analog_up = (
+                analog_vertical < -0.5
+                and game.prev_analog_vertical >= -0.5
+            )
+            analog_down = (
+                analog_vertical > 0.5
+                and game.prev_analog_vertical <= 0.5
+            )
+            dpad_up = (
+                dpad_vertical < -0.5
+                and game.prev_dpad_vertical >= -0.5
+            )
+            dpad_down = (
+                dpad_vertical > 0.5
+                and game.prev_dpad_vertical <= 0.5
+            )
             if analog_up or dpad_up:
                 game._process_cheat_token("UP")
                 if game.state == GameState.MAIN_MENU:
@@ -396,8 +465,9 @@ class Events:
                         game.menu_options
                     )
                 elif game.state == GameState.GAME_OVER:
-                    game.game_over_selected = (game.game_over_selected - 1) % len(
-                        game.game_over_options
+                    game.game_over_selected = (
+                        (game.game_over_selected - 1)
+                        % len(game.game_over_options)
                     )
             elif analog_down or dpad_down:
                 game._process_cheat_token("DOWN")
@@ -406,17 +476,26 @@ class Events:
                         game.menu_options
                     )
                 elif game.state == GameState.GAME_OVER:
-                    game.game_over_selected = (game.game_over_selected + 1) % len(
-                        game.game_over_options
+                    game.game_over_selected = (
+                        (game.game_over_selected + 1)
+                        % len(game.game_over_options)
                     )
             analog_left = (
-                analog_horizontal < -0.5 and game.prev_analog_horizontal >= -0.5
+                analog_horizontal < -0.5
+                and game.prev_analog_horizontal >= -0.5
             )
             analog_right = (
-                analog_horizontal > 0.5 and game.prev_analog_horizontal <= 0.5
+                analog_horizontal > 0.5
+                and game.prev_analog_horizontal <= 0.5
             )
-            dpad_left = dpad_horizontal < -0.5 and game.prev_dpad_horizontal >= -0.5
-            dpad_right = dpad_horizontal > 0.5 and game.prev_dpad_horizontal <= 0.5
+            dpad_left = (
+                dpad_horizontal < -0.5
+                and game.prev_dpad_horizontal >= -0.5
+            )
+            dpad_right = (
+                dpad_horizontal > 0.5
+                and game.prev_dpad_horizontal <= 0.5
+            )
             if analog_left or dpad_left:
                 game._process_cheat_token("LEFT")
             if analog_right or dpad_right:

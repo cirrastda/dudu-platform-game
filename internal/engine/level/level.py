@@ -1,7 +1,4 @@
-import pygame
-from internal.utils.constants import *
-from internal.resources.platform import Platform
-from internal.resources.flag import Flag
+from internal.utils.constants import WIDTH, HEIGHT
 from internal.resources.cache import ResourceCache
 from internal.engine.level.generator.static import StaticLevelGenerator
 from internal.resources.player import Player
@@ -19,7 +16,6 @@ class Level:
 
         if level <= 20:
             # Cálculo gradual baseado no nível (1-20)
-            level_progress = (level - 1) / 19.0  # 0.0 a 1.0
 
             # Pássaros por spawn: progressão gradual até o máximo
             if level <= 4:
@@ -33,9 +29,6 @@ class Level:
         elif level <= 30:
             # Níveis 21-30: usar morcegos seguindo EXATAMENTE o mesmo padrão dos pássaros das fases 11-20
             equivalent_bird_level = level - 10  # 21->11, 22->12, etc.
-            level_progress = (
-                equivalent_bird_level - 1
-            ) / 19.0  # 0.0 a 1.0 (mesmo cálculo das fases 11-20)
 
             # Morcegos por spawn: seguir EXATAMENTE o mesmo padrão dos pássaros das fases 11-20
             if (

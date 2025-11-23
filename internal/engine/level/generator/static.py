@@ -1,11 +1,9 @@
-import pygame
 from internal.engine.level.enemy import LevelEnemy
-from internal.utils.constants import *
+from internal.utils.constants import HEIGHT
 from internal.resources.platform import Platform
 from internal.resources.flag import Flag
 from internal.resources.spaceship import Spaceship
 from internal.resources.cache import ResourceCache
-from internal.resources.enemies.turtle import Turtle
 from internal.resources.generator import Generator
 
 
@@ -86,7 +84,8 @@ class StaticLevelGenerator:
         StaticLevelGenerator.drawFlag(game, platforms)
 
     def create_level_3(game):
-        """Nível 3 - Médio-Difícil (40 plataformas) - Corrigido para pulos possíveis"""
+        """Nível 3 - Médio-Difícil (40 plataformas)
+        Corrigido para pulos possíveis"""
         platform_width = 80
         platforms = [
             (100, HEIGHT - 200, platform_width, 20),
@@ -4901,9 +4900,10 @@ class StaticLevelGenerator:
         top_y = max(50, min_y - player_h - 20)
         bottom_y = HEIGHT - 40
         blocked = [(p[0], p[0] + p[2]) for p in platforms]
+
         def is_blocked(x):
-            for l, r in blocked:
-                if l <= x <= r:
+            for left, r in blocked:
+                if left <= x <= r:
                     return True
             return False
         spacing = getattr(game, 'generator_spacing', 180)

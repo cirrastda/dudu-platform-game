@@ -138,12 +138,14 @@ class Game:
         # Carregar configuração de ambiente antes de inicializar a tela
 
         self.env_config = ENV_CONFIG
-        # Inicializar o módulo de sistema cedo, pois Screen.init usa is_development()
+        # Inicializar o módulo de sistema cedo, pois Screen.init usa
+        # is_development()
         try:
             self._system = System(self)
         except Exception:
             self._system = None
-        # Inicializar outros módulos delegados que podem ser chamados cedo em testes
+        # Inicializar outros módulos delegados que podem ser chamados cedo
+        # em testes
         try:
             self._difficulty = DifficultyOps(self)
             self._pool = Pool(self)
@@ -161,7 +163,10 @@ class Game:
                 resource_path("imagens/icones/icon_desktop_new.png"),
                 resource_path("imagens/icones/title_icon.png"),
             ]
-            icon_path = next((p for p in candidates if os.path.exists(p)), None)
+            icon_path = next(
+                (p for p in candidates if os.path.exists(p)),
+                None,
+            )
             if icon_path:
                 icon_surface = pygame.image.load(icon_path)
                 pygame.display.set_icon(icon_surface)
@@ -180,13 +185,20 @@ class Game:
             try:
                 self.current_level = int(ENV_CONFIG["initial-stage"])
                 # Validar se o nível está dentro do range válido
-                if self.current_level < 1 or self.current_level > self.max_levels:
-                    print(f"Aviso: initial-stage {self.current_level} inválido.")
+                if (
+                    self.current_level < 1
+                    or self.current_level > self.max_levels
+                ):
+                    print(
+                        f"Aviso: initial-stage {self.current_level} "
+                        f"inválido."
+                    )
                     print("Usando nível 1.")
                     self.current_level = 1
                 else:
                     print(
-                        f"Modo desenvolvimento: Iniciando no nível {self.current_level}"
+                        f"Modo desenvolvimento: Iniciando no nível "
+                        f"{self.current_level}"
                     )
             except (ValueError, TypeError):
                 print("Aviso: initial-stage deve ser um número.")
@@ -216,7 +228,8 @@ class Game:
         self.difficulty_options = ["Fácil", "Normal", "Difícil"]
         self.difficulty_selected = 1
 
-        # Em modo development, aplicar dificuldade definida no .env, se presente
+        # Em modo development, aplicar dificuldade definida no .env,
+        # se presente
         try:
             if self.env_config.get("environment") == "development":
                 raw_diff = self.env_config.get("difficulty")
@@ -238,19 +251,24 @@ class Game:
                     chosen = mapping.get(key)
                     if chosen is not None:
                         self.difficulty = chosen
-                        # Alinhar seleção do menu de dificuldade à configuração
+                        # Alinhar seleção do menu de dificuldade
+                        # à configuração
                         if self.difficulty == Difficulty.EASY:
                             self.difficulty_selected = 0
                         elif self.difficulty == Difficulty.HARD:
                             self.difficulty_selected = 2
                         else:
                             self.difficulty_selected = 1
-                # Ativar escudo inicial quando flag shield=on estiver definida no .env
-                raw_shield = str(self.env_config.get("shield", "")).strip().lower()
+                # Ativar escudo inicial quando flag shield=on estiver definida
+                # no .env
+                raw_shield = (
+                    str(self.env_config.get("shield", ""))
+                ).strip().lower()
                 if raw_shield in ("on", "1", "true", "yes"):
                     self.shield_active = True
         except Exception:
-            # Não interromper inicialização do jogo caso .env esteja inválido
+            # Não interromper inicialização do jogo caso .env esteja
+            # inválido
             pass
 
         # Ligar subsistemas extraídos e encaminhar métodos públicos
@@ -347,8 +365,9 @@ class Game:
         self._pending_state_after_hold = None
 
         # Controles do boss alien (nível 51) — inicialização segura
-        # Alguns testes exercitam caminhos de desenho/atualização sem criar nível 51
-        # pelo gerador estático; manter atributos definidos evita AttributeError.
+        # Alguns testes exercitam caminhos de desenho/atualização sem criar
+        # nível 51 pelo gerador estático; manter atributos definidos evita
+        # AttributeError.
         self.boss_alien = None
         self.boss_alien_captured = False
         self.capture_sequence_timer = 0
@@ -438,11 +457,14 @@ class Game:
         self.fires = []
         self.fire_spawn_timer = 0
         self.fires_per_spawn = 1
-        self.fire_spawn_interval = 240  # Spawn menos frequente para reduzir quantidade
+        # Spawn menos frequente para reduzir quantidade
+        self.fire_spawn_interval = 240
 
         # Ajustar dificuldade baseada no nível
         self.birds_per_spawn = Level.get_birds_per_spawn(self.current_level)
-        self.bird_spawn_interval = Level.get_bird_spawn_interval(self.current_level)
+        self.bird_spawn_interval = Level.get_bird_spawn_interval(
+            self.current_level
+        )
         # Intervalo das gotas acompanha o dos pássaros por padrão
         self.raindrop_spawn_interval = self.bird_spawn_interval
 
@@ -477,10 +499,18 @@ class Game:
                 except Exception:
                     pass
         try:
-            self.menu_big_font = pygame.font.SysFont("Bahnschrift", 56, bold=True)
+            self.menu_big_font = pygame.font.SysFont(
+                "Bahnschrift",
+                56,
+                bold=True,
+            )
         except Exception:
             try:
-                self.menu_big_font = pygame.font.SysFont("Segoe UI", 56, bold=True)
+                self.menu_big_font = pygame.font.SysFont(
+                    "Segoe UI",
+                    56,
+                    bold=True,
+                )
             except Exception:
                 self.menu_big_font = pygame.font.Font(None, 56)
                 try:
@@ -498,10 +528,18 @@ class Game:
 
         # Fonte de conteúdo do menu (um pouco mais bold e menor)
         try:
-            self.menu_content_font = pygame.font.SysFont("Segoe UI", 22, bold=True)
+            self.menu_content_font = pygame.font.SysFont(
+                "Segoe UI",
+                22,
+                bold=True,
+            )
         except Exception:
             try:
-                self.menu_content_font = pygame.font.SysFont("Arial", 22, bold=True)
+                self.menu_content_font = pygame.font.SysFont(
+                    "Arial",
+                    22,
+                    bold=True,
+                )
             except Exception:
                 self.menu_content_font = pygame.font.Font(None, 22)
                 try:
@@ -515,7 +553,8 @@ class Game:
         self.image.load_images(self)
         # Sincronizar logos da splash screen carregados pelo Image
         self.logos = getattr(self.image, "logos", [])
-        # Disponibilizar texturas de plataforma diretamente no Game para geradores de níveis
+        # Disponibilizar texturas de plataforma diretamente no Game para
+        # geradores de níveis
         self.platform_texture = self.image.platform_texture
         self.platform_texture_city = self.image.platform_texture_city
         self.platform_texture_space = self.image.platform_texture_space
@@ -524,14 +563,29 @@ class Game:
         # Compatibilidade com código que espera image_manager
         self.image_manager = self.image
 
-        # Espelhar texturas e imagens necessárias como atributos diretos do jogo
+        # Espelhar texturas e imagens necessárias como atributos diretos
+        # do jogo
         self.platform_texture = getattr(self.image, "platform_texture", None)
-        self.platform_texture_city = getattr(self.image, "platform_texture_city", None)
-        self.platform_texture_space = getattr(
-            self.image, "platform_texture_space", None
+        self.platform_texture_city = getattr(
+            self.image,
+            "platform_texture_city",
+            None,
         )
-        self.platform_texture_ship = getattr(self.image, "platform_texture_ship", None)
-        self.platform_texture_flag = getattr(self.image, "platform_texture_flag", None)
+        self.platform_texture_space = getattr(
+            self.image,
+            "platform_texture_space",
+            None,
+        )
+        self.platform_texture_ship = getattr(
+            self.image,
+            "platform_texture_ship",
+            None,
+        )
+        self.platform_texture_flag = getattr(
+            self.image,
+            "platform_texture_flag",
+            None,
+        )
 
         self.turtle_images = getattr(self.image, "turtle_images", None)
         self.spider_images = getattr(self.image, "spider_images", None)
@@ -539,7 +593,8 @@ class Game:
         self.missile_images = getattr(self.image, "missile_images", None)
         self.alien_images = getattr(self.image, "alien_images", None)
 
-        # Imagens de avião: manter também cópias individuais para uso existente
+        # Imagens de avião: manter também cópias individuais para uso
+        # existente
         self.airplane_img1 = getattr(self.image, "airplane_img1", None)
         self.airplane_img2 = getattr(self.image, "airplane_img2", None)
         self.airplane_img3 = getattr(self.image, "airplane_img3", None)
@@ -549,20 +604,36 @@ class Game:
             else None
         )
 
-        self.flying_disk_images = getattr(self.image, "flying_disk_images", None)
+        self.flying_disk_images = getattr(
+            self.image,
+            "flying_disk_images",
+            None,
+        )
         self.fire_image = getattr(self.image, "fire_image", None)
         self.extra_life_img = getattr(self.image, "extra_life_img", None)
         self.explosion_image = getattr(self.image, "explosion_image", None)
         self.lava_drop_img = getattr(self.image, "lava_drop_img", None)
         # Imagens dos power-ups e bolha do escudo
         self.powerup_invincibility_img = getattr(
-            self.image, "powerup_invincibility_img", None
+            self.image,
+            "powerup_invincibility_img",
+            None,
         )
         self.powerup_double_jump_img = getattr(
-            self.image, "powerup_double_jump_img", None
+            self.image,
+            "powerup_double_jump_img",
+            None,
         )
-        self.powerup_shield_img = getattr(self.image, "powerup_shield_img", None)
-        self.shield_bubble_img = getattr(self.image, "shield_bubble_img", None)
+        self.powerup_shield_img = getattr(
+            self.image,
+            "powerup_shield_img",
+            None,
+        )
+        self.shield_bubble_img = getattr(
+            self.image,
+            "shield_bubble_img",
+            None,
+        )
 
         # Transferir logo do jogo
         self.game_logo = self.image.game_logo
@@ -577,7 +648,8 @@ class Game:
         self.extra_lives = []
         self.powerups = []
 
-        # Se estiver em modo desenvolvimento e iniciando em uma fase específica,
+        # Se estiver em modo desenvolvimento e iniciando em uma fase
+        # específica,
         # pular para o estado PLAYING e tocar música do nível
         if (
             ENV_CONFIG.get("environment") == "development"
@@ -595,7 +667,8 @@ class Game:
         else:
             Level.init_level(self)
 
-    # Encaminhadores finos para manter compatibilidade e delegar aos módulos extraídos
+        # Encaminhadores finos para manter compatibilidade e delegar aos
+        # módulos extraídos
     def get_initial_lives(self):
         return Life(self).get_initial_lives()
 
@@ -614,8 +687,19 @@ class Game:
     def _compute_sound_frames(self, sound_key, default_seconds=2.0):
         return self._hold._compute_sound_frames(sound_key, default_seconds)
 
-    def _start_hold(self, hold_type, frames, pending_state=None, next_level=False):
-        return self._hold._start_hold(hold_type, frames, pending_state, next_level)
+    def _start_hold(
+        self,
+        hold_type,
+        frames,
+        pending_state=None,
+        next_level=False,
+    ):
+        return self._hold._start_hold(
+            hold_type,
+            frames,
+            pending_state,
+            next_level,
+        )
 
     def start_game_over_hold(self):
         return self._hold.start_game_over_hold()
@@ -721,7 +805,8 @@ class Game:
                 self._menu = Menu(self)
             except Exception:
                 pass
-        # Injetar sys e pygame do módulo atual para permitir monkeypatch nos testes
+        # Injetar sys e pygame do módulo atual para permitir monkeypatch
+        # nos testes
         try:
             self._menu.set_runtime_modules(sys, pygame)
         except Exception:

@@ -2,7 +2,13 @@ import pygame
 
 
 class LightningBeam:
-    def __init__(self, start_pos, end_pos, orientation: str, segment_image: pygame.Surface | None):
+    def __init__(
+        self,
+        start_pos,
+        end_pos,
+        orientation: str,
+        segment_image: pygame.Surface | None,
+    ):
         self.start_pos = start_pos
         self.end_pos = end_pos
         self.orientation = orientation  # 'h' or 'v'
@@ -36,14 +42,22 @@ class LightningBeam:
     def draw(self, screen: pygame.Surface, camera_x: int):
         if not self.active:
             return
-        alpha = self.alpha_strong if self.blink_timer < self.blink_period // 2 else self.alpha_weak
+        alpha = (
+            self.alpha_strong
+            if self.blink_timer < self.blink_period // 2
+            else self.alpha_weak
+        )
         if self.segment_image:
             img = self.segment_image.copy()
             img.set_alpha(alpha)
             for seg in self.segments:
                 screen.blit(img, (seg.x - camera_x, seg.y))
         else:
-            color = (255, 255, 0) if self.blink_timer < self.blink_period // 2 else (240, 240, 120)
+            color = (
+                (255, 255, 0)
+                if self.blink_timer < self.blink_period // 2
+                else (240, 240, 120)
+            )
             for seg in self.segments:
                 r = seg.copy()
                 r.x -= camera_x
@@ -66,6 +80,7 @@ class LightningBeam:
                 if not any(rect.colliderect(p) for p in platform_rects):
                     self.segments.append(rect)
                 cur += step
+
         else:
             step = max(1, self.segment_image.get_height())
             x = self.start_pos[0]

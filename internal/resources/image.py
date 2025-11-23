@@ -1,6 +1,5 @@
 import pygame
 from internal.resources.cache import ResourceCache
-from internal.utils.functions import resource_path
 from internal.utils.constants import WIDTH, HEIGHT
 from internal.engine.level.level import Level
 
@@ -25,7 +24,10 @@ class Image:
                 background_file = Level.get_background_for_level(
                     game, game.current_level
                 )
-                self.background_img = cache.get_image(background_file, (WIDTH, HEIGHT))
+                self.background_img = cache.get_image(
+                    background_file,
+                    (WIDTH, HEIGHT),
+                )
             else:
                 self.background_img = None
 
@@ -54,13 +56,28 @@ class Image:
             self.platform_texture_flag = self.platform_texture
 
             # Carregar imagens dos pássaros usando cache
-            self.bird_img1 = cache.get_image("imagens/inimigos/bird1.png", (40, 30))
-            self.bird_img2 = cache.get_image("imagens/inimigos/bird2.png", (40, 30))
+            self.bird_img1 = cache.get_image(
+                "imagens/inimigos/bird1.png",
+                (40, 30),
+            )
+            self.bird_img2 = cache.get_image(
+                "imagens/inimigos/bird2.png",
+                (40, 30),
+            )
 
             # Carregar imagens dos morcegos usando cache
-            self.bat_img1 = cache.get_image("imagens/inimigos/bat1.png", (40, 30))
-            self.bat_img2 = cache.get_image("imagens/inimigos/bat2.png", (40, 30))
-            self.bat_img3 = cache.get_image("imagens/inimigos/bat3.png", (40, 30))
+            self.bat_img1 = cache.get_image(
+                "imagens/inimigos/bat1.png",
+                (40, 30),
+            )
+            self.bat_img2 = cache.get_image(
+                "imagens/inimigos/bat2.png",
+                (40, 30),
+            )
+            self.bat_img3 = cache.get_image(
+                "imagens/inimigos/bat3.png",
+                (40, 30),
+            )
 
             # Carregar imagens dos aviões usando cache
             self.airplane_img1 = cache.get_image(
@@ -75,9 +92,18 @@ class Image:
 
             # Carregar imagens do flying-disk usando cache
             try:
-                self.disk_img1 = cache.get_image("imagens/inimigos/disk1.png", (40, 40))
-                self.disk_img2 = cache.get_image("imagens/inimigos/disk2.png", (40, 40))
-                self.disk_img3 = cache.get_image("imagens/inimigos/disk3.png", (40, 40))
+                self.disk_img1 = cache.get_image(
+                    "imagens/inimigos/disk1.png",
+                    (40, 40),
+                )
+                self.disk_img2 = cache.get_image(
+                    "imagens/inimigos/disk2.png",
+                    (40, 40),
+                )
+                self.disk_img3 = cache.get_image(
+                    "imagens/inimigos/disk3.png",
+                    (40, 40),
+                )
                 self.flying_disk_images = [
                     self.disk_img1,
                     self.disk_img2,
@@ -469,7 +495,9 @@ class Image:
 
             # Bolha do escudo (overlay que envolve o personagem)
             # Carregada sem escala para permitir ajuste dinâmico conforme tamanho do player
-            self.shield_bubble_img = cache.get_image("imagens/elementos/bolha.png")
+            self.shield_bubble_img = cache.get_image(
+                "imagens/elementos/bolha.png"
+            )
 
             # Carregar logos para splash screen usando cache
             logo_files = ["cirrastec.png", "cirrasretrogames.png", "canaldodudu.png"]

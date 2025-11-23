@@ -2,7 +2,8 @@ import types
 
 
 def _make_platform(x, y, w, h=20):
-    return types.SimpleNamespace(x=x, y=y, width=w, height=h, rect=types.SimpleNamespace(x=x, y=y, width=w, height=h, right=x+w))
+    rect = types.SimpleNamespace(x=x, y=y, width=w, height=h, right=x + w)
+    return types.SimpleNamespace(x=x, y=y, width=w, height=h, rect=rect)
 
 
 def test_generators_avoid_platform_columns(monkeypatch):
@@ -36,6 +37,7 @@ def test_difficulty_changes_generator_density(monkeypatch):
         (600, 360, 140, 20),
         (950, 340, 140, 20),
     ]
+
     def run_for_diff(diff):
         game = types.SimpleNamespace()
         game.current_level = 37
@@ -54,26 +56,56 @@ def test_difficulty_changes_generator_density(monkeypatch):
 def test_lightning_segments_do_not_cross_platforms(monkeypatch):
     import internal.resources.lightning as lightning_mod
     # Stub pygame.Rect
+
     class Rect:
         def __init__(self, x, y, w, h):
             self.x, self.y, self.w, self.h = x, y, w, h
             self.width, self.height = w, h
+
         def copy(self):
             return Rect(self.x, self.y, self.w, self.h)
+
         def colliderect(self, other):
             return not (
-                self.x + self.w <= other.x or other.x + other.width <= self.x or
-                self.y + self.h <= other.y or other.y + other.height <= self.y
+                self.x + self.w <= other.x
+                or other.x + other.width <= self.x
+                or self.y + self.h <= other.y
+                or other.y + other.height <= self.y
             )
     monkeypatch.setattr(lightning_mod, 'pygame', types.SimpleNamespace(Rect=Rect), False)
-    # Fake segment image with fixed size
+    # Fake segment image com tamanho fixo
+
     class Img:
-        def get_width(self): return 12
-        def get_height(self): return 6
+        def get_width(self):
+            return 12
+
+        def get_height(self):
+            return 6
     # Platforms rects (using Rect-compatible objects)
-    plats = [types.SimpleNamespace(x=200, y=350, width=160, height=20), types.SimpleNamespace(x=500, y=330, width=140, height=20)]
+    plats = [
+        types.SimpleNamespace(x=200, y=350, width=160, height=20),
+        types.SimpleNamespace(x=500, y=330, width=140, height=20),
+    ]
     # Horizontal beam that would pass across platforms; segments must skip
     lb = lightning_mod.LightningBeam((100, 360), (700, 360), 'h', Img())
-    lightning_mod.LightningBeam.build_segments(lb, [types.SimpleNamespace(x=p.x, y=p.y, width=p.width, height=p.height) for p in plats])
+    lightning_mod.LightningBeam.build_segments(
+        lb,
+        [
+            types.SimpleNamespace(x=p.x, y=p.y, width=p.width, height=p.height)
+            for p in plats
+        ],
+    )
     assert len(lb.segments) > 0
-    assert all(not Rect(getattr(seg, 'x', seg.x), getattr(seg, 'y', seg.y), getattr(seg, 'width', getattr(seg, 'w', 0)), getattr(seg, 'height', getattr(seg, 'h', 0))).colliderect(types.SimpleNamespace(x=p.x, y=p.y, width=p.width, height=p.height)) for seg in lb.segments for p in plats)
+    for seg in lb.segments:
+        seg_rect = Rect(
+            getattr(seg, "x", seg.x),
+            getattr(seg, "y", seg.y),
+            getattr(seg, "width", getattr(seg, "w", 0)),
+            getattr(seg, "height", getattr(seg, "h", 0)),
+        )
+        for p in plats:
+            assert not seg_rect.colliderect(
+                types.SimpleNamespace(
+                    x=p.x, y=p.y, width=p.width, height=p.height
+                )
+            )

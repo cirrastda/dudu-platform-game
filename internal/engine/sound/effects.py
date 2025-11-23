@@ -36,7 +36,9 @@ class SoundEffects:
                 sound = cache.get_sound(explosion_path)
                 if sound:
                     self.sound_effects["explosion"] = sound
-                    self.sound_effects["explosion"].set_volume(self.sound_volume)
+                    self.sound_effects["explosion"].set_volume(
+                        self.sound_volume
+                    )
                     print("Som de explosão carregado com sucesso")
             else:
                 print("Aviso: Arquivo sounds/explosion.mp3 não encontrado")
@@ -47,7 +49,9 @@ class SoundEffects:
                 sound = cache.get_sound(shot_path)
                 if sound:
                     self.sound_effects["shot"] = sound
-                    self.sound_effects["shot"].set_volume(self.sound_volume)
+                    self.sound_effects["shot"].set_volume(
+                        self.sound_volume
+                    )
                     print("Som de tiro carregado com sucesso")
             else:
                 print("Aviso: Arquivo sounds/shot.mp3 não encontrado")
@@ -70,12 +74,19 @@ class SoundEffects:
                         collect_sound = cache.get_sound(collect_path)
                         if collect_sound:
                             self.sound_effects["collect"] = collect_sound
-                            self.sound_effects["collect"].set_volume(self.sound_volume)
+                            self.sound_effects["collect"].set_volume(
+                                self.sound_volume
+                            )
                             print("Som de coleta carregado com sucesso")
                     else:
                         # Mapear 'collect' para 'new-life' como fallback
-                        self.sound_effects["collect"] = self.sound_effects["new-life"]
-                        print("Som 'collect' não encontrado; usando fallback de 'new-life'")
+                        self.sound_effects["collect"] = (
+                            self.sound_effects["new-life"]
+                        )
+                        print(
+                            "Som 'collect' não encontrado; "
+                            "usando fallback de 'new-life'"
+                        )
             else:
                 print("Aviso: Arquivo sounds/new-life.mp3 não encontrado")
                 # Ainda tentar carregar um som dedicado de 'collect' se existir
@@ -84,7 +95,9 @@ class SoundEffects:
                     collect_sound = cache.get_sound(collect_path)
                     if collect_sound:
                         self.sound_effects["collect"] = collect_sound
-                        self.sound_effects["collect"].set_volume(self.sound_volume)
+                        self.sound_effects["collect"].set_volume(
+                            self.sound_volume
+                        )
                         print("Som de coleta carregado com sucesso")
 
             # Carregar som de fim de fase
@@ -94,7 +107,9 @@ class SoundEffects:
                 if sound:
                     self.sound_effects["level-end"] = sound
                     # leve destaque
-                    self.sound_effects["level-end"].set_volume(min(1.0, self.sound_volume * 1.2))
+                    self.sound_effects["level-end"].set_volume(
+                        min(1.0, self.sound_volume * 1.2)
+                    )
                     print("Som de fim de fase carregado com sucesso")
             else:
                 print("Aviso: Arquivo sounds/level-end.mp3 não encontrado")
@@ -106,7 +121,9 @@ class SoundEffects:
                 if sound:
                     self.sound_effects["game-over"] = sound
                     # manter volume padrão
-                    self.sound_effects["game-over"].set_volume(self.sound_volume)
+                    self.sound_effects["game-over"].set_volume(
+                        self.sound_volume
+                    )
                     print("Som de game over carregado com sucesso")
             else:
                 print("Aviso: Arquivo sounds/game-over.mp3 não encontrado")
@@ -118,7 +135,9 @@ class SoundEffects:
                 if sound:
                     self.sound_effects["bird-hit"] = sound
                     # ligeiramente mais alto para destacar o impacto
-                    self.sound_effects["bird-hit"].set_volume(min(1.0, self.sound_volume * 1.2))
+                    self.sound_effects["bird-hit"].set_volume(
+                        min(1.0, self.sound_volume * 1.2)
+                    )
                     print("Som de bird-hit carregado com sucesso")
             else:
                 print("Aviso: Arquivo sounds/bird-hit.mp3 não encontrado")
@@ -130,7 +149,9 @@ class SoundEffects:
                 if sound:
                     self.sound_effects["water-hit"] = sound
                     # um pouco mais alto para destacar o estouro da gota
-                    self.sound_effects["water-hit"].set_volume(min(1.0, self.sound_volume * 1.2))
+                    self.sound_effects["water-hit"].set_volume(
+                        min(1.0, self.sound_volume * 1.2)
+                    )
                     print("Som de water-hit carregado com sucesso")
             else:
                 print("Aviso: Arquivo sounds/water-hit.mp3 não encontrado")
@@ -142,7 +163,9 @@ class SoundEffects:
                 if sound:
                     self.sound_effects["player-hit"] = sound
                     # manter volume padrão
-                    self.sound_effects["player-hit"].set_volume(self.sound_volume)
+                    self.sound_effects["player-hit"].set_volume(
+                        self.sound_volume
+                    )
                     print("Som de player-hit carregado com sucesso")
             else:
                 print("Aviso: Arquivo sounds/player-hit.mp3 não encontrado")
@@ -153,7 +176,9 @@ class SoundEffects:
                 sound = cache.get_sound(shock_path)
                 if sound:
                     self.sound_effects["shock"] = sound
-                    self.sound_effects["shock"].set_volume(min(1.0, self.sound_volume * 1.1))
+                    self.sound_effects["shock"].set_volume(
+                        min(1.0, self.sound_volume * 1.1)
+                    )
                     print("Som de choque carregado com sucesso")
             else:
                 print("Aviso: Arquivo sounds/shock.mp3 não encontrado")

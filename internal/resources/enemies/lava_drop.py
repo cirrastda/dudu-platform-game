@@ -24,4 +24,9 @@ class LavaDrop:
         if self.image:
             surface.blit(self.image, (self.x, self.y))
         else:
-            pygame.draw.circle(surface, (255, 80, 0), (int(self.x), int(self.y)), 10)
+            pygame.draw.circle(
+                surface,
+                (255, 80, 0),
+                (int(self.x), int(self.y)),
+                10,
+            )

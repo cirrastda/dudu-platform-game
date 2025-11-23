@@ -27,5 +27,10 @@ class Generator:
         if self.image:
             screen.blit(self.image, (self.x - camera_x, self.y))
         else:
-            pygame.draw.rect(screen, (200, 200, 255), (self.x - camera_x, self.y, self.width, self.height), 1)
+            pygame.draw.rect(
+                screen,
+                (200, 200, 255),
+                (self.x - camera_x, self.y, self.width, self.height),
+                1,
+            )
         # Sem halo de iluminação

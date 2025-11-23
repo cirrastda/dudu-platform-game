@@ -5,7 +5,12 @@ from internal.engine.state import GameState
 from internal.engine.screen import Screen
 from internal.utils.constants import WIDTH, HEIGHT
 
-Screen.init = lambda game: setattr(game, "screen", pygame.Surface((WIDTH, HEIGHT)))
+
+def _init_screen(game):
+    setattr(game, "screen", pygame.Surface((WIDTH, HEIGHT)))
+
+
+Screen.init = _init_screen
 
 
 def make_surface(w=20, h=20, color=(255, 80, 0)):

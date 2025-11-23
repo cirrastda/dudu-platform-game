@@ -1,6 +1,7 @@
 import pygame
 from internal.utils.functions import resource_path
-from internal.utils.constants import *
+from internal.utils.constants import WIDTH, HEIGHT, GRAVITY, JUMP_STRENGTH, PLAYER_SPEED, BLUE, RED
+from internal.resources.bullet import Bullet
 
 
 class Player:

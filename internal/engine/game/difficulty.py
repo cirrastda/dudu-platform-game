@@ -39,12 +39,14 @@ class DifficultyOps:
                 1,
                 min(3, int(round(base_qty * qty_factor))),
             )
-            # Respeitar limites da progressão (mínimo 60 como nas funções de Level)
+            # Respeitar limites da progressão
+            # (mínimo 60 como nas funções de Level)
             g.bird_spawn_interval = max(
                 60,
                 int(base_interval * interval_factor),
             )
-            # Gotas de chuva (fases 7-10): quantidade ajustada por dificuldade 1x/2x/3x
+            # Gotas de chuva (fases 7-10): quantidade ajustada por dificuldade
+            # 1x/2x/3x
             if 7 <= g.current_level <= 10:
                 # Quantidade baseada na dificuldade: EASY=1, NORMAL=2, HARD=3
                 if diff == Difficulty.EASY:
@@ -59,9 +61,12 @@ class DifficultyOps:
                 )
             # A partir do nível 17, introduzir morcegos e estrelas cadentes
             if g.current_level >= 17:
-                # Morcegos seguem a progressão dos pássaros e aplicam dificuldade
+                # Morcegos seguem a progressão dos pássaros
+                # e aplicam dificuldade
                 bat_base_qty = Level.get_birds_per_spawn(g.current_level)
-                bat_base_interval = Level.get_bird_spawn_interval(g.current_level)
+                bat_base_interval = Level.get_bird_spawn_interval(
+                    g.current_level
+                )
                 g.bats_per_spawn = max(
                     1,
                     min(3, int(round(bat_base_qty * qty_factor))),
@@ -71,8 +76,10 @@ class DifficultyOps:
                     int(bat_base_interval * interval_factor),
                 )
 
-                # Limitar quantidade máxima de morcegos visíveis (estabiliza densidade na tela)
-                # Aplica apenas nas fases 17-20 para manter consistência de dificuldade
+                # Limitar quantidade máxima de morcegos visíveis (estabiliza
+                # densidade na tela)
+                # Aplica apenas nas fases 17-20 para manter consistência de
+                # dificuldade
                 g.max_bats_visible = 8 * qty_factor
 
                 # Estrelas cadentes com presença moderada
@@ -102,7 +109,8 @@ class DifficultyOps:
             g.shooting_stars_per_spawn = 0
             g.shooting_star_spawn_interval = 999999
             g.max_bats_visible = 8 * qty_factor
-            # Gotas de lava (fases 27–30): quantidade ajustada por dificuldade
+            # Gotas de lava (fases 27–30):
+            # quantidade ajustada por dificuldade
             if 27 <= g.current_level <= 30:
                 if diff == Difficulty.EASY:
                     g.lavadrops_per_spawn = 2
@@ -114,10 +122,10 @@ class DifficultyOps:
                     60,
                     int(base_interval * drop_interval_factor),
                 )
-                # Reduzir ainda mais a presença de morcegos na dificuldade EASY nas fases 27–30
+                # Reduzir ainda mais a presença de morcegos na dificuldade EASY
+                # nas fases 27–30
                 if diff == Difficulty.EASY:
                     g.bats_per_spawn = 1
-                    
         elif g.current_level <= 40:
             # Aviões: usar valores base fixos e aplicar dificuldade
             base_qty = 1
@@ -134,9 +142,11 @@ class DifficultyOps:
             if 37 <= g.current_level <= 40:
                 base_spacing = 180
                 if diff == Difficulty.EASY:
-                    g.generator_spacing = int(base_spacing * 1.3)  # menos geradores
+                    # menos geradores
+                    g.generator_spacing = int(base_spacing * 1.3)
                 elif diff == Difficulty.HARD:
-                    g.generator_spacing = int(base_spacing * 0.7)  # mais geradores
+                    # mais geradores
+                    g.generator_spacing = int(base_spacing * 0.7)
                 else:
                     g.generator_spacing = base_spacing
         elif g.current_level <= 50:

@@ -20,6 +20,9 @@ class Update:
 
     def update(self):
         g = self.game
+        sfx = g.sound_effects
+        exp_img = g.image.explosion_image
+        high_score = g.ranking_manager.is_high_score
 
         # Se estamos em hold, gerenciar contagem.
         if getattr(g, "hold_active", False):
@@ -31,7 +34,9 @@ class Update:
                 # Restaurar volume da música se foi reduzido
                 try:
                     if g._music_duck_original_volume is not None:
-                        pygame.mixer.music.set_volume(g._music_duck_original_volume)
+                        pygame.mixer.music.set_volume(
+                            g._music_duck_original_volume
+                        )
                         g._music_duck_original_volume = None
                 except Exception:
                     pass
@@ -56,7 +61,8 @@ class Update:
                         g._next_level_after_hold = False
                     g.hold_type = None
                 elif g.hold_type == "game_over":
-                    # Para game over, não bloqueamos atualização; apenas removemos o esmaecimento
+                    # Para game over, não bloqueamos atualização;
+                    # apenas removemos o esmaecimento
                     g.hold_type = None
 
         if g.state == GameState.SPLASH:
@@ -65,8 +71,11 @@ class Update:
 
             # Calcular qual logo mostrar baseado no tempo com fade
             if g.logos:
-                g.current_logo_index = (g.splash_timer // g.logo_display_time) % len(
-                    g.logos
+                g.current_logo_index = (
+                    (g.splash_timer // g.logo_display_time)
+                    % len(
+                        g.logos
+                    )
                 )
 
             # Após o tempo total, ir para a tela de título
@@ -94,7 +103,8 @@ class Update:
                     # Iniciar reprodução do vídeo
                     g.ending_video_player.start_playback()
                 else:
-                    # Se não conseguir carregar o vídeo, ir direto para tela FIM
+                    # Se não conseguir carregar o vídeo,
+                    # ir direto para tela FIM
                     g.state = GameState.FIM_SCREEN
                     g.fim_screen_timer = 0
 
@@ -135,7 +145,8 @@ class Update:
                 g.credits_reset_timer = 0
 
         elif g.state == GameState.PLAYING:
-            # Congelar toda a jogabilidade durante holds de transição (fim de fase / game over)
+            # Congelar jogabilidade durante holds de transição
+            # (fim de fase / game over)
             if getattr(g, "hold_active", False) and g.hold_type in (
                 "level_end",
                 "game_over",
@@ -162,7 +173,8 @@ class Update:
                 # Jogador morreu (caiu da tela) - decrementar vida
                 g.lives -= 1
                 if g.lives <= 0:
-                    # Disparar rotina de game over imediatamente e esmaecer enquanto o som toca
+                    # Disparar rotina de game over e esmaecer
+                    # enquanto o som toca
                     if g.ranking_manager.is_high_score(g.score):
                         g.state = GameState.ENTER_NAME
                     else:
@@ -190,7 +202,8 @@ class Update:
             if target_camera_x > g.camera_x:
                 g.camera_x = target_camera_x
 
-            # Sistema de pontuação - verificar se jogador pousou em nova plataforma
+            # Sistema de pontuação:
+            # verificar se jogador pousou em nova plataforma
             if g.player.just_landed and hasattr(g.player, "landed_platform_id"):
                 if g.player.landed_platform_id not in g.platforms_jumped:
                     g.platforms_jumped.add(g.player.landed_platform_id)
@@ -217,7 +230,8 @@ class Update:
                     else:
                         remaining_items.append(item)
                 g.extra_lives = remaining_items
-                # Remover atributo de plataforma pousada se existir, para evitar recontagem
+                # Remover atributo de plataforma pousada se existir
+                # para evitar recontagem
                 if hasattr(g.player, "landed_platform_id"):
                     delattr(g.player, "landed_platform_id")
 
@@ -233,7 +247,8 @@ class Update:
                             g.player.is_invulnerable = True
                             g.player.invulnerability_timer = 20 * FPS
                             g.invincibility_active = True
-                            # Música acelerada simulada: trocar para faixa rápida
+                            # Música acelerada simulada:
+                            # trocar para faixa rápida
                             try:
                                 g.music.enter_invincibility_music(g)
                             except Exception:
@@ -294,9 +309,14 @@ class Update:
                     # Níveis 17-20: spawn de morcegos e estrelas cadentes
                     # Morcegos
                     g.bat_spawn_timer += 1
-                    if g.bat_spawn_timer >= getattr(g, "bat_spawn_interval", 999999):
+                    if g.bat_spawn_timer >= getattr(
+                        g,
+                        "bat_spawn_interval",
+                        999999,
+                    ):
                         import random
-                        # Verificar limite de morcegos visíveis para evitar acumulação excessiva
+                        # Verificar limite de morcegos visíveis
+                        # para evitar acumulação excessiva
                         visible_count = 0
                         for bat in getattr(g, "bats", []):
                             if (
@@ -311,7 +331,11 @@ class Update:
                                 bat_y = random.randint(HEIGHT // 4, HEIGHT - 150)
                                 bat_x = g.camera_x + WIDTH + 50 + (i * 100)
                                 bat_images = (
-                                    (g.image.bat_img1, g.image.bat_img2, g.image.bat_img3)
+                                    (
+                                        g.image.bat_img1,
+                                        g.image.bat_img2,
+                                        g.image.bat_img3,
+                                    )
                                     if hasattr(g.image, "bat_img1")
                                     else None
                                 )
@@ -320,11 +344,15 @@ class Update:
                     # Estrelas cadentes
                     g.shooting_star_spawn_timer += 1
                     if g.shooting_star_spawn_timer >= getattr(
-                        g, "shooting_star_spawn_interval", 999999
+                        g,
+                        "shooting_star_spawn_interval",
+                        999999,
                     ):
                         import random
 
-                        for i in range(getattr(g, "shooting_stars_per_spawn", 0)):
+                        for i in range(
+                            getattr(g, "shooting_stars_per_spawn", 0)
+                        ):
                             star_y = random.randint(HEIGHT // 6, HEIGHT // 2)
                             star_x = g.camera_x + WIDTH + 50 + (i * 90)
                             star_img = (
@@ -354,26 +382,38 @@ class Update:
                     g.bat_spawn_timer = 0
                 if 27 <= g.current_level <= 30:
                     g.lavadrop_spawn_timer += 1
-                    if g.lavadrop_spawn_timer >= getattr(g, "lavadrop_spawn_interval", 999999):
-                        import random
-
-                        for i in range(getattr(g, "lavadrops_per_spawn", 0)):
-                            drop_x = g.camera_x + random.randint(0, WIDTH)
-                            drop_y = -20 - (i * 15)
-                            drop_img = (
-                                getattr(g.image, "lava_drop_img", None)
-                                if hasattr(g, "image")
-                                else None
-                            )
-                            g.lava_drops.append(LavaDrop(drop_x, drop_y, drop_img))
-                        g.lavadrop_spawn_timer = 0
+                if (
+                    27 <= g.current_level <= 30
+                    and g.lavadrop_spawn_timer >= getattr(
+                        g,
+                        "lavadrop_spawn_interval",
+                        999999,
+                    )
+                ):
+                    import random
+                    for i in range(
+                        getattr(g, "lavadrops_per_spawn", 0)
+                    ):
+                        drop_x = g.camera_x + random.randint(0, WIDTH)
+                        drop_y = -20 - (i * 15)
+                        drop_img = (
+                            getattr(g.image, "lava_drop_img", None)
+                            if hasattr(g, "image")
+                            else None
+                        )
+                        g.lava_drops.append(LavaDrop(drop_x, drop_y, drop_img))
+                    g.lavadrop_spawn_timer = 0
                 g.shooting_star_spawn_timer += 1
                 if g.shooting_star_spawn_timer >= getattr(
-                    g, "shooting_star_spawn_interval", 999999
+                    g,
+                    "shooting_star_spawn_interval",
+                    999999,
                 ):
                     import random
 
-                    for i in range(getattr(g, "shooting_stars_per_spawn", 0)):
+                    for i in range(
+                        getattr(g, "shooting_stars_per_spawn", 0)
+                    ):
                         star_y = random.randint(HEIGHT // 6, HEIGHT // 2)
                         star_x = g.camera_x + WIDTH + 50 + (i * 90)
                         star_img = (
@@ -381,7 +421,9 @@ class Update:
                             if hasattr(g, "image")
                             else None
                         )
-                        g.shooting_stars.append(ShootingStar(star_x, star_y, star_img))
+                        g.shooting_stars.append(
+                            ShootingStar(star_x, star_y, star_img)
+                        )
                     g.shooting_star_spawn_timer = 0
             elif g.current_level <= 40:
                 # Spawn de novos aviões (níveis 31-40)
@@ -393,7 +435,11 @@ class Update:
                         airplane_y = random.randint(HEIGHT // 4, HEIGHT - 150)
                         airplane_x = g.camera_x + WIDTH + 50 + (i * 120)
                         airplane_images = (
-                            (g.airplane_img1, g.airplane_img2, g.airplane_img3)
+                            (
+                                g.airplane_img1,
+                                g.airplane_img2,
+                                g.airplane_img3,
+                            )
                             if hasattr(g, "airplane_img1")
                             else None
                         )
@@ -415,11 +461,17 @@ class Update:
                             if hasattr(g, "flying_disk_images")
                             else None
                         )
-                        g.flying_disks.append(FlyingDisk(disk_x, disk_y, disk_images))
+                        g.flying_disks.append(
+                            FlyingDisk(disk_x, disk_y, disk_images)
+                        )
                     g.flying_disk_spawn_timer = 0
                 if 47 <= g.current_level <= 50:
                     g.meteor_spawn_timer += 1
-                    if g.meteor_spawn_timer >= getattr(g, "meteor_spawn_interval", 999999):
+                    if g.meteor_spawn_timer >= getattr(
+                        g,
+                        "meteor_spawn_interval",
+                        999999,
+                    ):
                         import random
 
                         for _ in range(getattr(g, "meteors_per_spawn", 0)):
@@ -591,7 +643,11 @@ class Update:
                 g.aliens = active_aliens
 
             # Atualizar boss alien (51)
-            if g.current_level == 51 and hasattr(g, "boss_alien") and g.boss_alien:
+            if (
+                g.current_level == 51
+                and hasattr(g, "boss_alien")
+                and g.boss_alien
+            ):
                 g.boss_alien.update(g.player.x, g.camera_x)
 
                 if not g.boss_alien_captured and g.boss_alien.is_captured(
@@ -645,7 +701,7 @@ class Update:
                                     g.player.bullets.remove(bullet)
                                     g.return_bullet_to_pool(bullet)
                                     drop.die()
-                                    g.sound_effects.play_sound_effect("water-hit")
+                                    sfx.play_sound_effect("water-hit")
                                     g.add_score(100)
                                     break
                 else:
@@ -685,7 +741,9 @@ class Update:
                                 g.return_bullet_to_pool(bullet)
                                 star.die()
                                 explosion = g.get_pooled_explosion(
-                                    star.x, star.y, g.image.explosion_image
+                                    star.x,
+                                    star.y,
+                                    exp_img,
                                 )
                                 g.explosions.append(explosion)
                                 g.sound_effects.play_sound_effect("explosion")
@@ -714,7 +772,9 @@ class Update:
                             g.return_bullet_to_pool(bullet)
                             star.die()
                             explosion = g.get_pooled_explosion(
-                                star.x, star.y, g.image.explosion_image
+                                star.x,
+                                star.y,
+                                exp_img,
                             )
                             g.explosions.append(explosion)
                             g.sound_effects.play_sound_effect("explosion")
@@ -727,7 +787,9 @@ class Update:
                             g.player.bullets.remove(bullet)
                             g.airplanes.remove(airplane)
                             explosion = g.get_pooled_explosion(
-                                airplane.x, airplane.y, g.image.explosion_image
+                                airplane.x,
+                                airplane.y,
+                                exp_img,
                             )
                             g.explosions.append(explosion)
                             g.return_bullet_to_pool(bullet)
@@ -741,7 +803,9 @@ class Update:
                             g.player.bullets.remove(bullet)
                             g.flying_disks.remove(disk)
                             explosion = g.get_pooled_explosion(
-                                disk.x, disk.y, g.image.explosion_image
+                                disk.x,
+                                disk.y,
+                                exp_img,
                             )
                             g.explosions.append(explosion)
                             g.return_bullet_to_pool(bullet)
@@ -757,7 +821,9 @@ class Update:
                             g.return_bullet_to_pool(bullet)
                             met.die()
                             explosion = g.get_pooled_explosion(
-                                met.x, met.y, g.image.explosion_image
+                                met.x,
+                                met.y,
+                                exp_img,
                             )
                             g.explosions.append(explosion)
                             if met in g.meteors:
@@ -803,7 +869,9 @@ class Update:
                                 g.player.bullets.remove(bullet)
                             g.return_bullet_to_pool(bullet)
                             explosion = g.get_pooled_explosion(
-                                robot.x, robot.y, g.image.explosion_image
+                                robot.x,
+                                robot.y,
+                                exp_img,
                             )
                             g.explosions.append(explosion)
                             g.sound_effects.play_sound_effect("explosion")
@@ -821,7 +889,9 @@ class Update:
                         if g.player.rect.colliderect(missile.rect):
                             if g.player.is_invulnerable:
                                 explosion = g.get_pooled_explosion(
-                                    missile.x, missile.y, g.image.explosion_image
+                                    missile.x,
+                                    missile.y,
+                                    exp_img,
                                 )
                                 g.explosions.append(explosion)
                                 robot.missiles.remove(missile)
@@ -833,24 +903,26 @@ class Update:
                                         explosion = g.get_pooled_explosion(
                                             missile.x,
                                             missile.y,
-                                            g.image.explosion_image,
+                                            exp_img,
                                         )
                                         g.explosions.append(explosion)
                                         if missile in robot.missiles:
                                             robot.missiles.remove(missile)
                                     else:
                                         g.player.take_hit()
-                                        g.sound_effects.play_sound_effect("player-hit")
+                                        sfx.play_sound_effect(
+                                            "player-hit"
+                                        )
                                         explosion = g.get_pooled_explosion(
                                             missile.x,
                                             missile.y,
-                                            g.image.explosion_image,
+                                            exp_img,
                                         )
                                         g.explosions.append(explosion)
                                         robot.missiles.remove(missile)
                                         g.lives -= 1
                                         if g.lives <= 0:
-                                            if g.ranking_manager.is_high_score(g.score):
+                                            if high_score(g.score):
                                                 g.state = GameState.ENTER_NAME
                                             else:
                                                 g.state = GameState.GAME_OVER
@@ -868,7 +940,9 @@ class Update:
                         if g.player.rect.colliderect(laser.rect):
                             if g.player.is_invulnerable:
                                 explosion = g.get_pooled_explosion(
-                                    laser.x, laser.y, g.image.explosion_image
+                                    laser.x,
+                                    laser.y,
+                                    exp_img,
                                 )
                                 g.explosions.append(explosion)
                                 alien.lasers.remove(laser)
@@ -878,22 +952,28 @@ class Update:
                                     if getattr(g, "shield_active", False):
                                         g.shield_active = False
                                         explosion = g.get_pooled_explosion(
-                                            laser.x, laser.y, g.image.explosion_image
+                                            laser.x,
+                                            laser.y,
+                                            exp_img,
                                         )
                                         g.explosions.append(explosion)
                                         if laser in alien.lasers:
                                             alien.lasers.remove(laser)
                                     else:
                                         g.player.take_hit()
-                                        g.sound_effects.play_sound_effect("player-hit")
+                                        sfx.play_sound_effect(
+                                            "player-hit"
+                                        )
                                         explosion = g.get_pooled_explosion(
-                                            laser.x, laser.y, g.image.explosion_image
+                                            laser.x,
+                                            laser.y,
+                                            exp_img,
                                         )
                                         g.explosions.append(explosion)
                                         alien.lasers.remove(laser)
                                         g.lives -= 1
                                         if g.lives <= 0:
-                                            if g.ranking_manager.is_high_score(g.score):
+                                            if high_score(g.score):
                                                 g.state = GameState.ENTER_NAME
                                             else:
                                                 g.state = GameState.GAME_OVER
@@ -957,7 +1037,11 @@ class Update:
                                 continue
                             if g.player.is_invulnerable:
                                 g.explosions.append(
-                                    Explosion(bird.x, bird.y, g.image.explosion_image)
+                                    Explosion(
+                                        bird.x,
+                                        bird.y,
+                                        g.image.explosion_image,
+                                    )
                                 )
                                 g.birds.remove(bird)
                                 g.add_score(20)
@@ -967,23 +1051,31 @@ class Update:
                                         g.shield_active = False
                                         g.explosions.append(
                                             Explosion(
-                                                bird.x, bird.y, g.image.explosion_image
+                                                bird.x,
+                                                bird.y,
+                                                g.image.explosion_image,
                                             )
                                         )
                                         if bird in g.birds:
                                             g.birds.remove(bird)
                                     else:
                                         g.player.take_hit()
-                                        g.sound_effects.play_sound_effect("player-hit")
+                                        g.sound_effects.play_sound_effect(
+                                            "player-hit"
+                                        )
                                         g.explosions.append(
                                             Explosion(
-                                                bird.x, bird.y, g.image.explosion_image
+                                                bird.x,
+                                                bird.y,
+                                                g.image.explosion_image,
                                             )
                                         )
                                         g.birds.remove(bird)
                                         g.lives -= 1
                                         if g.lives <= 0:
-                                            if g.ranking_manager.is_high_score(g.score):
+                                            if g.ranking_manager.is_high_score(
+                                                g.score
+                                            ):
                                                 g.state = GameState.ENTER_NAME
                                             else:
                                                 g.state = GameState.GAME_OVER
@@ -1027,7 +1119,8 @@ class Update:
                                                 g.start_game_over_hold()
                                 break
                 else:
-                    # Compatibilidade de testes: processar colisões com pássaros se existirem nas fases 17-20
+                    # Compatibilidade de testes:
+                    # processar colisões com pássaros (fases 17–20)
                     for bird in g.birds[:]:
                         distance_x = abs(bird.x - g.player.x)
                         distance_y = abs(bird.y - g.player.y)
@@ -1045,7 +1138,11 @@ class Update:
                                 continue
                             if g.player.is_invulnerable:
                                 g.explosions.append(
-                                    Explosion(bird.x, bird.y, g.image.explosion_image)
+                                    Explosion(
+                                        bird.x,
+                                        bird.y,
+                                        exp_img,
+                                    )
                                 )
                                 g.birds.remove(bird)
                                 g.add_score(20)
@@ -1055,23 +1152,29 @@ class Update:
                                         g.shield_active = False
                                         g.explosions.append(
                                             Explosion(
-                                                bird.x, bird.y, g.image.explosion_image
+                                                bird.x,
+                                                bird.y,
+                                                exp_img,
                                             )
                                         )
                                         if bird in g.birds:
                                             g.birds.remove(bird)
                                     else:
                                         g.player.take_hit()
-                                        g.sound_effects.play_sound_effect("player-hit")
+                                        g.sound_effects.play_sound_effect(
+                                            "player-hit"
+                                        )
                                         g.explosions.append(
                                             Explosion(
-                                                bird.x, bird.y, g.image.explosion_image
+                                                bird.x,
+                                                bird.y,
+                                                exp_img,
                                             )
                                         )
                                         g.birds.remove(bird)
                                         g.lives -= 1
                                         if g.lives <= 0:
-                                            if g.ranking_manager.is_high_score(g.score):
+                                            if high_score(g.score):
                                                 g.state = GameState.ENTER_NAME
                                             else:
                                                 g.state = GameState.GAME_OVER
@@ -1095,7 +1198,11 @@ class Update:
                                 continue
                             if g.player.is_invulnerable:
                                 g.explosions.append(
-                                    Explosion(bat.x, bat.y, g.image.explosion_image)
+                                    Explosion(
+                                        bat.x,
+                                        bat.y,
+                                        exp_img,
+                                    )
                                 )
                                 g.bats.remove(bat)
                                 g.add_score(25)
@@ -1105,23 +1212,29 @@ class Update:
                                         g.shield_active = False
                                         g.explosions.append(
                                             Explosion(
-                                                bat.x, bat.y, g.image.explosion_image
+                                                bat.x,
+                                                bat.y,
+                                                exp_img,
                                             )
                                         )
                                         if bat in g.bats:
                                             g.bats.remove(bat)
                                     else:
                                         g.player.take_hit()
-                                        g.sound_effects.play_sound_effect("player-hit")
+                                        g.sound_effects.play_sound_effect(
+                                            "player-hit"
+                                        )
                                         g.explosions.append(
                                             Explosion(
-                                                bat.x, bat.y, g.image.explosion_image
+                                                bat.x,
+                                                bat.y,
+                                                exp_img,
                                             )
                                         )
                                         g.bats.remove(bat)
                                         g.lives -= 1
                                         if g.lives <= 0:
-                                            if g.ranking_manager.is_high_score(g.score):
+                                            if high_score(g.score):
                                                 g.state = GameState.ENTER_NAME
                                             else:
                                                 g.state = GameState.GAME_OVER
@@ -1156,23 +1269,29 @@ class Update:
                                     if getattr(g, "shield_active", False):
                                         g.shield_active = False
                                         explosion = g.get_pooled_explosion(
-                                            star.x, star.y, g.image.explosion_image
+                                            star.x,
+                                            star.y,
+                                            exp_img,
                                         )
                                         g.explosions.append(explosion)
                                         if star in g.shooting_stars:
                                             g.shooting_stars.remove(star)
                                     else:
                                         g.player.take_hit()
-                                        g.sound_effects.play_sound_effect("player-hit")
+                                        sfx.play_sound_effect(
+                                            "player-hit"
+                                        )
                                         explosion = g.get_pooled_explosion(
-                                            star.x, star.y, g.image.explosion_image
+                                            star.x,
+                                            star.y,
+                                            exp_img,
                                         )
                                         g.explosions.append(explosion)
                                         if star in g.shooting_stars:
                                             g.shooting_stars.remove(star)
                                         g.lives -= 1
                                         if g.lives <= 0:
-                                            if g.ranking_manager.is_high_score(g.score):
+                                            if high_score(g.score):
                                                 g.state = GameState.ENTER_NAME
                                             else:
                                                 g.state = GameState.GAME_OVER
@@ -1196,7 +1315,11 @@ class Update:
                             continue
                         if g.player.is_invulnerable:
                             g.explosions.append(
-                                Explosion(bat.x, bat.y, g.image.explosion_image)
+                                Explosion(
+                                    bat.x,
+                                    bat.y,
+                                    g.image.explosion_image,
+                                )
                             )
                             g.bats.remove(bat)
                             g.add_score(25)
@@ -1205,20 +1328,32 @@ class Update:
                                 if getattr(g, "shield_active", False):
                                     g.shield_active = False
                                     g.explosions.append(
-                                        Explosion(bat.x, bat.y, g.image.explosion_image)
+                                        Explosion(
+                                            bat.x,
+                                            bat.y,
+                                            g.image.explosion_image,
+                                        )
                                     )
                                     if bat in g.bats:
                                         g.bats.remove(bat)
                                 else:
                                     g.player.take_hit()
-                                    g.sound_effects.play_sound_effect("player-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "player-hit"
+                                    )
                                     g.explosions.append(
-                                        Explosion(bat.x, bat.y, g.image.explosion_image)
+                                        Explosion(
+                                            bat.x,
+                                            bat.y,
+                                            g.image.explosion_image,
+                                        )
                                     )
                                     g.bats.remove(bat)
                                     g.lives -= 1
                                     if g.lives <= 0:
-                                        if g.ranking_manager.is_high_score(g.score):
+                                        if g.ranking_manager.is_high_score(
+                                            g.score
+                                        ):
                                             g.state = GameState.ENTER_NAME
                                         else:
                                             g.state = GameState.GAME_OVER
@@ -1234,13 +1369,15 @@ class Update:
                                     if getattr(g, "shield_active", False):
                                         g.shield_active = False
                                         g.player.take_hit()
-                                        g.sound_effects.play_sound_effect("player-hit")
+                                        sfx.play_sound_effect("player-hit")
                                     else:
                                         g.player.take_hit()
                                         g.sound_effects.play_sound_effect("player-hit")
                                         g.lives -= 1
                                         if g.lives <= 0:
-                                            if g.ranking_manager.is_high_score(g.score):
+                                            if g.ranking_manager.is_high_score(
+                                                g.score
+                                            ):
                                                 g.state = GameState.ENTER_NAME
                                             else:
                                                 g.state = GameState.GAME_OVER
@@ -1263,7 +1400,9 @@ class Update:
                             continue
                         if g.player.is_invulnerable:
                             explosion = g.get_pooled_explosion(
-                                star.x, star.y, g.image.explosion_image
+                                star.x,
+                                star.y,
+                                exp_img,
                             )
                             g.explosions.append(explosion)
                             if star in g.shooting_stars:
@@ -1274,23 +1413,27 @@ class Update:
                                 if getattr(g, "shield_active", False):
                                     g.shield_active = False
                                     explosion = g.get_pooled_explosion(
-                                        star.x, star.y, g.image.explosion_image
+                                        star.x,
+                                        star.y,
+                                        exp_img,
                                     )
                                     g.explosions.append(explosion)
                                     if star in g.shooting_stars:
                                         g.shooting_stars.remove(star)
                                 else:
                                     g.player.take_hit()
-                                    g.sound_effects.play_sound_effect("player-hit")
+                                    sfx.play_sound_effect("player-hit")
                                     explosion = g.get_pooled_explosion(
-                                        star.x, star.y, g.image.explosion_image
+                                        star.x,
+                                        star.y,
+                                        exp_img,
                                     )
                                     g.explosions.append(explosion)
                                     if star in g.shooting_stars:
                                         g.shooting_stars.remove(star)
                                     g.lives -= 1
                                     if g.lives <= 0:
-                                        if g.ranking_manager.is_high_score(g.score):
+                                        if high_score(g.score):
                                             g.state = GameState.ENTER_NAME
                                         else:
                                             g.state = GameState.GAME_OVER
@@ -1315,7 +1458,9 @@ class Update:
                         if g.player.is_invulnerable:
                             g.explosions.append(
                                 Explosion(
-                                    airplane.x, airplane.y, g.image.explosion_image
+                                    airplane.x,
+                                    airplane.y,
+                                    exp_img,
                                 )
                             )
                             g.airplanes.remove(airplane)
@@ -1328,7 +1473,7 @@ class Update:
                                         Explosion(
                                             airplane.x,
                                             airplane.y,
-                                            g.image.explosion_image,
+                                            exp_img,
                                         )
                                     )
                                     if airplane in g.airplanes:
@@ -1339,13 +1484,13 @@ class Update:
                                         Explosion(
                                             airplane.x,
                                             airplane.y,
-                                            g.image.explosion_image,
+                                            exp_img,
                                         )
                                     )
                                     g.airplanes.remove(airplane)
                                     g.lives -= 1
                                     if g.lives <= 0:
-                                        if g.ranking_manager.is_high_score(g.score):
+                                        if high_score(g.score):
                                             g.state = GameState.ENTER_NAME
                                         else:
                                             g.state = GameState.GAME_OVER
@@ -1353,11 +1498,25 @@ class Update:
                         break
                 # Geradores e raios (37-40)
                 if 37 <= g.current_level <= 40:
-                    if not hasattr(g, 'generators') or g.generators is None or getattr(g, 'generators_level', None) != g.current_level:
+                    if (
+                        not hasattr(g, 'generators')
+                        or g.generators is None
+                        or getattr(g, 'generators_level', None)
+                        != g.current_level
+                    ):
                         try:
                             # Criados pelo gerador estático; se não, inicializar agora a partir das plataformas
-                            from internal.engine.level.generator.static import StaticLevelGenerator
-                            StaticLevelGenerator.drawGenerators(g, [(p.x, p.y, p.width, p.height) for p in g.platforms])
+                            from internal.engine.level.generator.static import (
+                                StaticLevelGenerator,
+                            )
+                            platforms_rects = [
+                                (p.x, p.y, p.width, p.height)
+                                for p in g.platforms
+                            ]
+                            StaticLevelGenerator.drawGenerators(
+                                g,
+                                platforms_rects,
+                            )
                             g.generators_level = g.current_level
                         except Exception:
                             g.generators = []
@@ -1393,11 +1552,27 @@ class Update:
                             for i in range(len(gens_sorted) - 1):
                                 a = gens_sorted[i]
                                 b = gens_sorted[i + 1]
-                                yb = y + a.height // 2 - (h_img.get_height() // 2 if h_img else 4)
+                                yb = (
+                                    y
+                                    + a.height // 2
+                                    - (
+                                        h_img.get_height() // 2 if h_img else 4
+                                    )
+                                )
                                 start = (a.x + a.width, yb)
                                 end = (b.x, yb)
-                                lb = __import__('internal.resources.lightning', fromlist=['LightningBeam']).LightningBeam(start, end, 'h', h_img)
-                                lb.build_segments([p.rect for p in g.platforms])
+                                lb = __import__(
+                                    'internal.resources.lightning',
+                                    fromlist=['LightningBeam'],
+                                ).LightningBeam(
+                                    start,
+                                    end,
+                                    'h',
+                                    h_img,
+                                )
+                                lb.build_segments(
+                                    [p.rect for p in g.platforms]
+                                )
                                 g.lightnings.append(lb)
                         # Conectar verticalmente por colunas
                         for x, gens in cols.items():
@@ -1405,11 +1580,27 @@ class Update:
                             for i in range(len(gens_sorted) - 1):
                                 a = gens_sorted[i]
                                 b = gens_sorted[i + 1]
-                                xb = x + a.width // 2 - (v_img.get_width() // 2 if v_img else 4)
+                                xb = (
+                                    x
+                                    + a.width // 2
+                                    - (
+                                        v_img.get_width() // 2 if v_img else 4
+                                    )
+                                )
                                 start = (xb, a.y + a.height)
                                 end = (xb, b.y)
-                                lb = __import__('internal.resources.lightning', fromlist=['LightningBeam']).LightningBeam(start, end, 'v', v_img)
-                                lb.build_segments([p.rect for p in g.platforms])
+                                lb = __import__(
+                                    'internal.resources.lightning',
+                                    fromlist=['LightningBeam'],
+                                ).LightningBeam(
+                                    start,
+                                    end,
+                                    'v',
+                                    v_img,
+                                )
+                                lb.build_segments(
+                                    [p.rect for p in g.platforms]
+                                )
                                 g.lightnings.append(lb)
                         # Tocar som de choque
                         try:
@@ -1430,7 +1621,10 @@ class Update:
                         player_rect = g.player.get_airborne_collision_rect()
                         for beam in g.lightnings:
                             # Colidir apenas com segmentos válidos, nunca sobre plataformas
-                            hit = any(player_rect.colliderect(seg) for seg in getattr(beam, 'segments', []))
+                            hit = any(
+                                player_rect.colliderect(seg)
+                                for seg in getattr(beam, 'segments', [])
+                            )
                             if hit:
                                 if g.player.is_invulnerable:
                                     break
@@ -1438,13 +1632,19 @@ class Update:
                                     if getattr(g, 'shield_active', False):
                                         g.shield_active = False
                                         g.player.take_hit()
-                                        g.sound_effects.play_sound_effect('player-hit')
+                                        g.sound_effects.play_sound_effect(
+                                            'player-hit'
+                                        )
                                     else:
                                         g.player.take_hit()
-                                        g.sound_effects.play_sound_effect('player-hit')
+                                        g.sound_effects.play_sound_effect(
+                                            'player-hit'
+                                        )
                                         g.lives -= 1
                                         if g.lives <= 0:
-                                            if g.ranking_manager.is_high_score(g.score):
+                                            if g.ranking_manager.is_high_score(
+                                                g.score
+                                            ):
                                                 g.state = GameState.ENTER_NAME
                                             else:
                                                 g.state = GameState.GAME_OVER
@@ -1468,7 +1668,11 @@ class Update:
                             continue
                         if g.player.is_invulnerable:
                             g.explosions.append(
-                                Explosion(disk.x, disk.y, g.image.explosion_image)
+                                Explosion(
+                                    disk.x,
+                                    disk.y,
+                                    g.image.explosion_image,
+                                )
                             )
                             g.flying_disks.remove(disk)
                             g.add_score(40)
@@ -1485,16 +1689,22 @@ class Update:
                                         g.flying_disks.remove(disk)
                                 else:
                                     g.player.take_hit()
-                                    g.sound_effects.play_sound_effect("player-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "player-hit"
+                                    )
                                     g.explosions.append(
                                         Explosion(
-                                            disk.x, disk.y, g.image.explosion_image
+                                            disk.x,
+                                            disk.y,
+                                            g.image.explosion_image,
                                         )
                                     )
                                     g.flying_disks.remove(disk)
                                     g.lives -= 1
                                     if g.lives <= 0:
-                                        if g.ranking_manager.is_high_score(g.score):
+                                        if g.ranking_manager.is_high_score(
+                                            g.score
+                                        ):
                                             g.state = GameState.ENTER_NAME
                                         else:
                                             g.state = GameState.GAME_OVER
@@ -1504,7 +1714,10 @@ class Update:
             if g.current_level == 51:
                 for fire in g.fires[:]:
                     if g.player.rect.colliderect(fire.rect):
-                        if not g.player.is_invulnerable and not g.player.is_hit:
+                        if (
+                            not g.player.is_invulnerable
+                            and not g.player.is_hit
+                        ):
                             if getattr(g, "shield_active", False):
                                 g.shield_active = False
                             else:
@@ -1512,14 +1725,16 @@ class Update:
                                 g.sound_effects.play_sound_effect("player-hit")
                                 g.lives -= 1
                                 if g.lives <= 0:
-                                    if g.ranking_manager.is_high_score(g.score):
+                                    if g.ranking_manager.is_high_score(
+                                        g.score
+                                    ):
                                         g.state = GameState.ENTER_NAME
                                     else:
                                         g.state = GameState.GAME_OVER
                                     g.start_game_over_hold()
                         break
 
-            # Colisão com meteoro (47-50): meteoro NÃO é destruído por colisão com jogador
+            # Meteoro (47-50): não é destruído por colisão com jogador
             if 47 <= g.current_level <= 50:
                 for met in getattr(g, "meteors", [])[:]:
                     player_rect = g.player.get_airborne_collision_rect()
@@ -1527,7 +1742,7 @@ class Update:
                         if getattr(met, "is_dead", False):
                             continue
                         if g.player.is_invulnerable:
-                            # Ignora meteoro; apenas o tiro do jogador pode destruí-lo
+                            # Ignora meteoro; apenas tiro do jogador destrói
                             pass
                         else:
                             if not g.player.is_hit:
@@ -1536,10 +1751,14 @@ class Update:
                                     # Meteoro permanece
                                 else:
                                     g.player.take_hit()
-                                    g.sound_effects.play_sound_effect("player-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "player-hit"
+                                    )
                                     g.lives -= 1
                                     if g.lives <= 0:
-                                        if g.ranking_manager.is_high_score(g.score):
+                                        if g.ranking_manager.is_high_score(
+                                            g.score
+                                        ):
                                             g.state = GameState.ENTER_NAME
                                         else:
                                             g.state = GameState.GAME_OVER
@@ -1563,16 +1782,24 @@ class Update:
                                     g.shield_active = False
                                     if hasattr(turtle, "die"):
                                         turtle.die()
-                                    g.sound_effects.play_sound_effect("bird-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "bird-hit"
+                                    )
                                 else:
                                     g.player.take_hit()
-                                    g.sound_effects.play_sound_effect("player-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "player-hit"
+                                    )
                                     if hasattr(turtle, "die"):
                                         turtle.die()
-                                    g.sound_effects.play_sound_effect("bird-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "bird-hit"
+                                    )
                                     g.lives -= 1
                                     if g.lives <= 0:
-                                        if g.ranking_manager.is_high_score(g.score):
+                                        if g.ranking_manager.is_high_score(
+                                            g.score
+                                        ):
                                             g.state = GameState.ENTER_NAME
                                         else:
                                             g.state = GameState.GAME_OVER
@@ -1594,16 +1821,24 @@ class Update:
                                     g.shield_active = False
                                     if hasattr(spider, "die"):
                                         spider.die()
-                                    g.sound_effects.play_sound_effect("bird-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "bird-hit"
+                                    )
                                 else:
                                     g.player.take_hit()
-                                    g.sound_effects.play_sound_effect("player-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "player-hit"
+                                    )
                                     if hasattr(spider, "die"):
                                         spider.die()
-                                    g.sound_effects.play_sound_effect("bird-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "bird-hit"
+                                    )
                                     g.lives -= 1
                                     if g.lives <= 0:
-                                        if g.ranking_manager.is_high_score(g.score):
+                                        if g.ranking_manager.is_high_score(
+                                            g.score
+                                        ):
                                             g.state = GameState.ENTER_NAME
                                         else:
                                             g.state = GameState.GAME_OVER
@@ -1616,10 +1851,14 @@ class Update:
                     if g.player.rect.colliderect(robot.rect):
                         if g.player.is_invulnerable:
                             explosion = g.get_pooled_explosion(
-                                robot.x, robot.y, g.image.explosion_image
+                                robot.x,
+                                robot.y,
+                                g.image.explosion_image,
                             )
                             g.explosions.append(explosion)
-                            g.sound_effects.play_sound_effect("explosion")
+                            g.sound_effects.play_sound_effect(
+                                "explosion"
+                            )
                             for missile in getattr(robot, "missiles", []):
                                 g.orphan_missiles.append(missile)
                             if robot in g.robots:
@@ -1640,19 +1879,27 @@ class Update:
                                         g.robots.remove(robot)
                                 else:
                                     g.player.take_hit()
-                                    g.sound_effects.play_sound_effect("player-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "player-hit"
+                                    )
                                     explosion = g.get_pooled_explosion(
-                                        robot.x, robot.y, g.image.explosion_image
+                                        robot.x,
+                                        robot.y,
+                                        g.image.explosion_image,
                                     )
                                     g.explosions.append(explosion)
-                                    g.sound_effects.play_sound_effect("explosion")
+                                    g.sound_effects.play_sound_effect(
+                                        "explosion"
+                                    )
                                     for missile in getattr(robot, "missiles", []):
                                         g.orphan_missiles.append(missile)
                                     if robot in g.robots:
                                         g.robots.remove(robot)
                                     g.lives -= 1
                                     if g.lives <= 0:
-                                        if g.ranking_manager.is_high_score(g.score):
+                                        if g.ranking_manager.is_high_score(
+                                            g.score
+                                        ):
                                             g.state = GameState.ENTER_NAME
                                         else:
                                             g.state = GameState.GAME_OVER
@@ -1678,20 +1925,28 @@ class Update:
                                     g.shield_active = False
                                     if hasattr(alien, "die"):
                                         alien.die()
-                                        g.sound_effects.play_sound_effect("bird-hit")
+                                        g.sound_effects.play_sound_effect(
+                                            "bird-hit"
+                                        )
                                     for laser in getattr(alien, "lasers", []):
                                         g.orphan_lasers.append(laser)
                                 else:
                                     g.player.take_hit()
-                                    g.sound_effects.play_sound_effect("player-hit")
+                                    g.sound_effects.play_sound_effect(
+                                        "player-hit"
+                                    )
                                     if hasattr(alien, "die"):
                                         alien.die()
-                                        g.sound_effects.play_sound_effect("bird-hit")
+                                        g.sound_effects.play_sound_effect(
+                                            "bird-hit"
+                                        )
                                 for laser in alien.lasers:
                                     g.orphan_lasers.append(laser)
                                 g.lives -= 1
                                 if g.lives <= 0:
-                                    if g.ranking_manager.is_high_score(g.score):
+                                    if g.ranking_manager.is_high_score(
+                                        g.score
+                                    ):
                                         g.state = GameState.ENTER_NAME
                                     else:
                                         g.state = GameState.GAME_OVER
@@ -1704,7 +1959,10 @@ class Update:
                     g._next_level_after_hold = True
 
             # Verificar abdução (fase 50)
-            if g.spaceship and g.player.rect.colliderect(g.spaceship.abduction_rect):
+            if (
+                g.spaceship
+                and g.player.rect.colliderect(g.spaceship.abduction_rect)
+            ):
                 if not g.player.is_being_abducted:
                     g.player.start_abduction()
                 if g.player.abduction_timer >= 600:
