@@ -7,8 +7,10 @@ class DifficultyOps:
         self.g = game
 
     def update_bird_difficulty(self):
-        """Atualiza parâmetros de spawn por faixa de nível e aplica modificadores da dificuldade.
-        Mantém progressão por nível (Level.get_*) e ajusta quantidade/intervalo conforme Difficulty.
+        """Atualiza parâmetros de spawn por faixa de nível e aplica
+        modificadores da dificuldade.
+        Mantém progressão por nível (Level.get_*) e ajusta quantidade e
+        intervalo conforme Difficulty.
         """
         g = self.g
 
@@ -33,9 +35,15 @@ class DifficultyOps:
             base_qty = Level.get_birds_per_spawn(g.current_level)
             base_interval = Level.get_bird_spawn_interval(g.current_level)
             # Aplicar dificuldade com limites
-            g.birds_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
+            g.birds_per_spawn = max(
+                1,
+                min(3, int(round(base_qty * qty_factor))),
+            )
             # Respeitar limites da progressão (mínimo 60 como nas funções de Level)
-            g.bird_spawn_interval = max(60, int(base_interval * interval_factor))
+            g.bird_spawn_interval = max(
+                60,
+                int(base_interval * interval_factor),
+            )
             # Gotas de chuva (fases 7-10): quantidade ajustada por dificuldade 1x/2x/3x
             if 7 <= g.current_level <= 10:
                 # Quantidade baseada na dificuldade: EASY=1, NORMAL=2, HARD=3
@@ -54,8 +62,14 @@ class DifficultyOps:
                 # Morcegos seguem a progressão dos pássaros e aplicam dificuldade
                 bat_base_qty = Level.get_birds_per_spawn(g.current_level)
                 bat_base_interval = Level.get_bird_spawn_interval(g.current_level)
-                g.bats_per_spawn = max(1, min(3, int(round(bat_base_qty * qty_factor))))
-                g.bat_spawn_interval = max(60, int(bat_base_interval * interval_factor))
+                g.bats_per_spawn = max(
+                    1,
+                    min(3, int(round(bat_base_qty * qty_factor))),
+                )
+                g.bat_spawn_interval = max(
+                    60,
+                    int(bat_base_interval * interval_factor),
+                )
 
                 # Limitar quantidade máxima de morcegos visíveis (estabiliza densidade na tela)
                 # Aplica apenas nas fases 17-20 para manter consistência de dificuldade
@@ -65,17 +79,25 @@ class DifficultyOps:
                 star_base_qty = 1
                 star_base_interval = max(90, int(bat_base_interval * 1.2))
                 g.shooting_stars_per_spawn = max(
-                    1, min(2, int(round(star_base_qty * qty_factor)))
+                    1,
+                    min(2, int(round(star_base_qty * qty_factor))),
                 )
                 g.shooting_star_spawn_interval = max(
-                    80, int(star_base_interval * interval_factor)
+                    80,
+                    int(star_base_interval * interval_factor),
                 )
         elif g.current_level <= 30:
             # Morcegos: seguem mesma progressão dos pássaros 11-20
             base_qty = Level.get_birds_per_spawn(g.current_level)
             base_interval = Level.get_bird_spawn_interval(g.current_level)
-            g.bats_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
-            g.bat_spawn_interval = max(60, int(base_interval * interval_factor))
+            g.bats_per_spawn = max(
+                1,
+                min(3, int(round(base_qty * qty_factor))),
+            )
+            g.bat_spawn_interval = max(
+                60,
+                int(base_interval * interval_factor),
+            )
             # Fases 21–30: sem shooting stars
             g.shooting_stars_per_spawn = 0
             g.shooting_star_spawn_interval = 999999
@@ -88,7 +110,10 @@ class DifficultyOps:
                     g.lavadrops_per_spawn = 4
                 else:
                     g.lavadrops_per_spawn = 3
-                g.lavadrop_spawn_interval = max(60, int(base_interval * drop_interval_factor))
+                g.lavadrop_spawn_interval = max(
+                    60,
+                    int(base_interval * drop_interval_factor),
+                )
                 # Reduzir ainda mais a presença de morcegos na dificuldade EASY nas fases 27–30
                 if diff == Difficulty.EASY:
                     g.bats_per_spawn = 1
@@ -97,8 +122,14 @@ class DifficultyOps:
             # Aviões: usar valores base fixos e aplicar dificuldade
             base_qty = 1
             base_interval = 150
-            g.airplanes_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
-            g.airplane_spawn_interval = max(60, int(base_interval * interval_factor))
+            g.airplanes_per_spawn = max(
+                1,
+                min(3, int(round(base_qty * qty_factor))),
+            )
+            g.airplane_spawn_interval = max(
+                60,
+                int(base_interval * interval_factor),
+            )
             # Densidade de geradores/raios nas fases 37-40
             if 37 <= g.current_level <= 40:
                 base_spacing = 180
@@ -112,11 +143,23 @@ class DifficultyOps:
             # Flying-disks: valores base fixos com dificuldade
             base_qty = 1
             base_interval = 150
-            g.flying_disks_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
-            g.flying_disk_spawn_interval = max(60, int(base_interval * interval_factor))
+            g.flying_disks_per_spawn = max(
+                1,
+                min(3, int(round(base_qty * qty_factor))),
+            )
+            g.flying_disk_spawn_interval = max(
+                60,
+                int(base_interval * interval_factor),
+            )
         else:
             # Foguinhos (nível 51): valores base fixos com dificuldade
             base_qty = 1
             base_interval = 240
-            g.fires_per_spawn = max(1, min(4, int(round(base_qty * qty_factor))))
-            g.fire_spawn_interval = max(60, int(base_interval * interval_factor))
+            g.fires_per_spawn = max(
+                1,
+                min(4, int(round(base_qty * qty_factor))),
+            )
+            g.fire_spawn_interval = max(
+                60,
+                int(base_interval * interval_factor),
+            )

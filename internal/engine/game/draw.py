@@ -1,7 +1,21 @@
 import math
 import pygame
 
-from internal.utils.constants import *
+from internal.utils.constants import (
+    WIDTH,
+    HEIGHT,
+    WHITE,
+    BLACK,
+    YELLOW,
+    DARK_BLUE,
+    LIGHT_GRAY,
+    RED,
+    GREEN,
+    DARK_GRAY,
+    BROWN,
+    LIGHT_BLUE,
+    CYAN,
+)
 from internal.engine.screen import Screen
 from internal.engine.state import GameState
 from internal.engine.title import TitleScreen
@@ -13,16 +27,24 @@ class Draw:
         self.game = game
 
     def draw_ocean_background(self, surface=None):
-        """Desenha o fundo do mar para menus e jogo, com fallback em gradiente."""
+        """Desenha o fundo do mar para menus e jogo.
+        Usa fallback em gradiente quando não houver imagem carregada.
+        """
         g = self.game
         surf = surface if surface is not None else g.screen
 
         # Escolher imagem de fundo conforme estado
         if g.state == GameState.PLAYING:
-            background_to_use = getattr(g, "background_img", g.image.background_img)
+            background_to_use = getattr(
+                g,
+                "background_img",
+                g.image.background_img,
+            )
         else:
             background_to_use = getattr(
-                g, "menu_background_img", g.image.background_img
+                g,
+                "menu_background_img",
+                g.image.background_img,
             )
 
         if background_to_use:
@@ -59,7 +81,9 @@ class Draw:
 
                 # Fade in (primeiros frames)
                 if logo_cycle_time < game.fade_in_duration:
-                    alpha = int((logo_cycle_time / game.fade_in_duration) * 255)
+                    alpha = int(
+                        (logo_cycle_time / game.fade_in_duration) * 255
+                    )
                 # Fade out (últimos frames)
                 elif logo_cycle_time > (
                     game.logo_display_time - game.fade_out_duration

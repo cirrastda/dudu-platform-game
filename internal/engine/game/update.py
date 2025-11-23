@@ -1,5 +1,5 @@
 import pygame
-from internal.utils.constants import *
+from internal.utils.constants import WIDTH, HEIGHT, FPS, CAMERA_OFFSET_X
 from internal.engine.state import GameState
 from internal.engine.level.level import Level
 from internal.resources.explosion import Explosion

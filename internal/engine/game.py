@@ -1,10 +1,31 @@
 import pygame
 import sys
 import os
-import math
-from internal.utils.constants import *
-from internal.utils.functions import *
-from internal.resources.cache import ResourceCache
+from internal.utils.functions import resource_path, load_env_config
+from internal.utils.constants import (
+    WIDTH,
+    HEIGHT,
+    FPS,
+    GRAVITY,
+    JUMP_STRENGTH,
+    PLAYER_SPEED,
+    CAMERA_OFFSET_X,
+    WHITE,
+    BLACK,
+    BLUE,
+    LIGHT_BLUE,
+    DARK_BLUE,
+    GREEN,
+    RED,
+    BROWN,
+    YELLOW,
+    GOLD,
+    GRAY,
+    LIGHT_GRAY,
+    DARK_GRAY,
+    CYAN,
+    DEFAULT_INITIAL_LIVES,
+)
 from internal.resources.image import Image
 from internal.engine.joystick import Joystick
 from internal.engine.video import VideoPlayer
@@ -20,7 +41,7 @@ from internal.engine.sound.mixer import Mixer
 from internal.engine.sound.effects import SoundEffects
 
 
-# Carregar módulos auxiliares da pasta internal/engine/game/ sem conflito de nome
+# Carregar submódulos auxiliares de internal/engine/game
 _GAME_SUBMODULE_DIR = os.path.join(os.path.dirname(__file__), "game")
 Life = None
 Score = None
@@ -71,7 +92,6 @@ try:
     Menu = getattr(_menu_mod, "Menu", None)
     System = getattr(_system_mod, "System", None)
 except Exception:
-    # Em ambientes de teste, garantir que erros de import não interrompam coleta
     pass
 
 # Carregar configurações
@@ -82,6 +102,35 @@ try:
         ENV_CONFIG = {"environment": "production"}
 except Exception:
     pass
+
+# Exportar símbolos usados pelos testes e pela API
+__all__ = [
+    "WIDTH",
+    "HEIGHT",
+    "FPS",
+    "GRAVITY",
+    "JUMP_STRENGTH",
+    "PLAYER_SPEED",
+    "CAMERA_OFFSET_X",
+    "WHITE",
+    "BLACK",
+    "BLUE",
+    "LIGHT_BLUE",
+    "DARK_BLUE",
+    "GREEN",
+    "RED",
+    "BROWN",
+    "YELLOW",
+    "GOLD",
+    "GRAY",
+    "LIGHT_GRAY",
+    "DARK_GRAY",
+    "CYAN",
+    "DEFAULT_INITIAL_LIVES",
+    "Bullet",
+    "Explosion",
+    "DifficultyOps",
+]
 
 
 class Game:
@@ -117,7 +166,6 @@ class Game:
                 icon_surface = pygame.image.load(icon_path)
                 pygame.display.set_icon(icon_surface)
         except Exception:
-            # Ignorar falhas ao definir ícone para não interromper o jogo
             pass
         self.clock = pygame.time.Clock()
         self.state = GameState.SPLASH
@@ -133,16 +181,16 @@ class Game:
                 self.current_level = int(ENV_CONFIG["initial-stage"])
                 # Validar se o nível está dentro do range válido
                 if self.current_level < 1 or self.current_level > self.max_levels:
-                    print(
-                        f"Aviso: initial-stage {self.current_level} inválido. Usando nível 1."
-                    )
+                    print(f"Aviso: initial-stage {self.current_level} inválido.")
+                    print("Usando nível 1.")
                     self.current_level = 1
                 else:
                     print(
                         f"Modo desenvolvimento: Iniciando no nível {self.current_level}"
                     )
             except (ValueError, TypeError):
-                print("Aviso: initial-stage deve ser um número. Usando nível 1.")
+                print("Aviso: initial-stage deve ser um número.")
+                print("Usando nível 1.")
                 self.current_level = 1
         else:
             self.current_level = 1

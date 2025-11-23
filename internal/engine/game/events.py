@@ -19,7 +19,9 @@ class Events:
                     uni = event.unicode if hasattr(event, "unicode") else ""
                 except Exception:
                     uni = ""
-                game._process_cheat_token(game._map_key_to_cheat_token(event.key, uni))
+                game._process_cheat_token(
+                    game._map_key_to_cheat_token(event.key, uni)
+                )
                 if game.state == GameState.SPLASH:
                     if env.get("environment", "production") == "development":
                         game.state = GameState.TITLE_SCREEN
