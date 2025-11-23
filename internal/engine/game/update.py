@@ -197,8 +197,13 @@ class Update:
                 except Exception:
                     pass
 
-            # Atualizar câmera para seguir o jogador
-            target_camera_x = g.player.x - CAMERA_OFFSET_X
+            # Atualizar câmera para seguir o jogador com look-ahead dinâmico
+            lookahead = int(min(150, max(0, abs(getattr(g.player, "vel_x", 0)) * 30)))
+            if getattr(g.player, "vel_x", 0) >= 0:
+                dynamic_offset = max(0, CAMERA_OFFSET_X - min(120, lookahead))
+            else:
+                dynamic_offset = CAMERA_OFFSET_X + min(60, lookahead)
+            target_camera_x = g.player.x - dynamic_offset
             if target_camera_x > g.camera_x:
                 g.camera_x = target_camera_x
 

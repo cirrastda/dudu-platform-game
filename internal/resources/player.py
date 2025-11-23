@@ -36,6 +36,13 @@ class Player:
         # Detecção de borda de entrada para pulo (evita consumo imediato do pulo duplo)
         self.jump_was_down = False
 
+        # Coyote time e jump buffering para melhorar responsividade do pulo
+        self.coyote_max_frames = 8
+        self.coyote_frames_left = 0
+        self.jump_buffer_max_frames = 8
+        self.jump_buffer_frames_left = 0
+        self.was_on_ground = False
+
         # Sistema de animação
         self.sprites = {}
         self.current_animation = "idle"
@@ -354,17 +361,16 @@ class Player:
                 joystick_jump = True
 
         jump_sound = False
-        # Pulo baseado em detecção de PRESS (borda de subida) para permitir segundo salto quando desejado
         want_jump = (keys[pygame.K_UP] or keys[pygame.K_w]) or joystick_jump
         press_jump = want_jump and not self.jump_was_down
         if press_jump:
-            if self.on_ground and not self.is_crouching:
-                # Primeiro salto a partir do chão
+            self.jump_buffer_frames_left = self.jump_buffer_max_frames
+            if (self.on_ground or self.coyote_frames_left > 0) and not self.is_crouching:
                 self.vel_y = JUMP_STRENGTH
                 self.on_ground = False
+                self.coyote_frames_left = 0
                 jump_sound = True
             elif self.double_jump_enabled and self.remaining_jumps > 0:
-                # Segundo salto no ar quando habilitado
                 self.vel_y = JUMP_STRENGTH
                 self.remaining_jumps -= 1
                 jump_sound = True
@@ -389,6 +395,7 @@ class Player:
 
         # Verificar colisões com plataformas
         self.prev_vel_y = self.vel_y  # Salvar velocidade anterior
+        self.was_on_ground = self.on_ground
         self.on_ground = False
 
         for platform in platforms:
@@ -405,6 +412,29 @@ class Player:
                     self.rect.y = self.y
                     # Reset dos saltos disponíveis
                     self.remaining_jumps = 2 if self.double_jump_enabled else 1
+
+        # Atualizar coyote time baseado no contato com o chão
+        if self.on_ground:
+            self.coyote_frames_left = self.coyote_max_frames
+        else:
+            if self.was_on_ground:
+                self.coyote_frames_left = self.coyote_max_frames
+            elif self.coyote_frames_left > 0:
+                self.coyote_frames_left -= 1
+
+        # Consumir jump buffering se possível após resolver colisões
+        if not jump_sound and self.jump_buffer_frames_left > 0:
+            if (self.on_ground or self.coyote_frames_left > 0) and not self.is_crouching:
+                self.vel_y = JUMP_STRENGTH
+                self.on_ground = False
+                self.coyote_frames_left = 0
+                jump_sound = True
+                self.jump_buffer_frames_left = 0
+            elif self.double_jump_enabled and self.remaining_jumps > 0 and not self.on_ground:
+                self.vel_y = JUMP_STRENGTH
+                self.remaining_jumps -= 1
+                jump_sound = True
+                self.jump_buffer_frames_left = 0
 
         # Atualizar tiros e remover os que saíram da área visível
         for bullet in self.bullets[:]:
@@ -433,6 +463,10 @@ class Player:
 
         # Atualizar estado de borda da entrada de pulo
         self.jump_was_down = want_jump
+
+        # Decaimento do buffer de pulo
+        if self.jump_buffer_frames_left > 0:
+            self.jump_buffer_frames_left -= 1
 
         # Retornar ação baseada nos sons
         if jump_sound:
