@@ -99,6 +99,15 @@ class DifficultyOps:
             base_interval = 150
             g.airplanes_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
             g.airplane_spawn_interval = max(60, int(base_interval * interval_factor))
+            # Densidade de geradores/raios nas fases 37-40
+            if 37 <= g.current_level <= 40:
+                base_spacing = 180
+                if diff == Difficulty.EASY:
+                    g.generator_spacing = int(base_spacing * 1.3)  # menos geradores
+                elif diff == Difficulty.HARD:
+                    g.generator_spacing = int(base_spacing * 0.7)  # mais geradores
+                else:
+                    g.generator_spacing = base_spacing
         elif g.current_level <= 50:
             # Flying-disks: valores base fixos com dificuldade
             base_qty = 1

@@ -6,6 +6,7 @@ from internal.resources.flag import Flag
 from internal.resources.spaceship import Spaceship
 from internal.resources.cache import ResourceCache
 from internal.resources.enemies.turtle import Turtle
+from internal.resources.generator import Generator
 
 
 class StaticLevelGenerator:
@@ -3154,6 +3155,8 @@ class StaticLevelGenerator:
         # Adicionar robôs (1 a cada 3 plataformas)
         StaticLevelGenerator.drawRobots(game, platforms, 5)
 
+        StaticLevelGenerator.drawGenerators(game, platforms)
+
         StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_city)
 
     @staticmethod
@@ -3289,6 +3292,8 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         StaticLevelGenerator.drawRobots(game, platforms, 5)
+
+        StaticLevelGenerator.drawGenerators(game, platforms)
 
         StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_city)
 
@@ -3441,6 +3446,8 @@ class StaticLevelGenerator:
         # Adicionar robôs e aviões (misturados)
         StaticLevelGenerator.drawRobots(game, platforms, 4)
 
+        StaticLevelGenerator.drawGenerators(game, platforms)
+
         StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_city)
 
     @staticmethod
@@ -3576,6 +3583,8 @@ class StaticLevelGenerator:
         StaticLevelGenerator.putPlayerInFirstPlatform(game)
 
         StaticLevelGenerator.drawRobots(game, platforms, 4)
+
+        StaticLevelGenerator.drawGenerators(game, platforms)
 
         StaticLevelGenerator.drawFlag(game, platforms, game.platform_texture_city)
 
@@ -4882,6 +4891,33 @@ class StaticLevelGenerator:
         )  # Posicionar para que a parte inferior toque a plataforma (altura da nave)
 
         game.spaceship = Spaceship(spaceship_x, spaceship_y)
+
+    @staticmethod
+    def drawGenerators(game, platforms):
+        min_x = min(p[0] for p in platforms)
+        max_x = max(p[0] + p[2] for p in platforms)
+        min_y = min(p[1] for p in platforms)
+        player_h = getattr(game.player, 'height', 30)
+        top_y = max(50, min_y - player_h - 20)
+        bottom_y = HEIGHT - 40
+        blocked = [(p[0], p[0] + p[2]) for p in platforms]
+        def is_blocked(x):
+            for l, r in blocked:
+                if l <= x <= r:
+                    return True
+            return False
+        spacing = getattr(game, 'generator_spacing', 180)
+        cols = []
+        x = min_x + 30
+        while x < max_x - 30:
+            if not is_blocked(x):
+                cols.append(x)
+            x += spacing
+        game.generators = []
+        for x in cols:
+            img = getattr(game.image, 'generator_img', None)
+            game.generators.append(Generator(int(x) - 16, int(top_y), img))
+            game.generators.append(Generator(int(x) - 16, int(bottom_y), img))
 
     @staticmethod
     def create_level_51(game):

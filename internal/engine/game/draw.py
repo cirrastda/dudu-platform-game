@@ -328,6 +328,12 @@ class Draw:
                         airplane.draw(game.screen)
                         # Restaurar posição original
                         airplane.x = original_airplane_x
+                # Geradores e raios (37-40)
+                if 37 <= game.current_level <= 40:
+                    for gen in getattr(game, 'generators', []):
+                        gen.draw(game.screen, game.camera_x)
+                    for beam in getattr(game, 'lightnings', []):
+                        beam.draw(game.screen, game.camera_x)
             else:
                 for disk in game.flying_disks:
                     disk_x = disk.x - game.camera_x

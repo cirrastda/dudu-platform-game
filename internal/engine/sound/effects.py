@@ -147,6 +147,17 @@ class SoundEffects:
             else:
                 print("Aviso: Arquivo sounds/player-hit.mp3 não encontrado")
 
+            # Carregar som de choque elétrico
+            shock_path = "sounds/shock.mp3"
+            if os.path.exists(resource_path(shock_path)):
+                sound = cache.get_sound(shock_path)
+                if sound:
+                    self.sound_effects["shock"] = sound
+                    self.sound_effects["shock"].set_volume(min(1.0, self.sound_volume * 1.1))
+                    print("Som de choque carregado com sucesso")
+            else:
+                print("Aviso: Arquivo sounds/shock.mp3 não encontrado")
+
         except pygame.error as e:
             print(f"Erro ao carregar efeitos sonoros: {e}")
 

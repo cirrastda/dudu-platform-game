@@ -1313,6 +1313,105 @@ class Update:
                                             g.state = GameState.GAME_OVER
                                         g.start_game_over_hold()
                         break
+                # Geradores e raios (37-40)
+                if 37 <= g.current_level <= 40:
+                    if not hasattr(g, 'generators') or g.generators is None or getattr(g, 'generators_level', None) != g.current_level:
+                        try:
+                            # Criados pelo gerador estático; se não, inicializar agora a partir das plataformas
+                            from internal.engine.level.generator.static import StaticLevelGenerator
+                            StaticLevelGenerator.drawGenerators(g, [(p.x, p.y, p.width, p.height) for p in g.platforms])
+                            g.generators_level = g.current_level
+                        except Exception:
+                            g.generators = []
+                            g.generators_level = g.current_level
+                    # Atualizar geradores
+                    for gen in getattr(g, 'generators', []):
+                        try:
+                            gen.update()
+                        except Exception:
+                            pass
+                    # Controle de disparo dos raios
+                    if not hasattr(g, 'lightning_timer'):
+                        g.lightning_timer = 0
+                        g.lightning_active = False
+                        g.lightnings = []
+                    g.lightning_timer = (g.lightning_timer + 1) % 240
+                    activate_duration = 90
+                    should_activate = g.lightning_timer < activate_duration
+                    if should_activate and not g.lightning_active:
+                        g.lightning_active = True
+                        # Criar raios alinhados entre geradores
+                        rows = {}
+                        cols = {}
+                        for gen in g.generators:
+                            rows.setdefault(gen.y, []).append(gen)
+                            cols.setdefault(gen.x, []).append(gen)
+                        g.lightnings = []
+                        h_img = getattr(g.image, 'lightning_h_img', None)
+                        v_img = getattr(g.image, 'lightning_v_img', None)
+                        # Conectar horizontalmente por linhas
+                        for y, gens in rows.items():
+                            gens_sorted = sorted(gens, key=lambda gg: gg.x)
+                            for i in range(len(gens_sorted) - 1):
+                                a = gens_sorted[i]
+                                b = gens_sorted[i + 1]
+                                yb = y + a.height // 2 - (h_img.get_height() // 2 if h_img else 4)
+                                start = (a.x + a.width, yb)
+                                end = (b.x, yb)
+                                lb = __import__('internal.resources.lightning', fromlist=['LightningBeam']).LightningBeam(start, end, 'h', h_img)
+                                lb.build_segments([p.rect for p in g.platforms])
+                                g.lightnings.append(lb)
+                        # Conectar verticalmente por colunas
+                        for x, gens in cols.items():
+                            gens_sorted = sorted(gens, key=lambda gg: gg.y)
+                            for i in range(len(gens_sorted) - 1):
+                                a = gens_sorted[i]
+                                b = gens_sorted[i + 1]
+                                xb = x + a.width // 2 - (v_img.get_width() // 2 if v_img else 4)
+                                start = (xb, a.y + a.height)
+                                end = (xb, b.y)
+                                lb = __import__('internal.resources.lightning', fromlist=['LightningBeam']).LightningBeam(start, end, 'v', v_img)
+                                lb.build_segments([p.rect for p in g.platforms])
+                                g.lightnings.append(lb)
+                        # Tocar som de choque
+                        try:
+                            g.sound_effects.play_sound_effect('shock')
+                        except Exception:
+                            pass
+                    elif not should_activate and g.lightning_active:
+                        g.lightning_active = False
+                        g.lightnings = []
+                    # Atualizar raios ativos
+                    for beam in getattr(g, 'lightnings', []):
+                        try:
+                            beam.update()
+                        except Exception:
+                            pass
+                    # Colisão com raios
+                    if g.lightning_active:
+                        player_rect = g.player.get_airborne_collision_rect()
+                        for beam in g.lightnings:
+                            # Colidir apenas com segmentos válidos, nunca sobre plataformas
+                            hit = any(player_rect.colliderect(seg) for seg in getattr(beam, 'segments', []))
+                            if hit:
+                                if g.player.is_invulnerable:
+                                    break
+                                if not g.player.is_hit:
+                                    if getattr(g, 'shield_active', False):
+                                        g.shield_active = False
+                                        g.player.take_hit()
+                                        g.sound_effects.play_sound_effect('player-hit')
+                                    else:
+                                        g.player.take_hit()
+                                        g.sound_effects.play_sound_effect('player-hit')
+                                        g.lives -= 1
+                                        if g.lives <= 0:
+                                            if g.ranking_manager.is_high_score(g.score):
+                                                g.state = GameState.ENTER_NAME
+                                            else:
+                                                g.state = GameState.GAME_OVER
+                                            g.start_game_over_hold()
+                                break
             else:
                 for disk in g.flying_disks[:]:
                     distance_x = abs(disk.x - g.player.x)

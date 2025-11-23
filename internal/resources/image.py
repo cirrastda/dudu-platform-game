@@ -412,6 +412,28 @@ class Image:
                 print(f"Erro ao carregar imagem da gota de lava: {e}")
                 self.lava_drop_img = None
 
+            # Geradores e raios (fases 37-40)
+            try:
+                self.generator_img = cache.get_image(
+                    "imagens/elementos/gerador.png", (32, 32)
+                )
+            except pygame.error:
+                self.generator_img = None
+            try:
+                base_h = cache.get_image("imagens/elementos/raioHorizontal.png")
+                self.lightning_h_img = (
+                    pygame.transform.scale(base_h, (12, 6)) if base_h else None
+                )
+            except pygame.error:
+                self.lightning_h_img = None
+            try:
+                base_v = cache.get_image("imagens/elementos/raioVertical.png")
+                self.lightning_v_img = (
+                    pygame.transform.scale(base_v, (6, 12)) if base_v else None
+                )
+            except pygame.error:
+                self.lightning_v_img = None
+
             # Carregar imagem de vida extra (item colecionável)
             self.extra_life_img = cache.get_image(
                 "imagens/elementos/vida.png", (24, 24)
