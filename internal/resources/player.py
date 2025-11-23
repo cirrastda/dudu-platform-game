@@ -51,16 +51,10 @@ class Player:
         self.load_sprites()
 
     def get_airborne_collision_rect(self):
-        """Retângulo de colisão efetivo contra inimigos voadores.
-
-        Quando abaixado, reduzimos a área inferior em alguns pixels para
-        evitar colisões por baixo sem contato visual aparente.
-        """
         r = self.rect.copy()
         if self.is_crouching:
-            bottom_margin = 8  # margem inferior ignorada quando agachado
-            # Reduzir apenas a altura para subir a base (sem mover o topo)
-            r.height = max(10, r.height - bottom_margin)
+            bottom_trim = 8
+            r.height = max(10, r.height - bottom_trim)
         return r
 
     def load_sprites(self):
@@ -389,6 +383,8 @@ class Player:
         # Atualizar rect
         self.rect.x = self.x
         self.rect.y = self.y
+        self.rect.width = self.width
+        self.rect.height = self.height
 
         # Verificar colisões com plataformas
         self.prev_vel_y = self.vel_y  # Salvar velocidade anterior

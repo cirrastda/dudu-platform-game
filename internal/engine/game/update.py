@@ -1152,7 +1152,8 @@ class Update:
                     ):
                         g.birds_dodged.add(bat.id)
                         g.add_score(15)
-                    if g.player.rect.colliderect(bat.rect):
+                    player_rect = g.player.get_airborne_collision_rect()
+                    if player_rect.colliderect(bat.rect):
                         if hasattr(bat, "is_dead") and bat.is_dead:
                             continue
                         if g.player.is_invulnerable:
@@ -1218,7 +1219,8 @@ class Update:
                     ):
                         g.birds_dodged.add(star.id)
                         g.add_score(45)
-                    if g.player.rect.colliderect(star.rect):
+                    player_rect = g.player.get_airborne_collision_rect()
+                    if player_rect.colliderect(star.rect):
                         if hasattr(star, "is_dead") and star.is_dead:
                             continue
                         if g.player.is_invulnerable:
