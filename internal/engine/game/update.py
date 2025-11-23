@@ -11,6 +11,7 @@ from internal.resources.enemies.fire import Fire
 from internal.resources.enemies.shooting_star import ShootingStar
 from internal.resources.enemies.raindrop import Raindrop
 from internal.resources.enemies.lava_drop import LavaDrop
+from internal.resources.enemies.meteor import Meteor
 
 
 class Update:
@@ -416,6 +417,17 @@ class Update:
                         )
                         g.flying_disks.append(FlyingDisk(disk_x, disk_y, disk_images))
                     g.flying_disk_spawn_timer = 0
+                if 47 <= g.current_level <= 50:
+                    g.meteor_spawn_timer += 1
+                    if g.meteor_spawn_timer >= getattr(g, "meteor_spawn_interval", 999999):
+                        import random
+
+                        for _ in range(getattr(g, "meteors_per_spawn", 0)):
+                            met_y = random.randint(-100, 60)
+                            met_x = g.camera_x + random.randint(0, WIDTH)
+                            met_img = getattr(g.image, "meteor_img", None)
+                            g.meteors.append(Meteor(met_x, met_y, met_img))
+                        g.meteor_spawn_timer = 0
             else:
                 # Spawn de novos foguinhos (nível 51)
                 if g.current_level == 51:
@@ -527,6 +539,15 @@ class Update:
                         ):
                             visible_disks.append(disk)
                 g.flying_disks = visible_disks
+                visible_meteors = []
+                for met in getattr(g, "meteors", []):
+                    if met.update(g.camera_x):
+                        if (
+                            met.x > g.camera_x - 200
+                            and met.x < g.camera_x + WIDTH + 200
+                        ):
+                            visible_meteors.append(met)
+                g.meteors = visible_meteors
             else:
                 if g.current_level == 51:
                     visible_fires = []
@@ -726,6 +747,23 @@ class Update:
                             g.return_bullet_to_pool(bullet)
                             g.sound_effects.play_sound_effect("explosion")
                             g.add_score(90)
+                            break
+                    for met in getattr(g, "meteors", [])[:]:
+                        if getattr(met, "is_dead", False):
+                            continue
+                        if bullet.rect.colliderect(met.rect):
+                            if bullet in g.player.bullets:
+                                g.player.bullets.remove(bullet)
+                            g.return_bullet_to_pool(bullet)
+                            met.die()
+                            explosion = g.get_pooled_explosion(
+                                met.x, met.y, g.image.explosion_image
+                            )
+                            g.explosions.append(explosion)
+                            if met in g.meteors:
+                                g.meteors.remove(met)
+                            g.sound_effects.play_sound_effect("explosion")
+                            g.add_score(249)
                             break
 
             # Colisões tiros vs tartarugas/aranhas
@@ -1479,6 +1517,33 @@ class Update:
                                     else:
                                         g.state = GameState.GAME_OVER
                                     g.start_game_over_hold()
+                        break
+
+            # Colisão com meteoro (47-50): meteoro NÃO é destruído por colisão com jogador
+            if 47 <= g.current_level <= 50:
+                for met in getattr(g, "meteors", [])[:]:
+                    player_rect = g.player.get_airborne_collision_rect()
+                    if player_rect.colliderect(met.rect):
+                        if getattr(met, "is_dead", False):
+                            continue
+                        if g.player.is_invulnerable:
+                            # Ignora meteoro; apenas o tiro do jogador pode destruí-lo
+                            pass
+                        else:
+                            if not g.player.is_hit:
+                                if getattr(g, "shield_active", False):
+                                    g.shield_active = False
+                                    # Meteoro permanece
+                                else:
+                                    g.player.take_hit()
+                                    g.sound_effects.play_sound_effect("player-hit")
+                                    g.lives -= 1
+                                    if g.lives <= 0:
+                                        if g.ranking_manager.is_high_score(g.score):
+                                            g.state = GameState.ENTER_NAME
+                                        else:
+                                            g.state = GameState.GAME_OVER
+                                        g.start_game_over_hold()
                         break
 
             # Colisão com tartarugas/aranhas

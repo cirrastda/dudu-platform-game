@@ -107,6 +107,22 @@ class Image:
                 print(f"Erro ao carregar imagem da estrela cadente: {e}")
                 self.shooting_star_img = None
 
+            try:
+                self.meteor_img = None
+                path = "imagens/elementos/meteoro.png"
+                try:
+                    img = cache.get_image(path, (30, 30))
+                except Exception:
+                    img = None
+                if img:
+                    self.meteor_img = img
+                if self.meteor_img is None:
+                    surf = pygame.Surface((30, 30), pygame.SRCALPHA)
+                    pygame.draw.circle(surf, (160, 160, 160), (15, 15), 12)
+                    self.meteor_img = surf
+            except Exception:
+                self.meteor_img = None
+
             # Carregar imagens das tartarugas usando cache
             try:
                 self.turtle_left1 = cache.get_image(

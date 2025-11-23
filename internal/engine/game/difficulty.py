@@ -151,6 +151,16 @@ class DifficultyOps:
                 60,
                 int(base_interval * interval_factor),
             )
+            star_base_qty = 1
+            star_base_interval = 120
+            g.meteors_per_spawn = max(
+                1,
+                min(2, int(round(star_base_qty * qty_factor))),
+            )
+            g.meteor_spawn_interval = max(
+                80,
+                int(star_base_interval * interval_factor),
+            )
         else:
             # Foguinhos (nível 51): valores base fixos com dificuldade
             base_qty = 1

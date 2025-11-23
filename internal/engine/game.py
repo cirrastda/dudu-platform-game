@@ -417,6 +417,11 @@ class Game:
         self.flying_disks_per_spawn = 1
         self.flying_disk_spawn_interval = 150
 
+        self.meteors = []
+        self.meteor_spawn_timer = 0
+        self.meteors_per_spawn = 0
+        self.meteor_spawn_interval = 999999
+
         # Inicializar variáveis de robôs (níveis 31-40)
         self.robots = []
         self.orphan_missiles = (

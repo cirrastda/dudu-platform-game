@@ -371,6 +371,15 @@ class Draw:
                         # Restaurar posição original
                         disk.x = original_disk_x
 
+                if 47 <= game.current_level <= 50:
+                    for met in getattr(game, "meteors", []):
+                        met_x = met.x - game.camera_x
+                        if met_x > -60 and met_x < WIDTH + 20:
+                            original_met_x = met.x
+                            met.x = met_x
+                            met.draw(game.screen)
+                            met.x = original_met_x
+
             # Desenhar foguinhos com offset da câmera (nível 51)
             if game.current_level == 51:
                 for fire in game.fires:
@@ -411,7 +420,7 @@ class Draw:
                         # Restaurar posição original
                         spider.x = original_spider_x
 
-            # Desenhar robôs e seus mísseis com offset da câmera (níveis 31-40)
+            # Desenhar robôs com offset da câmera (níveis 31-40)
             if 31 <= game.current_level <= 40 and not game.player.is_being_abducted:
                 for robot in game.robots:
                     robot_x = robot.x - game.camera_x
@@ -425,20 +434,15 @@ class Draw:
                         # Restaurar posição original
                         robot.x = original_robot_x
 
-                        # Desenhar mísseis do robô com offset da câmera
-                        for missile in robot.missiles:
-                            missile_x = missile.x - game.camera_x
-                            if (
-                                missile_x > -20 and missile_x < WIDTH + 20
-                            ):  # Só visíveis
-                                # Salvar posição original do míssil
-                                original_missile_x = missile.x
-                                # Ajustar posição para câmera
-                                missile.x = missile_x
-                                # Chamar método draw do míssil
-                                missile.draw(game.screen)
-                                # Restaurar posição original
-                                missile.x = original_missile_x
+                # Desenhar mísseis dos robôs com offset da câmera, mesmo se robô invisível
+                for robot in game.robots:
+                    for missile in robot.missiles:
+                        missile_x = missile.x - game.camera_x
+                        if missile_x > -20 and missile_x < WIDTH + 20:
+                            original_missile_x = missile.x
+                            missile.x = missile_x
+                            missile.draw(game.screen)
+                            missile.x = original_missile_x
 
                 # Desenhar mísseis órfãos (de robôs mortos) com offset da câmera
                 for missile in game.orphan_missiles:
@@ -453,7 +457,7 @@ class Draw:
                         # Restaurar posição original
                         missile.x = original_missile_x
 
-            # Desenhar aliens e seus lasers com offset da câmera (níveis 41-50)
+            # Desenhar aliens com offset da câmera (níveis 41-50)
             if 41 <= game.current_level <= 50 and not game.player.is_being_abducted:
                 for alien in game.aliens:
                     alien_x = alien.x - game.camera_x
@@ -467,18 +471,15 @@ class Draw:
                         # Restaurar posição original
                         alien.x = original_alien_x
 
-                        # Desenhar lasers do alien com offset da câmera
-                        for laser in alien.lasers:
-                            laser_x = laser.x - game.camera_x
-                            if laser_x > -20 and laser_x < WIDTH + 20:  # Só visíveis
-                                # Salvar posição original do laser
-                                original_laser_x = laser.x
-                                # Ajustar posição para câmera
-                                laser.x = laser_x
-                                # Chamar método draw do laser
-                                laser.draw(game.screen)
-                                # Restaurar posição original
-                                laser.x = original_laser_x
+                # Desenhar lasers dos aliens com offset da câmera, mesmo se alien invisível
+                for alien in game.aliens:
+                    for laser in alien.lasers:
+                        laser_x = laser.x - game.camera_x
+                        if laser_x > -20 and laser_x < WIDTH + 20:
+                            original_laser_x = laser.x
+                            laser.x = laser_x
+                            laser.draw(game.screen)
+                            laser.x = original_laser_x
 
                 # Desenhar lasers órfãos (de aliens mortos) com offset da câmera
                 for laser in game.orphan_lasers:

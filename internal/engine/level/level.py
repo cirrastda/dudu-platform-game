@@ -259,6 +259,8 @@ class Level:
         # Reinicializar sistema de flying-disk (níveis 41-50)
         game.flying_disks = []
         game.flying_disk_spawn_timer = 0
+        game.meteors = []
+        game.meteor_spawn_timer = 0
 
         # Atualizar dificuldade dos pássaros para o nível atual
         game.update_bird_difficulty()
