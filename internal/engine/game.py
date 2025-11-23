@@ -76,6 +76,12 @@ except Exception:
 
 # Carregar configurações
 ENV_CONFIG = load_env_config()
+# Em ambiente de teste (pytest), ignorar .env carregado para os testes
+try:
+    if "pytest" in sys.modules:
+        ENV_CONFIG = {"environment": "production"}
+except Exception:
+    pass
 
 
 class Game:
@@ -191,6 +197,10 @@ class Game:
                             self.difficulty_selected = 2
                         else:
                             self.difficulty_selected = 1
+                # Ativar escudo inicial quando flag shield=on estiver definida no .env
+                raw_shield = str(self.env_config.get("shield", "")).strip().lower()
+                if raw_shield in ("on", "1", "true", "yes"):
+                    self.shield_active = True
         except Exception:
             # Não interromper inicialização do jogo caso .env esteja inválido
             pass
@@ -321,6 +331,12 @@ class Game:
         self.raindrop_spawn_timer = 0
         self.raindrops_per_spawn = 1
         self.raindrop_spawn_interval = 150
+
+        # Sistema de gotas de lava (fases 27-30)
+        self.lava_drops = []
+        self.lavadrop_spawn_timer = 0
+        self.lavadrops_per_spawn = 0
+        self.lavadrop_spawn_interval = 999999
 
         # Sistema de tartarugas
         self.turtles = []
@@ -484,6 +500,7 @@ class Game:
         self.fire_image = getattr(self.image, "fire_image", None)
         self.extra_life_img = getattr(self.image, "extra_life_img", None)
         self.explosion_image = getattr(self.image, "explosion_image", None)
+        self.lava_drop_img = getattr(self.image, "lava_drop_img", None)
         # Imagens dos power-ups e bolha do escudo
         self.powerup_invincibility_img = getattr(
             self.image, "powerup_invincibility_img", None

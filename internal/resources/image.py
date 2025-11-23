@@ -404,6 +404,14 @@ class Image:
                 print(f"Erro ao carregar imagem da gota de chuva: {e}")
                 self.raindrop_img = None
 
+            try:
+                self.lava_drop_img = cache.get_image(
+                    "imagens/elementos/lava.png", (20, 20)
+                )
+            except pygame.error as e:
+                print(f"Erro ao carregar imagem da gota de lava: {e}")
+                self.lava_drop_img = None
+
             # Carregar imagem de vida extra (item colecionável)
             self.extra_life_img = cache.get_image(
                 "imagens/elementos/vida.png", (24, 24)

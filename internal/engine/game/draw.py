@@ -297,6 +297,14 @@ class Draw:
                         bat.draw(game.screen)
                         # Restaurar posição original
                         bat.x = original_bat_x
+                if 27 <= game.current_level <= 30:
+                    for drop in getattr(game, "lava_drops", []):
+                        drop_x = drop.x - game.camera_x
+                        if drop_x > -30 and drop_x < WIDTH + 30:
+                            original_drop_x = drop.x
+                            drop.x = drop_x
+                            drop.draw(game.screen, game.camera_x)
+                            drop.x = original_drop_x
                 # Shooting stars (21-30)
                 if hasattr(game, "shooting_stars"):
                     for star in game.shooting_stars:

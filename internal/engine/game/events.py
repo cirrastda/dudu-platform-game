@@ -209,52 +209,102 @@ class Events:
                         return False
 
             elif event.type == pygame.JOYBUTTONDOWN:
-                if game.joystick_connected:
+                # Mapear botões para cheat tokens apenas se joystick estiver presente
+                if getattr(game, "joystick_connected", False):
                     if event.button == 1:
                         game._process_cheat_token("B")
                     elif event.button == 0:
                         game._process_cheat_token("A")
-                    if game.state == GameState.SPLASH:
-                        if env.get("environment", "production") == "development":
-                            game.state = GameState.TITLE_SCREEN
-                    elif game.state == GameState.TITLE_SCREEN:
-                        game.state = GameState.OPENING_VIDEO
-                        if game.video_player.load_video("videos/opening.mp4"):
-                            game.video_player.start_playback()
+                if game.state == GameState.SPLASH:
+                    if env.get("environment", "production") == "development":
+                        game.state = GameState.TITLE_SCREEN
+                elif game.state == GameState.TITLE_SCREEN:
+                    game.state = GameState.OPENING_VIDEO
+                    if game.video_player.load_video("videos/opening.mp4"):
+                        game.video_player.start_playback()
+                    else:
+                        game.state = GameState.MAIN_MENU
+                        if not game.music_started:
+                            game.music.play_menu_music(game)
+                            game.music_started = True
+                elif game.state == GameState.OPENING_VIDEO:
+                    pass
+                elif game.state == GameState.MAIN_MENU:
+                    if event.button == 0 or event.button in [6, 7, 8, 9]:
+                        game.handle_menu_selection()
+                elif game.state == GameState.SELECT_DIFFICULTY:
+                    if event.button == 0 or event.button in [6, 7, 8, 9]:
+                        if game.difficulty_selected == 0:
+                            game.difficulty = Difficulty.EASY
+                        elif game.difficulty_selected == 2:
+                            game.difficulty = Difficulty.HARD
+                        else:
+                            game.difficulty = Difficulty.NORMAL
+                        (
+                            game.extra_life_milestones,
+                            game.extra_life_increment_after_milestones,
+                        ) = game.get_extra_life_milestones_and_increment()
+                        game.next_extra_life_score = game.extra_life_milestones[0]
+                        game.extra_lives_earned = 0
+                        if (
+                            env.get("environment") == "development"
+                            and "initial-stage" in env
+                        ):
+                            try:
+                                game.current_level = int(env["initial-stage"])
+                                if game.current_level < 1 or game.current_level > 50:
+                                    game.current_level = 1
+                            except (ValueError, TypeError):
+                                game.current_level = 1
+                        else:
+                            game.current_level = 1
+                        game.score = 0
+                        game.platforms_jumped.clear()
+                        game.birds_dodged.clear()
+                        game.player_name = ""
+                        game.max_lives = game.get_initial_lives()
+                        game.lives = game.max_lives
+                        if hasattr(game, "collected_extra_life_levels"):
+                            game.collected_extra_life_levels.clear()
+                        game.state = GameState.PLAYING
+                        Level.init_level(game)
+                        game.music.play_level_music(game, game.current_level)
+                    elif event.button == 1:
+                        game.state = GameState.MAIN_MENU
+                elif game.state == GameState.FIM_SCREEN:
+                    game.state = GameState.CREDITS
+                    game.credits_type = "ending"
+                    game.music.play_music("credits")
+                elif game.state == GameState.CREDITS:
+                    if game.credits_type == "menu" and (
+                        event.button == 1 or event.button in [6, 7, 8, 9]
+                    ):
+                        game.state = GameState.MAIN_MENU
+                        return True
+                elif game.state == GameState.RECORDS:
+                    if event.button == 1 or event.button in [6, 7, 8, 9]:
+                        if game.previous_state_before_records:
+                            game.state = game.previous_state_before_records
+                            game.previous_state_before_records = None
                         else:
                             game.state = GameState.MAIN_MENU
-                            if not game.music_started:
-                                game.music.play_menu_music(game)
-                                game.music_started = True
-                    elif game.state == GameState.OPENING_VIDEO:
-                        pass
-                    elif game.state == GameState.MAIN_MENU:
-                        if event.button == 0 or event.button in [6, 7, 8, 9]:
-                            game.handle_menu_selection()
-                    elif game.state == GameState.SELECT_DIFFICULTY:
-                        if event.button == 0 or event.button in [6, 7, 8, 9]:
-                            if game.difficulty_selected == 0:
-                                game.difficulty = Difficulty.EASY
-                            elif game.difficulty_selected == 2:
-                                game.difficulty = Difficulty.HARD
-                            else:
-                                game.difficulty = Difficulty.NORMAL
-                            (
-                                game.extra_life_milestones,
-                                game.extra_life_increment_after_milestones,
-                            ) = game.get_extra_life_milestones_and_increment()
-                            game.next_extra_life_score = game.extra_life_milestones[0]
-                            game.extra_lives_earned = 0
+                elif game.state == GameState.SHOW_RANKING:
+                    if event.button == 1 or event.button in [6, 7, 8, 9]:
+                        if getattr(game, "previous_state_before_ranking", None):
+                            game.state = game.previous_state_before_ranking
+                            game.previous_state_before_ranking = None
+                        else:
+                            game.state = GameState.MAIN_MENU
+                elif game.state == GameState.GAME_OVER:
+                    if event.button == 0 or event.button in [6, 7, 8, 9]:
+                        if game.game_over_selected == 0:
                             if (
                                 env.get("environment") == "development"
                                 and "initial-stage" in env
                             ):
                                 try:
                                     game.current_level = int(env["initial-stage"])
-                                    if (
-                                        game.current_level < 1
-                                        or game.current_level > 50
-                                    ):
+                                    if game.current_level < 1 or game.current_level > 50:
                                         game.current_level = 1
                                 except (ValueError, TypeError):
                                     game.current_level = 1
@@ -263,115 +313,60 @@ class Events:
                             game.score = 0
                             game.platforms_jumped.clear()
                             game.birds_dodged.clear()
-                            game.player_name = ""
-                            game.max_lives = game.get_initial_lives()
                             game.lives = game.max_lives
+                            game.player_name = ""
+                            game.game_over_selected = 0
                             if hasattr(game, "collected_extra_life_levels"):
                                 game.collected_extra_life_levels.clear()
                             game.state = GameState.PLAYING
                             Level.init_level(game)
                             game.music.play_level_music(game, game.current_level)
-                        elif event.button == 1:
-                            game.state = GameState.MAIN_MENU
-                    elif game.state == GameState.FIM_SCREEN:
-                        game.state = GameState.CREDITS
-                        game.credits_type = "ending"
-                        game.music.play_music("credits")
-                    elif game.state == GameState.CREDITS:
-                        if game.credits_type == "menu" and (
-                            event.button == 1 or event.button in [6, 7, 8, 9]
-                        ):
-                            game.state = GameState.MAIN_MENU
-                            return True
-                    elif game.state == GameState.RECORDS:
-                        if event.button == 1 or event.button in [6, 7, 8, 9]:
-                            if game.previous_state_before_records:
-                                game.state = game.previous_state_before_records
-                                game.previous_state_before_records = None
-                            else:
-                                game.state = GameState.MAIN_MENU
-                    elif game.state == GameState.SHOW_RANKING:
-                        if event.button == 1 or event.button in [6, 7, 8, 9]:
-                            if getattr(game, "previous_state_before_ranking", None):
-                                game.state = game.previous_state_before_ranking
-                                game.previous_state_before_ranking = None
-                            else:
-                                game.state = GameState.MAIN_MENU
-                    elif game.state == GameState.GAME_OVER:
-                        if event.button == 0 or event.button in [6, 7, 8, 9]:
-                            if game.game_over_selected == 0:
-                                if (
-                                    env.get("environment") == "development"
-                                    and "initial-stage" in env
-                                ):
-                                    try:
-                                        game.current_level = int(env["initial-stage"])
-                                        if (
-                                            game.current_level < 1
-                                            or game.current_level > 50
-                                        ):
-                                            game.current_level = 1
-                                    except (ValueError, TypeError):
-                                        game.current_level = 1
-                                else:
-                                    game.current_level = 1
-                                game.score = 0
-                                game.platforms_jumped.clear()
-                                game.birds_dodged.clear()
-                                game.lives = game.max_lives
-                                game.player_name = ""
-                                game.game_over_selected = 0
-                                if hasattr(game, "collected_extra_life_levels"):
-                                    game.collected_extra_life_levels.clear()
-                                game.state = GameState.PLAYING
-                                Level.init_level(game)
-                                game.music.play_level_music(game, game.current_level)
-                            elif game.game_over_selected == 1:
-                                game.previous_state_before_records = GameState.GAME_OVER
-                                game.state = GameState.RECORDS
-                            elif game.game_over_selected == 2:
-                                return False
-                    elif event.button == 0:
-                        keys = pygame.key.get_pressed()
-                        keys = list(keys)
-                        keys[pygame.K_SPACE] = True
-                        keys = tuple(keys)
-                    elif event.button == 1:
-                        keys = pygame.key.get_pressed()
-                        keys = list(keys)
-                        keys[pygame.K_SPACE] = True
-                        keys = tuple(keys)
-                    elif event.button in [6, 7, 8, 9]:
-                        if game.state == GameState.ENTER_NAME:
-                            if game.player_name.strip():
-                                game.ranking_manager.add_score(
-                                    game.player_name.strip(), game.score
-                                )
-                                game.previous_state_before_ranking = GameState.GAME_OVER
-                                game.state = GameState.SHOW_RANKING
-                        elif game.state in (
-                            GameState.GAME_OVER,
-                            GameState.VICTORY,
-                            GameState.SHOW_RANKING,
-                        ):
-                            game.current_level = 1
-                            game.score = 0
-                            game.platforms_jumped.clear()
-                            game.birds_dodged.clear()
-                            game.lives = game.max_lives
-                            game.player_name = ""
-                            if hasattr(game, "collected_extra_life_levels"):
-                                game.collected_extra_life_levels.clear()
-                            game.state = GameState.PLAYING
-                            Level.init_level(game)
-                    elif event.button == 1 and game.state == GameState.SHOW_RANKING:
-                        if game.previous_state_before_ranking:
-                            game.state = game.previous_state_before_ranking
-                            game.previous_state_before_ranking = None
-                        else:
-                            game.state = GameState.GAME_OVER
+                        elif game.game_over_selected == 1:
+                            game.previous_state_before_records = GameState.GAME_OVER
+                            game.state = GameState.RECORDS
+                        elif game.game_over_selected == 2:
+                            return False
+                elif event.button == 0:
+                    keys = pygame.key.get_pressed()
+                    keys = list(keys)
+                    keys[pygame.K_SPACE] = True
+                    keys = tuple(keys)
+                elif event.button == 1:
+                    keys = pygame.key.get_pressed()
+                    keys = list(keys)
+                    keys[pygame.K_SPACE] = True
+                    keys = tuple(keys)
+                elif event.button in [6, 7, 8, 9]:
+                    if game.state == GameState.ENTER_NAME:
+                        if game.player_name.strip():
+                            game.ranking_manager.add_score(
+                                game.player_name.strip(), game.score
+                            )
+                            game.previous_state_before_ranking = GameState.GAME_OVER
+                            game.state = GameState.SHOW_RANKING
+                    elif game.state in (
+                        GameState.GAME_OVER,
+                        GameState.VICTORY,
+                        GameState.SHOW_RANKING,
+                    ):
+                        game.current_level = 1
+                        game.score = 0
+                        game.platforms_jumped.clear()
+                        game.birds_dodged.clear()
+                        game.lives = game.max_lives
+                        game.player_name = ""
+                        if hasattr(game, "collected_extra_life_levels"):
+                            game.collected_extra_life_levels.clear()
+                        game.state = GameState.PLAYING
+                        Level.init_level(game)
+                elif event.button == 1 and game.state == GameState.SHOW_RANKING:
+                    if game.previous_state_before_ranking:
+                        game.state = game.previous_state_before_ranking
+                        game.previous_state_before_ranking = None
+                    else:
+                        game.state = GameState.GAME_OVER
 
-        if game.joystick_connected:
+        if game.joystick_connected and getattr(game, "joystick", None):
             analog_vertical = 0
             analog_horizontal = 0
             if game.joystick.get_numaxes() >= 2:

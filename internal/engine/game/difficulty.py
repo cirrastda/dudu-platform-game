@@ -80,6 +80,19 @@ class DifficultyOps:
             g.shooting_stars_per_spawn = 0
             g.shooting_star_spawn_interval = 999999
             g.max_bats_visible = 8 * qty_factor
+            # Gotas de lava (fases 27–30): quantidade ajustada por dificuldade
+            if 27 <= g.current_level <= 30:
+                if diff == Difficulty.EASY:
+                    g.lavadrops_per_spawn = 2
+                elif diff == Difficulty.HARD:
+                    g.lavadrops_per_spawn = 4
+                else:
+                    g.lavadrops_per_spawn = 3
+                g.lavadrop_spawn_interval = max(60, int(base_interval * drop_interval_factor))
+                # Reduzir ainda mais a presença de morcegos na dificuldade EASY nas fases 27–30
+                if diff == Difficulty.EASY:
+                    g.bats_per_spawn = 1
+                    
         elif g.current_level <= 40:
             # Aviões: usar valores base fixos e aplicar dificuldade
             base_qty = 1

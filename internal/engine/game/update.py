@@ -10,6 +10,7 @@ from internal.resources.enemies.flying_disk import FlyingDisk
 from internal.resources.enemies.fire import Fire
 from internal.resources.enemies.shooting_star import ShootingStar
 from internal.resources.enemies.raindrop import Raindrop
+from internal.resources.enemies.lava_drop import LavaDrop
 
 
 class Update:
@@ -350,7 +351,21 @@ class Update:
                         )
                         g.bats.append(Bat(bat_x, bat_y, bat_images))
                     g.bat_spawn_timer = 0
-                # Shooting stars (níveis 21-30)
+                if 27 <= g.current_level <= 30:
+                    g.lavadrop_spawn_timer += 1
+                    if g.lavadrop_spawn_timer >= getattr(g, "lavadrop_spawn_interval", 999999):
+                        import random
+
+                        for i in range(getattr(g, "lavadrops_per_spawn", 0)):
+                            drop_x = g.camera_x + random.randint(0, WIDTH)
+                            drop_y = -20 - (i * 15)
+                            drop_img = (
+                                getattr(g.image, "lava_drop_img", None)
+                                if hasattr(g, "image")
+                                else None
+                            )
+                            g.lava_drops.append(LavaDrop(drop_x, drop_y, drop_img))
+                        g.lavadrop_spawn_timer = 0
                 g.shooting_star_spawn_timer += 1
                 if g.shooting_star_spawn_timer >= getattr(
                     g, "shooting_star_spawn_interval", 999999
@@ -473,7 +488,16 @@ class Update:
                         ):
                             visible_bats.append(bat)
                 g.bats = visible_bats
-                # Shooting stars update/culling
+                if 27 <= g.current_level <= 30:
+                    visible_lava = []
+                    for drop in getattr(g, "lava_drops", []):
+                        if drop.update():
+                            if (
+                                drop.x > g.camera_x - 100
+                                and drop.x < g.camera_x + WIDTH + 100
+                            ):
+                                visible_lava.append(drop)
+                    g.lava_drops = visible_lava
                 visible_stars = []
                 for star in getattr(g, "shooting_stars", []):
                     if star.update(g.camera_x):
@@ -1161,6 +1185,27 @@ class Update:
                                             g.state = GameState.GAME_OVER
                                     g.start_game_over_hold()
                         break
+                if 27 <= g.current_level <= 30:
+                    for drop in getattr(g, "lava_drops", [])[:]:
+                        if g.player.rect.colliderect(drop.rect):
+                            if g.player.is_invulnerable:
+                                pass
+                            else:
+                                if not g.player.is_hit:
+                                    if getattr(g, "shield_active", False):
+                                        g.shield_active = False
+                                        g.player.take_hit()
+                                        g.sound_effects.play_sound_effect("player-hit")
+                                    else:
+                                        g.player.take_hit()
+                                        g.sound_effects.play_sound_effect("player-hit")
+                                        g.lives -= 1
+                                        if g.lives <= 0:
+                                            if g.ranking_manager.is_high_score(g.score):
+                                                g.state = GameState.ENTER_NAME
+                                            else:
+                                                g.state = GameState.GAME_OVER
+                                            g.start_game_over_hold()
                 # Shooting stars dodge/collision
                 for star in getattr(g, "shooting_stars", [])[:]:
                     distance_x = abs(star.x - g.player.x)

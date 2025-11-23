@@ -243,6 +243,8 @@ class Level:
         # Reinicializar shooting stars (21-30)
         game.shooting_stars = []
         game.shooting_star_spawn_timer = 0
+        game.lava_drops = []
+        game.lavadrop_spawn_timer = 0
         # Reinicializar sistema de tartarugas
         game.turtles = []
         # Reinicializar sistema de aranhas
