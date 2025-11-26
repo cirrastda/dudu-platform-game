@@ -158,6 +158,16 @@ class Info:
             img = getattr(game, "powerup_shield_img", None)
             if isinstance(img, pygame.Surface):
                 powerup_icons.append(img)
+        # Tempo (lentidão) ativo
+        if getattr(game, "tempo_active", False):
+            img = getattr(game, "powerup_tempo_img", None)
+            if isinstance(img, pygame.Surface):
+                powerup_icons.append(img)
+        # SuperTiro ativo
+        if getattr(game, "super_shot_active", False):
+            img = getattr(game, "powerup_super_shot_img", None)
+            if isinstance(img, pygame.Surface):
+                powerup_icons.append(img)
 
         if powerup_icons:
             # Escalar ícones para tamanho do HUD

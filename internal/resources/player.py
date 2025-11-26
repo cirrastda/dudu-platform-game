@@ -265,29 +265,58 @@ class Player:
     def shoot(self, bullet_image=None, game=None):
         """Criar um novo tiro usando pool de objetos se disponível"""
         if self.shoot_cooldown <= 0:
-            # Determinar direção do tiro baseado no movimento
+            # Direção do tiro
             direction = 1 if self.vel_x >= 0 else -1
 
-            # Posição do tiro (centro do personagem)
-            bullet_x = self.x + self.width // 2
-            bullet_y = self.y + self.height // 2
-
-            # Criar tiro usando pool se disponível
-            if game and hasattr(game, "get_pooled_bullet"):
-                bullet = game.get_pooled_bullet(
-                    bullet_x, bullet_y, direction, bullet_image
-                )
+            # Posição base: saída à frente do personagem para não sobrepor sprite
+            if direction > 0:
+                bullet_x = self.rect.x + self.width
             else:
-                bullet = Bullet(bullet_x, bullet_y, direction, bullet_image)
-            self.bullets.append(bullet)
+                bullet_x = self.rect.x - 10
+            center_y = self.y + self.height // 2
 
-            # Resetar cooldown
+            # Configuração de rajada e velocidade
+            burst = 1
+            speed_factor = 1.0
+            if game and getattr(game, "super_shot_active", False):
+                burst = int(getattr(game, "super_shot_burst_count", 3))
+                speed_factor = float(getattr(game, "super_shot_speed_factor", 1.7))
+
+            offsets = []
+            if burst >= 3:
+                offsets = [-8, 0, 8]
+            elif burst == 2:
+                offsets = [-4, 4]
+            else:
+                offsets = [0]
+
+            # Criar tiros da rajada
+            for dy in offsets:
+                bullet_y = center_y + dy
+                bullet = None
+                if game and hasattr(game, "get_pooled_bullet"):
+                    try:
+                        bullet = game.get_pooled_bullet(
+                            bullet_x, bullet_y, direction, bullet_image
+                        )
+                    except Exception:
+                        bullet = None
+                if bullet is None:
+                    bullet = Bullet(bullet_x, bullet_y, direction, bullet_image)
+                try:
+                    # Definir velocidade explicitamente em vez de multiplicar
+                    base = 8
+                    bullet.speed = int(round(base * speed_factor)) if speed_factor > 1.0 else base
+                except Exception:
+                    pass
+                self.bullets.append(bullet)
+
+            # Resetar cooldown entre rajadas
             self.shoot_cooldown = self.max_shoot_cooldown
 
             # Disparar animação de tiro por alguns frames
             self.shooting_timer = 10
 
-            # Retornar sinal de que atirou
             return True
         return False
 

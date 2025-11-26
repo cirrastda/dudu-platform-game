@@ -18,6 +18,31 @@ class Update:
     def __init__(self, game):
         self.game = game
 
+    def _apply_tempo_speed(self, obj):
+        g = self.game
+        if not getattr(g, "tempo_active", False):
+            return []
+        factor = getattr(g, "tempo_factor", 1.0)
+        if factor >= 0.999:
+            return []
+        changes = []
+        for attr in ("speed", "speed_x", "speed_y"):
+            if hasattr(obj, attr):
+                try:
+                    orig = getattr(obj, attr)
+                    setattr(obj, attr, orig * factor)
+                    changes.append((attr, orig))
+                except Exception:
+                    pass
+        return changes
+
+    def _restore_tempo_speed(self, obj, changes):
+        for attr, orig in changes:
+            try:
+                setattr(obj, attr, orig)
+            except Exception:
+                pass
+
     def update(self):
         g = self.game
         sfx = g.sound_effects
@@ -31,6 +56,21 @@ class Update:
             else:
                 # fim do hold
                 g.hold_active = False
+                # Encerrar efeitos de power-ups de tempo e super tiro
+                try:
+                    if getattr(g, "tempo_active", False):
+                        g.tempo_active = False
+                        g.tempo_frames_left = 0
+                        g.tempo_factor = 1.0
+                        try:
+                            g.music.exit_tempo_music(g)
+                        except Exception:
+                            pass
+                    if getattr(g, "super_shot_active", False):
+                        g.super_shot_active = False
+                        g.super_shot_frames_left = 0
+                except Exception:
+                    pass
                 # Restaurar volume da música se foi reduzido
                 try:
                     if g._music_duck_original_volume is not None:
@@ -76,7 +116,52 @@ class Update:
 
             # Durante hold de fim de fase, congelar jogabilidade para efeito de esmaecimento
             if getattr(g, "hold_active", False) and g.hold_type == "level_end":
+                # Encerrar imediatamente efeitos de tempo no fim da fase
+                try:
+                    if getattr(g, "tempo_active", False):
+                        g.tempo_active = False
+                        g.tempo_frames_left = 0
+                        g.tempo_factor = 1.0
+                    if getattr(g, "super_shot_active", False):
+                        g.super_shot_active = False
+                        g.super_shot_frames_left = 0
+                except Exception:
+                    pass
                 return
+
+        # Atualizar timer do power-up Tempo
+        try:
+            if getattr(g, "tempo_active", False):
+                # Entrar no modo música lenta se ainda não entrou
+                if not getattr(g, "_tempo_music_active", False):
+                    try:
+                        g.music.enter_tempo_music(g)
+                    except Exception:
+                        pass
+                if g.tempo_frames_left > 0:
+                    g.tempo_frames_left -= 1
+                # Encerrar no fim de fase
+                if g.hold_type == "level_end" or g.tempo_frames_left <= 0:
+                    g.tempo_active = False
+                    g.tempo_frames_left = 0
+                    g.tempo_factor = 1.0
+                    try:
+                        g.music.exit_tempo_music(g)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        # Atualizar timer do power-up SuperTiro
+        try:
+            if getattr(g, "super_shot_active", False):
+                if g.super_shot_frames_left > 0:
+                    g.super_shot_frames_left -= 1
+                if g.hold_type == "level_end" or g.super_shot_frames_left <= 0:
+                    g.super_shot_active = False
+                    g.super_shot_frames_left = 0
+        except Exception:
+            pass
 
         if g.state == GameState.SPLASH:
             # Atualizar timer do splash screen
@@ -305,9 +390,23 @@ class Update:
 
             # Fail-safe: atualizar projéteis órfãos
             if 31 <= g.current_level <= 40:
-                g.orphan_missiles = [m for m in g.orphan_missiles if m.update(g.camera_x)]
+                new_orphans = []
+                for m in g.orphan_missiles:
+                    _c = self._apply_tempo_speed(m)
+                    ok = m.update(g.camera_x)
+                    self._restore_tempo_speed(m, _c)
+                    if ok:
+                        new_orphans.append(m)
+                g.orphan_missiles = new_orphans
             if 41 <= g.current_level <= 50:
-                g.orphan_lasers = [laser for laser in g.orphan_lasers if laser.update(g.camera_x)]
+                new_lasers = []
+                for laser in g.orphan_lasers:
+                    _c = self._apply_tempo_speed(laser)
+                    ok = laser.update(g.camera_x)
+                    self._restore_tempo_speed(laser, _c)
+                    if ok:
+                        new_lasers.append(laser)
+                g.orphan_lasers = new_lasers
 
             # Sequência de captura do boss (nível 51) antecipada
             if (
@@ -1239,6 +1338,17 @@ class Update:
                             g.player.double_jump_frames_left = 70 * FPS
                         elif kind == "escudo":
                             g.shield_active = True
+                        elif kind == "tempo":
+                            g.tempo_active = True
+                            g.tempo_frames_left = 70 * FPS
+                            g.tempo_factor = 0.2
+                            try:
+                                g.music.enter_tempo_music(g)
+                            except Exception:
+                                pass
+                        elif kind == "supertiro":
+                            g.super_shot_active = True
+                            g.super_shot_frames_left = 70 * FPS
                         if hasattr(g, "sound_effects"):
                             try:
                                 g.sound_effects.play_sound_effect("collect")
@@ -1492,7 +1602,10 @@ class Update:
                 if g.current_level <= 16:
                     visible_birds = []
                     for bird in g.birds:
-                        if bird.update():
+                        _c = self._apply_tempo_speed(bird)
+                        ok = bird.update()
+                        self._restore_tempo_speed(bird, _c)
+                        if ok:
                             if (
                                 bird.x > g.camera_x - 200
                                 and bird.x < g.camera_x + WIDTH + 200
@@ -1503,7 +1616,10 @@ class Update:
                     if 7 <= g.current_level <= 10:
                         visible_drops = []
                         for drop in getattr(g, "raindrops", []):
-                            if drop.update():
+                            _c = self._apply_tempo_speed(drop)
+                            ok = drop.update()
+                            self._restore_tempo_speed(drop, _c)
+                            if ok:
                                 if (
                                     drop.x > g.camera_x - 100
                                     and drop.x < g.camera_x + WIDTH + 100
@@ -1514,7 +1630,10 @@ class Update:
                     # Morcegos e estrelas (17-20)
                     visible_bats = []
                     for bat in g.bats:
-                        if bat.update(g.camera_x):
+                        _c = self._apply_tempo_speed(bat)
+                        ok = bat.update(g.camera_x)
+                        self._restore_tempo_speed(bat, _c)
+                        if ok:
                             if (
                                 bat.x > g.camera_x - 200
                                 and bat.x < g.camera_x + WIDTH + 200
@@ -1524,7 +1643,10 @@ class Update:
 
                     visible_stars = []
                     for star in getattr(g, "shooting_stars", []):
-                        if star.update(g.camera_x):
+                        _c = self._apply_tempo_speed(star)
+                        ok = star.update(g.camera_x)
+                        self._restore_tempo_speed(star, _c)
+                        if ok:
                             if (
                                 star.x > g.camera_x - 200
                                 and star.x < g.camera_x + WIDTH + 200
@@ -1534,7 +1656,10 @@ class Update:
             elif g.current_level <= 30:
                 visible_bats = []
                 for bat in g.bats:
-                    if bat.update(g.camera_x):
+                    _c = self._apply_tempo_speed(bat)
+                    ok = bat.update(g.camera_x)
+                    self._restore_tempo_speed(bat, _c)
+                    if ok:
                         if (
                             bat.x > g.camera_x - 200
                             and bat.x < g.camera_x + WIDTH + 200
@@ -1544,7 +1669,10 @@ class Update:
                 if 27 <= g.current_level <= 30:
                     visible_lava = []
                     for drop in getattr(g, "lava_drops", []):
-                        if drop.update():
+                        _c = self._apply_tempo_speed(drop)
+                        ok = drop.update()
+                        self._restore_tempo_speed(drop, _c)
+                        if ok:
                             if (
                                 drop.x > g.camera_x - 100
                                 and drop.x < g.camera_x + WIDTH + 100
@@ -1555,7 +1683,10 @@ class Update:
             elif g.current_level <= 40:
                 visible_airplanes = []
                 for airplane in g.airplanes:
-                    if airplane.update(g.camera_x):
+                    _c = self._apply_tempo_speed(airplane)
+                    ok = airplane.update(g.camera_x)
+                    self._restore_tempo_speed(airplane, _c)
+                    if ok:
                         if (
                             airplane.x > g.camera_x - 200
                             and airplane.x < g.camera_x + WIDTH + 200
@@ -1565,7 +1696,10 @@ class Update:
             elif g.current_level <= 50:
                 visible_disks = []
                 for disk in g.flying_disks:
-                    if disk.update(g.camera_x):
+                    _c = self._apply_tempo_speed(disk)
+                    ok = disk.update(g.camera_x)
+                    self._restore_tempo_speed(disk, _c)
+                    if ok:
                         if (
                             disk.x > g.camera_x - 200
                             and disk.x < g.camera_x + WIDTH + 200
@@ -1574,7 +1708,10 @@ class Update:
                 g.flying_disks = visible_disks
                 visible_meteors = []
                 for met in getattr(g, "meteors", []):
-                    if met.update(g.camera_x):
+                    _c = self._apply_tempo_speed(met)
+                    ok = met.update(g.camera_x)
+                    self._restore_tempo_speed(met, _c)
+                    if ok:
                         if (
                             met.x > g.camera_x - 200
                             and met.x < g.camera_x + WIDTH + 200
@@ -1584,26 +1721,35 @@ class Update:
             else:
                 if g.current_level == 51:
                     visible_fires = []
-                    for fire in g.fires:
-                        if fire.update(g.camera_x):
-                            if (
-                                fire.x > g.camera_x - 200
-                                and fire.x < g.camera_x + WIDTH + 200
-                            ):
-                                visible_fires.append(fire)
+                for fire in g.fires:
+                    _c = self._apply_tempo_speed(fire)
+                    ok = fire.update(g.camera_x)
+                    self._restore_tempo_speed(fire, _c)
+                    if ok:
+                        if (
+                            fire.x > g.camera_x - 200
+                            and fire.x < g.camera_x + WIDTH + 200
+                        ):
+                            visible_fires.append(fire)
                     g.fires = visible_fires
 
             # Atualizar tartarugas/aranhas
             if g.current_level <= 20:
                 active_turtles = []
                 for turtle in g.turtles:
-                    if turtle.update():
+                    _c = self._apply_tempo_speed(turtle)
+                    ok = turtle.update()
+                    self._restore_tempo_speed(turtle, _c)
+                    if ok:
                         active_turtles.append(turtle)
                 g.turtles = active_turtles
             else:
                 active_spiders = []
                 for spider in g.spiders:
-                    if spider.update(g.camera_x):
+                    _c = self._apply_tempo_speed(spider)
+                    ok = spider.update(g.camera_x)
+                    self._restore_tempo_speed(spider, _c)
+                    if ok:
                         active_spiders.append(spider)
                 g.spiders = active_spiders
 
@@ -1611,7 +1757,17 @@ class Update:
             if 31 <= g.current_level <= 40:
                 active_robots = []
                 for robot in g.robots:
-                    if robot.update(g.camera_x):
+                    _c = self._apply_tempo_speed(robot)
+                    # Aplicar lentidão aos mísseis existentes antes de atualizar
+                    missile_changes = []
+                    for _m in getattr(robot, "missiles", []):
+                        missile_changes.append(self._apply_tempo_speed(_m))
+                    ok = robot.update(g.camera_x)
+                    # Restaurar velocidades dos mísseis que existiam
+                    for _m, ch in zip(getattr(robot, "missiles", []), missile_changes):
+                        self._restore_tempo_speed(_m, ch)
+                    self._restore_tempo_speed(robot, _c)
+                    if ok:
                         active_robots.append(robot)
                 g.robots = active_robots
 
@@ -1619,7 +1775,15 @@ class Update:
             if 41 <= g.current_level <= 50:
                 active_aliens = []
                 for alien in g.aliens:
-                    if alien.update(g.camera_x):
+                    _c = self._apply_tempo_speed(alien)
+                    laser_changes = []
+                    for _lz in getattr(alien, "lasers", []):
+                        laser_changes.append(self._apply_tempo_speed(_lz))
+                    ok = alien.update(g.camera_x)
+                    for _lz, ch in zip(getattr(alien, "lasers", []), laser_changes):
+                        self._restore_tempo_speed(_lz, ch)
+                    self._restore_tempo_speed(alien, _c)
+                    if ok:
                         active_aliens.append(alien)
                 g.aliens = active_aliens
 
@@ -1629,7 +1793,9 @@ class Update:
                 and hasattr(g, "boss_alien")
                 and g.boss_alien
             ):
+                _c = self._apply_tempo_speed(g.boss_alien)
                 g.boss_alien.update(g.player.x, g.camera_x)
+                self._restore_tempo_speed(g.boss_alien, _c)
 
                 if not g.boss_alien_captured and g.boss_alien.is_captured(
                     g.player.rect

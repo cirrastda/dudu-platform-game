@@ -492,6 +492,14 @@ class Image:
             self.powerup_shield_img = cache.get_image(
                 "imagens/elementos/protecao.png", (24, 24)
             )
+            # Power-up Tempo (lentidão dos inimigos)
+            self.powerup_tempo_img = cache.get_image(
+                "imagens/elementos/tempo.png", (24, 24)
+            )
+            # Power-up SuperTiro (rajada + velocidade dos tiros do jogador)
+            self.powerup_super_shot_img = cache.get_image(
+                "imagens/elementos/supertiro.png", (24, 24)
+            )
 
             # Bolha do escudo (overlay que envolve o personagem)
             # Carregada sem escala para permitir ajuste dinâmico conforme tamanho do player

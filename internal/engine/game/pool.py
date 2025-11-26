@@ -17,6 +17,11 @@ class Pool:
             bullet.image = image
             bullet.rect.x = x
             bullet.rect.y = y
+            # Resetar velocidade para o padrão antes de qualquer ajuste externo
+            try:
+                bullet.speed = 8
+            except Exception:
+                pass
             return bullet
         else:
             return Bullet(x, y, direction, image)

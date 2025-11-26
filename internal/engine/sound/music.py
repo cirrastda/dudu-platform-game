@@ -158,6 +158,60 @@ class Music:
         except Exception:
             pass
 
+    def enter_tempo_music(self, game):
+        """Simular música mais lenta durante o power-up Tempo.
+        Marca flag e tenta reconfigurar mixer com frequência menor.
+        """
+        try:
+            # Guardar estado
+            game._tempo_music_active = True
+            game._saved_level_music = getattr(game, "current_music", None)
+            # Tentar reduzir a taxa de amostragem ~12.5%
+            try:
+                import pygame
+                # Reiniciar mixer com frequência reduzida
+                try:
+                    pygame.mixer.quit()
+                except Exception:
+                    pass
+                try:
+                    pygame.mixer.pre_init(frequency=int(44100 * 0.875), size=-16, channels=2, buffer=1024)
+                except Exception:
+                    pass
+                pygame.mixer.init()
+            except Exception:
+                pass
+            # Recarregar música atual com volume levemente reduzido
+            prev = getattr(game, "current_music", None)
+            if prev and self.check_music_exists(prev):
+                full_music_path = resource_path(prev)
+                vol = max(0.4, game.music_volumes.get(prev, game.music_volume) * 0.8)
+                self.play(game, prev, full_music_path, vol)
+        except Exception:
+            pass
+
+    def exit_tempo_music(self, game):
+        """Restaurar configuração de música após fim do power-up Tempo."""
+        try:
+            game._tempo_music_active = False
+            # Restaurar mixer padrão
+            try:
+                import pygame
+                pygame.mixer.quit()
+                try:
+                    pygame.mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=1024)
+                except Exception:
+                    pass
+                pygame.mixer.init()
+            except Exception:
+                pass
+            prev = getattr(game, "current_music", None)
+            if prev and self.check_music_exists(prev):
+                full_music_path = resource_path(prev)
+                vol = game.music_volumes.get(prev, game.music_volume)
+                self.play(game, prev, full_music_path, vol)
+        except Exception:
+            pass
     def exit_invincibility_music(self, game):
         """Restaurar música do nível ao terminar invencibilidade."""
         try:

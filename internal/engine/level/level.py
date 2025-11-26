@@ -570,16 +570,22 @@ class Level:
         if lvl == 51:
             return kinds
         if diff == Difficulty.EASY:
-            cycle = ["invencibilidade", "pulo_duplo", "escudo"]
+            cycle = ["invencibilidade", "pulo_duplo", "escudo", "tempo", "supertiro"]
             kinds.append(cycle[(lvl - 1) % len(cycle)])
         elif diff == Difficulty.NORMAL:
             pos = (lvl - 1) % 10
-            if pos in (0, 5):
+            if pos == 0:
                 kinds.append("invencibilidade")
-            elif pos in (2, 7):
+            elif pos == 2:
                 kinds.append("pulo_duplo")
-            elif pos in (4, 9):
+            elif pos == 4:
                 kinds.append("escudo")
+            elif pos == 5:
+                kinds.append("tempo")
+            elif pos == 7:
+                kinds.append("pulo_duplo")
+            elif pos == 9:
+                kinds.append("supertiro")
         else:
             pos = (lvl - 1) % 10
             if pos == 1:
@@ -673,6 +679,10 @@ class Level:
                 img = getattr(game, "powerup_double_jump_img", None)
             elif kind == "escudo":
                 img = getattr(game, "powerup_shield_img", None)
+            elif kind == "tempo":
+                img = getattr(game, "powerup_tempo_img", None)
+            elif kind == "supertiro":
+                img = getattr(game, "powerup_super_shot_img", None)
             else:
                 img = None
             x = spot_x

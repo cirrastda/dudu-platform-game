@@ -730,6 +730,16 @@ class Game:
             "powerup_shield_img",
             None,
         )
+        self.powerup_tempo_img = getattr(
+            self.image,
+            "powerup_tempo_img",
+            None,
+        )
+        self.powerup_super_shot_img = getattr(
+            self.image,
+            "powerup_super_shot_img",
+            None,
+        )
         self.shield_bubble_img = getattr(
             self.image,
             "shield_bubble_img",
@@ -749,6 +759,17 @@ class Game:
         self.extra_lives = []
         self.powerups = []
 
+        # Power-up Tempo (lentidão dos inimigos)
+        self.tempo_active = False
+        self.tempo_frames_left = 0
+        self.tempo_factor = 1.0
+
+        # Power-up SuperTiro (rajada + velocidade dos tiros do jogador)
+        self.super_shot_active = False
+        self.super_shot_frames_left = 0
+        self.super_shot_speed_factor = 1.7
+        self.super_shot_burst_count = 3
+
         # Se estiver em modo desenvolvimento e iniciando em uma fase
         # específica,
         # pular para o estado PLAYING e tocar música do nível
@@ -767,6 +788,25 @@ class Game:
             self.music.play_level_music(self, self.current_level)
         else:
             Level.init_level(self)
+
+        # Ativar power-up Tempo via .env em modo desenvolvimento
+        try:
+            if ENV_CONFIG.get("environment") == "development":
+                raw_tempo = str(ENV_CONFIG.get("tempo", "")).strip().lower()
+                if raw_tempo in ("on", "1", "true", "yes"):
+                    self.tempo_active = True
+                    self.tempo_frames_left = int(70 * FPS)
+                    self.tempo_factor = 0.2
+                    try:
+                        self.music.enter_tempo_music(self)
+                    except Exception:
+                        pass
+                raw_super = str(ENV_CONFIG.get("supertiro", "")).strip().lower()
+                if raw_super in ("on", "1", "true", "yes"):
+                    self.super_shot_active = True
+                    self.super_shot_frames_left = int(70 * FPS)
+        except Exception:
+            pass
 
         # Encaminhadores finos para manter compatibilidade e delegar aos
         # módulos extraídos
