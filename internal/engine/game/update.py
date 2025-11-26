@@ -63,7 +63,7 @@ class Update:
                         g.tempo_frames_left = 0
                         g.tempo_factor = 1.0
                         try:
-                            g.music.exit_tempo_music(g)
+                            g._tempo_music_active = False
                         except Exception:
                             pass
                     if getattr(g, "super_shot_active", False):
@@ -146,7 +146,7 @@ class Update:
                     g.tempo_frames_left = 0
                     g.tempo_factor = 1.0
                     try:
-                        g.music.exit_tempo_music(g)
+                        g._tempo_music_active = False
                     except Exception:
                         pass
         except Exception:

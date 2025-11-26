@@ -1,4 +1,5 @@
 import os
+import io
 import pygame
 from internal.utils.functions import resource_path
 from internal.engine.level.music import LevelMusic
@@ -79,6 +80,31 @@ class Music:
         full_music_path = resource_path(music_file)
 
         try:
+            try:
+                with open(full_music_path, "rb") as f:
+                    normal_bytes = f.read()
+            except Exception:
+                normal_bytes = None
+            try:
+                base, ext = os.path.splitext(music_file)
+                slow_file = f"{base}_slow{ext}"
+            except Exception:
+                slow_file = None
+            slow_path = resource_path(slow_file) if slow_file else None
+            try:
+                if slow_path and os.path.exists(slow_path):
+                    with open(slow_path, "rb") as f:
+                        slow_bytes = f.read()
+                else:
+                    slow_bytes = None
+            except Exception:
+                slow_bytes = None
+            game._music_cache = {
+                "normal_file": music_file,
+                "normal_bytes": normal_bytes,
+                "slow_file": slow_file,
+                "slow_bytes": slow_bytes,
+            }
             volume = game.music_volumes.get(music_file, game.music_volume)
             self.play(game, music_file, full_music_path, volume)
 
@@ -159,57 +185,115 @@ class Music:
             pass
 
     def enter_tempo_music(self, game):
-        """Simular música mais lenta durante o power-up Tempo.
-        Marca flag e tenta reconfigurar mixer com frequência menor.
-        """
         try:
-            # Guardar estado
             game._tempo_music_active = True
             game._saved_level_music = getattr(game, "current_music", None)
-            # Tentar reduzir a taxa de amostragem ~12.5%
+            prev = getattr(game, "current_music", None)
+            if not prev:
+                return
+            base_vol = game.music_volumes.get(prev, game.music_volume)
+            slow_vol = max(0.4, base_vol * 0.85)
             try:
-                import pygame
-                # Reiniciar mixer com frequência reduzida
-                try:
-                    pygame.mixer.quit()
-                except Exception:
-                    pass
-                try:
-                    pygame.mixer.pre_init(frequency=int(44100 * 0.875), size=-16, channels=2, buffer=1024)
-                except Exception:
-                    pass
-                pygame.mixer.init()
+                slow_bytes = None
+                if hasattr(game, "_music_cache") and isinstance(getattr(game, "_music_cache", None), dict):
+                    slow_bytes = game._music_cache.get("slow_bytes")
+                    slow_file = game._music_cache.get("slow_file")
+                else:
+                    slow_file = None
+            except Exception:
+                slow_bytes = None
+                slow_file = None
+            try:
+                pygame.mixer.music.fadeout(400)
             except Exception:
                 pass
-            # Recarregar música atual com volume levemente reduzido
-            prev = getattr(game, "current_music", None)
-            if prev and self.check_music_exists(prev):
-                full_music_path = resource_path(prev)
-                vol = max(0.4, game.music_volumes.get(prev, game.music_volume) * 0.8)
-                self.play(game, prev, full_music_path, vol)
+            if slow_bytes:
+                try:
+                    pygame.mixer.music.load(io.BytesIO(slow_bytes))
+                    pygame.mixer.music.set_volume(slow_vol)
+                    try:
+                        pygame.mixer.music.play(-1, fade_ms=400)
+                    except TypeError:
+                        pygame.mixer.music.play(-1)
+                    if slow_file:
+                        game.current_music = slow_file
+                except Exception:
+                    pass
+            else:
+                try:
+                    base, ext = os.path.splitext(prev)
+                    slow_file2 = f"{base}_slow{ext}"
+                except Exception:
+                    slow_file2 = None
+                slow_full = self.check_music_exists(slow_file2) if slow_file2 else None
+                try:
+                    if slow_full:
+                        pygame.mixer.music.load(slow_full)
+                        pygame.mixer.music.set_volume(slow_vol)
+                        try:
+                            pygame.mixer.music.play(-1, fade_ms=400)
+                        except TypeError:
+                            pygame.mixer.music.play(-1)
+                        game.current_music = slow_file2
+                    else:
+                        full_prev = resource_path(prev)
+                        pygame.mixer.music.load(full_prev)
+                        pygame.mixer.music.set_volume(slow_vol)
+                        try:
+                            pygame.mixer.music.play(-1, fade_ms=400)
+                        except TypeError:
+                            pygame.mixer.music.play(-1)
+                except Exception:
+                    pass
         except Exception:
             pass
 
     def exit_tempo_music(self, game):
-        """Restaurar configuração de música após fim do power-up Tempo."""
         try:
             game._tempo_music_active = False
-            # Restaurar mixer padrão
+            target = getattr(game, "_saved_level_music", None) or getattr(game, "current_music", None)
+            if not target:
+                return
+            vol = game.music_volumes.get(target, game.music_volume)
             try:
-                import pygame
-                pygame.mixer.quit()
-                try:
-                    pygame.mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=1024)
-                except Exception:
-                    pass
-                pygame.mixer.init()
+                normal_bytes = None
+                normal_file = None
+                if hasattr(game, "_music_cache") and isinstance(getattr(game, "_music_cache", None), dict):
+                    normal_bytes = game._music_cache.get("normal_bytes")
+                    normal_file = game._music_cache.get("normal_file")
+            except Exception:
+                normal_bytes = None
+                normal_file = None
+            try:
+                pygame.mixer.music.fadeout(400)
             except Exception:
                 pass
-            prev = getattr(game, "current_music", None)
-            if prev and self.check_music_exists(prev):
-                full_music_path = resource_path(prev)
-                vol = game.music_volumes.get(prev, game.music_volume)
-                self.play(game, prev, full_music_path, vol)
+            if normal_bytes:
+                try:
+                    pygame.mixer.music.load(io.BytesIO(normal_bytes))
+                    pygame.mixer.music.set_volume(vol)
+                    try:
+                        pygame.mixer.music.play(-1, fade_ms=400)
+                    except TypeError:
+                        pygame.mixer.music.play(-1)
+                    if normal_file:
+                        game.current_music = normal_file
+                except Exception:
+                    pass
+            else:
+                try:
+                    if not self.check_music_exists(target):
+                        return
+                    full_music_path = resource_path(target)
+                    pygame.mixer.music.load(full_music_path)
+                    pygame.mixer.music.set_volume(vol)
+                    try:
+                        pygame.mixer.music.play(-1, fade_ms=400)
+                    except TypeError:
+                        pygame.mixer.music.play(-1)
+                    game.current_music = target
+                except Exception:
+                    pass
         except Exception:
             pass
     def exit_invincibility_music(self, game):
