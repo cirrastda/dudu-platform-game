@@ -309,9 +309,23 @@ class Player:
                 joystick_x = 0
 
         # Movimento com teclado ou joystick
-        if keys[pygame.K_LEFT] or keys[pygame.K_a] or joystick_x < -0.1:
+        left_defaults = [pygame.K_LEFT, pygame.K_a]
+        right_defaults = [pygame.K_RIGHT, pygame.K_d]
+        left_keys = getattr(getattr(game, "controls", {}), "get", lambda *_: [])("left") if game else []
+        right_keys = getattr(getattr(game, "controls", {}), "get", lambda *_: [])("right") if game else []
+        if not left_keys:
+            left_keys = left_defaults
+        if not right_keys:
+            right_keys = right_defaults
+
+        def _any_down(key_list):
+            try:
+                return any(keys[k] for k in key_list)
+            except Exception:
+                return False
+        if _any_down(left_keys) or joystick_x < -0.1:
             self.vel_x = -PLAYER_SPEED
-        elif keys[pygame.K_RIGHT] or keys[pygame.K_d] or joystick_x > 0.1:
+        elif _any_down(right_keys) or joystick_x > 0.1:
             self.vel_x = PLAYER_SPEED
         else:
             self.vel_x = 0
@@ -326,7 +340,11 @@ class Player:
             if joystick_y > 0.5:  # Analógico para baixo
                 joystick_crouch = True
 
-        if keys[pygame.K_DOWN] or keys[pygame.K_s] or joystick_crouch:
+        crouch_defaults = [pygame.K_DOWN, pygame.K_s]
+        crouch_keys = getattr(getattr(game, "controls", {}), "get", lambda *_: [])("crouch") if game else []
+        if not crouch_keys:
+            crouch_keys = crouch_defaults
+        if _any_down(crouch_keys) or joystick_crouch:
             if not self.is_crouching and self.on_ground:
                 # Começar a agachar
                 old_y = self.y
@@ -343,25 +361,45 @@ class Player:
 
         # Tiro com barra de espaço ou botão do joystick
         joystick_shoot = False
-        if joystick and joystick.get_numbuttons() > 1:
-            joystick_shoot = joystick.get_button(1)  # Botão B/Círculo para tiro
+        if joystick and joystick.get_numbuttons() > 0:
+            shoot_button = 1
+            try:
+                if game and hasattr(game, "joystick_controls"):
+                    shoot_button = int(game.joystick_controls.get("shoot", 1))
+            except Exception:
+                shoot_button = 1
+            if shoot_button < joystick.get_numbuttons():
+                joystick_shoot = joystick.get_button(shoot_button)
 
         shot_sound = False
-        if keys[pygame.K_SPACE] or joystick_shoot:
+        shoot_defaults = [pygame.K_SPACE]
+        shoot_keys = getattr(getattr(game, "controls", {}), "get", lambda *_: [])("shoot") if game else []
+        if not shoot_keys:
+            shoot_keys = shoot_defaults
+        if _any_down(shoot_keys) or joystick_shoot:
             shot_sound = self.shoot(bullet_image, game)
 
         # Pulo com setas/WASD ou botão/analógico do joystick
         joystick_jump = False
         if joystick:
-            # Botão A/X para pulo
-            if joystick.get_numbuttons() > 0:
-                joystick_jump = joystick.get_button(0)
+            jump_button = 0
+            try:
+                if game and hasattr(game, "joystick_controls"):
+                    jump_button = int(game.joystick_controls.get("jump", 0))
+            except Exception:
+                jump_button = 0
+            if joystick.get_numbuttons() > 0 and jump_button < joystick.get_numbuttons():
+                joystick_jump = joystick.get_button(jump_button)
             # Ou analógico para cima
             if joystick.get_numaxes() >= 2 and joystick_y < -0.5:
                 joystick_jump = True
 
         jump_sound = False
-        want_jump = (keys[pygame.K_UP] or keys[pygame.K_w]) or joystick_jump
+        jump_defaults = [pygame.K_UP, pygame.K_w]
+        jump_keys = getattr(getattr(game, "controls", {}), "get", lambda *_: [])("jump") if game else []
+        if not jump_keys:
+            jump_keys = jump_defaults
+        want_jump = _any_down(jump_keys) or joystick_jump
         press_jump = want_jump and not self.jump_was_down
         if press_jump:
             self.jump_buffer_frames_left = self.jump_buffer_max_frames

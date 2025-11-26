@@ -6,8 +6,11 @@ from internal.utils.constants import (
     HEIGHT,
     WHITE,
     BLACK,
+    BLUE,
     YELLOW,
     DARK_BLUE,
+    GOLD,
+    GRAY,
     LIGHT_GRAY,
     RED,
     GREEN,
@@ -1312,6 +1315,210 @@ class Draw:
                 center=(WIDTH // 2, HEIGHT - 50)
             )
             game.screen.blit(instruction_text, instruction_rect)
+
+        elif game.state == GameState.PAUSED:
+            self.draw_ocean_background(game.screen)
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 160))
+            game.screen.blit(overlay, (0, 0))
+            title = game.menu_big_font.render("Pausado", True, YELLOW)
+            game.screen.blit(title, title.get_rect(center=(WIDTH // 2, 160)))
+            start_y = 260
+            for i, option in enumerate(game.pause_menu_options):
+                color = YELLOW if i == game.pause_selected else WHITE
+                opt = game.menu_font.render(option, True, color)
+                rect = opt.get_rect(center=(WIDTH // 2, start_y + i * 50))
+                if i == game.pause_selected:
+                    pygame.draw.rect(game.screen, DARK_BLUE, rect.inflate(20, 10))
+                game.screen.blit(opt, rect)
+
+        elif game.state == GameState.OPTIONS_MENU:
+            self.draw_ocean_background(game.screen)
+            title = game.menu_big_font.render("Configurações", True, YELLOW)
+            game.screen.blit(title, title.get_rect(center=(WIDTH // 2, 160)))
+            options = ["Botões/Teclas", "Áudio", "Vídeo", "Voltar"]
+            start_y = 260
+            for i, option in enumerate(options):
+                color = YELLOW if i == game.options_selected else WHITE
+                opt = game.menu_font.render(option, True, color)
+                rect = opt.get_rect(center=(WIDTH // 2, start_y + i * 50))
+                if i == game.options_selected:
+                    pygame.draw.rect(game.screen, DARK_BLUE, rect.inflate(20, 10))
+                game.screen.blit(opt, rect)
+            inst = game.menu_small_font.render(
+                "↑↓ escolher  Enter/A confirma  ESC/B volta",
+                True,
+                LIGHT_GRAY,
+            )
+            game.screen.blit(inst, inst.get_rect(center=(WIDTH // 2, HEIGHT - 50)))
+
+        elif game.state == GameState.OPTIONS_AUDIO:
+            self.draw_ocean_background(game.screen)
+            title = game.menu_big_font.render("Áudio", True, YELLOW)
+            game.screen.blit(title, title.get_rect(center=(WIDTH // 2, 160)))
+            label_music = game.menu_font.render("Volume Música", True, YELLOW if game.audio_selected == 0 else WHITE)
+            label_sfx = game.menu_font.render("Volume Efeitos", True, YELLOW if game.audio_selected == 1 else WHITE)
+            game.screen.blit(label_music, label_music.get_rect(center=(WIDTH // 2, 260)))
+            game.screen.blit(label_sfx, label_sfx.get_rect(center=(WIDTH // 2, 360)))
+            bar_w = 460
+            bar_h = 16
+            bar_x = WIDTH // 2 - bar_w // 2
+            bar1_y = 300
+            bar2_y = 400
+            pygame.draw.rect(game.screen, DARK_GRAY, (bar_x, bar1_y, bar_w, bar_h))
+            pygame.draw.rect(game.screen, DARK_GRAY, (bar_x, bar2_y, bar_w, bar_h))
+            fill1_w = int(bar_w * max(0.0, min(1.0, getattr(game, "music_volume", 0.7))))
+            fill2_w = int(bar_w * max(0.0, min(1.0, getattr(game.sound_effects, "sound_volume", 0.8))))
+            fill1_color = YELLOW if game.audio_selected == 0 else LIGHT_GRAY
+            fill2_color = YELLOW if game.audio_selected == 1 else LIGHT_GRAY
+            pygame.draw.rect(game.screen, fill1_color, (bar_x, bar1_y, fill1_w, bar_h))
+            pygame.draw.rect(game.screen, fill2_color, (bar_x, bar2_y, fill2_w, bar_h))
+            if game.audio_selected == 0:
+                pygame.draw.rect(game.screen, BLUE, (bar_x - 2, bar1_y - 2, bar_w + 4, bar_h + 4), 2)
+            else:
+                pygame.draw.rect(game.screen, BLUE, (bar_x - 2, bar2_y - 2, bar_w + 4, bar_h + 4), 2)
+            knob1_x = bar_x + fill1_w
+            knob2_x = bar_x + fill2_w
+            knob_r = 8
+            pygame.draw.circle(game.screen, WHITE, (knob1_x, bar1_y + bar_h // 2), knob_r)
+            pygame.draw.circle(game.screen, WHITE, (knob2_x, bar2_y + bar_h // 2), knob_r)
+            inner_color1 = GOLD if game.audio_selected == 0 else GRAY
+            inner_color2 = GOLD if game.audio_selected == 1 else GRAY
+            pygame.draw.circle(game.screen, inner_color1, (knob1_x, bar1_y + bar_h // 2), max(2, knob_r - 4))
+            pygame.draw.circle(game.screen, inner_color2, (knob2_x, bar2_y + bar_h // 2), max(2, knob_r - 4))
+            inst = game.menu_small_font.render("← → ajusta  ESC/B volta", True, LIGHT_GRAY)
+            game.screen.blit(inst, inst.get_rect(center=(WIDTH // 2, HEIGHT - 50)))
+
+        elif game.state == GameState.OPTIONS_VIDEO:
+            self.draw_ocean_background(game.screen)
+            title = game.menu_big_font.render("Vídeo", True, YELLOW)
+            game.screen.blit(title, title.get_rect(center=(WIDTH // 2, 160)))
+            ws = getattr(game.env_config, "get", lambda *_: 1.0)("window_scale", 1.0)
+            try:
+                ws = float(ws)
+            except Exception:
+                ws = 1.0
+            res_color = YELLOW if getattr(game, "video_selected", 0) == 0 else WHITE
+            disp_color = YELLOW if getattr(game, "video_selected", 0) == 1 else WHITE
+            res = game.menu_font.render(
+                f"Resolução: {int(WIDTH*ws)} x {int(HEIGHT*ws)}",
+                True,
+                res_color,
+            )
+            mode = "Fullscreen" if Screen.is_fullscreen(game) else "Janela"
+            disp = game.menu_font.render(f"Exibição: {mode}", True, disp_color)
+            res_rect = res.get_rect(center=(WIDTH // 2, 270))
+            disp_rect = disp.get_rect(center=(WIDTH // 2, 330))
+            if getattr(game, "video_selected", 0) == 0:
+                pygame.draw.rect(game.screen, DARK_BLUE, res_rect.inflate(20, 10))
+            else:
+                pygame.draw.rect(game.screen, DARK_BLUE, disp_rect.inflate(20, 10))
+            game.screen.blit(res, res_rect)
+            game.screen.blit(disp, disp_rect)
+            inst = game.menu_small_font.render("↑↓ escolhe  Enter/A alterna  ← → ajusta  ESC/B volta", True, LIGHT_GRAY)
+            game.screen.blit(inst, inst.get_rect(center=(WIDTH // 2, HEIGHT - 50)))
+
+        elif game.state == GameState.OPTIONS_CONTROLS:
+            self.draw_ocean_background(game.screen)
+            title = game.menu_big_font.render("Botões/Teclas", True, YELLOW)
+            game.screen.blit(title, title.get_rect(center=(WIDTH // 2, 140)))
+            start_y = 240
+            for i, (label, action) in enumerate(game.controls_actions):
+                keys = game.controls.get(action, [])
+                try:
+                    key_names = [pygame.key.name(k) for k in keys]
+                except Exception:
+                    key_names = [str(k) for k in keys]
+                js_btn = game.joystick_controls.get(action)
+                js_txt = f" (Joy: {js_btn})" if js_btn is not None else ""
+                display = ", ".join(key_names) if key_names else "(nenhum)"
+                color = YELLOW if i == game.controls_selected else WHITE
+                text = game.menu_font.render(f"{label}: {display}{js_txt}", True, color)
+                rect = text.get_rect(center=(WIDTH // 2, start_y + i * 50))
+                if i == game.controls_selected:
+                    pygame.draw.rect(game.screen, DARK_BLUE, rect.inflate(24, 14))
+                game.screen.blit(text, rect)
+            if game.controls_editing:
+                prompt = game.menu_small_font.render(
+                    "Pressione a nova tecla ou botão... ESC cancela",
+                    True,
+                    LIGHT_GRAY,
+                )
+            else:
+                prompt = game.menu_small_font.render(
+                    "↑↓ escolher  Enter/A editar  R: Resetar  ESC/B volta",
+                    True,
+                    LIGHT_GRAY,
+                )
+            game.screen.blit(prompt, prompt.get_rect(center=(WIDTH // 2, HEIGHT - 50)))
+
+        elif game.state == GameState.CONFIRM_NEW_GAME:
+            self.draw_ocean_background(game.screen)
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 160))
+            game.screen.blit(overlay, (0, 0))
+            box_w = 680
+            box_h = 220
+            box = pygame.Rect(0, 0, box_w, box_h)
+            box.center = (WIDTH // 2, HEIGHT // 2)
+            try:
+                shadow = pygame.Surface((box_w + 24, box_h + 24), pygame.SRCALPHA)
+                shadow.fill((0, 0, 0, 0))
+                pygame.draw.rect(shadow, (0, 0, 0, 110), shadow.get_rect(), border_radius=18)
+                game.screen.blit(shadow, (box.left - 12, box.top - 12))
+                pygame.draw.rect(game.screen, DARK_BLUE, box, border_radius=16)
+                pygame.draw.rect(game.screen, BLUE, box.inflate(10, 10), 3, border_radius=20)
+                header = pygame.Rect(box.left, box.top, box.width, 42)
+                pygame.draw.rect(game.screen, BLUE, header, border_radius=16)
+                pygame.draw.line(game.screen, GOLD, (box.left + 12, header.bottom - 2), (box.right - 12, header.bottom - 2), 2)
+            except Exception:
+                pygame.draw.rect(game.screen, DARK_BLUE, box)
+            title = game.menu_font.render("Novo Jogo", True, YELLOW)
+            game.screen.blit(title, title.get_rect(center=(WIDTH // 2, box.centery - 70)))
+            msg1 = game.menu_small_font.render("O jogo salvo será apagado.", True, WHITE)
+            msg2 = game.menu_small_font.render("Deseja continuar?", True, WHITE)
+            game.screen.blit(msg1, msg1.get_rect(center=(WIDTH // 2, box.centery - 20)))
+            game.screen.blit(msg2, msg2.get_rect(center=(WIDTH // 2, box.centery + 10)))
+            if getattr(game, "joystick_connected", False):
+                instr = "A: Continuar  B: Voltar"
+            else:
+                instr = "Enter: Continuar  ESC: Voltar"
+            inst = game.menu_small_font.render(instr, True, LIGHT_GRAY)
+            game.screen.blit(inst, inst.get_rect(center=(WIDTH // 2, box.centery + 60)))
+
+        elif game.state == GameState.CONFIRM_EXIT_TO_MENU:
+            self.draw_ocean_background(game.screen)
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 160))
+            game.screen.blit(overlay, (0, 0))
+            box_w = 740
+            box_h = 220
+            box = pygame.Rect(0, 0, box_w, box_h)
+            box.center = (WIDTH // 2, HEIGHT // 2)
+            try:
+                shadow = pygame.Surface((box_w + 24, box_h + 24), pygame.SRCALPHA)
+                shadow.fill((0, 0, 0, 0))
+                pygame.draw.rect(shadow, (0, 0, 0, 110), shadow.get_rect(), border_radius=18)
+                game.screen.blit(shadow, (box.left - 12, box.top - 12))
+                pygame.draw.rect(game.screen, DARK_BLUE, box, border_radius=16)
+                pygame.draw.rect(game.screen, BLUE, box.inflate(10, 10), 3, border_radius=20)
+                header = pygame.Rect(box.left, box.top, box.width, 42)
+                pygame.draw.rect(game.screen, BLUE, header, border_radius=16)
+                pygame.draw.line(game.screen, GOLD, (box.left + 12, header.bottom - 2), (box.right - 12, header.bottom - 2), 2)
+            except Exception:
+                pygame.draw.rect(game.screen, DARK_BLUE, box)
+            title = game.menu_font.render("Sair para o Menu", True, YELLOW)
+            game.screen.blit(title, title.get_rect(center=(WIDTH // 2, box.centery - 70)))
+            msg1 = game.menu_small_font.render("Você perderá o progresso da fase atual.", True, WHITE)
+            msg2 = game.menu_small_font.render("Deseja continuar?", True, WHITE)
+            game.screen.blit(msg1, msg1.get_rect(center=(WIDTH // 2, box.centery - 20)))
+            game.screen.blit(msg2, msg2.get_rect(center=(WIDTH // 2, box.centery + 10)))
+            if getattr(game, "joystick_connected", False):
+                instr = "A: Sair  B: Voltar"
+            else:
+                instr = "Enter: Sair  ESC: Voltar"
+            inst = game.menu_small_font.render(instr, True, LIGHT_GRAY)
+            game.screen.blit(inst, inst.get_rect(center=(WIDTH // 2, box.centery + 60)))
 
         # Overlay de esmaecimento durante hold (fade progressivo)
         if getattr(game, "hold_active", False):

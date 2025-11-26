@@ -122,7 +122,8 @@ def test_esc_in_other_states_returns_false():
     g = Game()
     g.state = GameState.PLAYING
     post_key(pygame.K_ESCAPE)
-    assert g.handle_events() is False
+    assert g.handle_events() is True
+    assert g.state == GameState.PAUSED
 
 
 def test_bullet_pool_get_and_return():

@@ -105,6 +105,263 @@ class Events:
                     game.state = GameState.CREDITS
                     game.credits_type = "ending"
                     game.music.play_music("credits")
+                elif game.state == GameState.PLAYING and (
+                    event.key in getattr(game, "controls", {}).get("pause", [pygame.K_ESCAPE])
+                ):
+                    game.state = GameState.PAUSED
+                    game.pause_selected = 0
+                    return True
+                elif game.state == GameState.PAUSED:
+                    if event.key == pygame.K_UP:
+                        game.pause_selected = (game.pause_selected - 1) % len(game.pause_menu_options)
+                    elif event.key == pygame.K_DOWN:
+                        game.pause_selected = (game.pause_selected + 1) % len(game.pause_menu_options)
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        sel = game.pause_menu_options[game.pause_selected]
+                        if sel == "Continuar":
+                            game.state = GameState.PLAYING
+                        elif sel == "Botões/Teclas":
+                            game.options_selected = 0
+                            game.previous_state_before_options = GameState.PAUSED
+                            game.state = GameState.OPTIONS_CONTROLS
+                        elif sel == "Áudio":
+                            game.audio_selected = 0
+                            game.previous_state_before_options = GameState.PAUSED
+                            game.state = GameState.OPTIONS_AUDIO
+                        elif sel == "Vídeo":
+                            game.video_selected = 0
+                            game.previous_state_before_options = GameState.PAUSED
+                            game.state = GameState.OPTIONS_VIDEO
+                        elif sel == "Sair":
+                            game.confirm_dialog_type = "exit_to_menu"
+                            game.confirm_selected = 0
+                            game.state = GameState.CONFIRM_EXIT_TO_MENU
+                    elif event.key == pygame.K_ESCAPE:
+                        # ESC também continua
+                        game.state = GameState.PLAYING
+                        return True
+                elif game.state == GameState.OPTIONS_MENU:
+                    if event.key == pygame.K_UP:
+                        game.options_selected = (game.options_selected - 1) % 4
+                    elif event.key == pygame.K_DOWN:
+                        game.options_selected = (game.options_selected + 1) % 4
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        game.pause_selected = None
+                        if game.options_selected == 0:
+                            game.state = GameState.OPTIONS_CONTROLS
+                        elif game.options_selected == 1:
+                            game.audio_selected = 0
+                            game.previous_state_before_options = GameState.MAIN_MENU
+                            game.state = GameState.OPTIONS_AUDIO
+                        elif game.options_selected == 2:
+                            game.video_selected = 0
+                            game.previous_state_before_options = GameState.MAIN_MENU
+                            game.state = GameState.OPTIONS_VIDEO
+                        elif game.options_selected == 3:
+                            game.state = GameState.MAIN_MENU
+                    elif event.key == pygame.K_ESCAPE:
+                        game.state = GameState.MAIN_MENU
+                        return True
+                elif game.state == GameState.OPTIONS_AUDIO:
+                    if event.key == pygame.K_UP:
+                        game.audio_selected = (game.audio_selected - 1) % 2
+                    elif event.key == pygame.K_DOWN:
+                        game.audio_selected = (game.audio_selected + 1) % 2
+                    elif event.key == pygame.K_LEFT:
+                        if game.audio_selected == 0:
+                            game.music_volume = max(0.0, game.music_volume - 0.1)
+                            try:
+                                import pygame as _pg
+                                _pg.mixer.music.set_volume(game.music_volume)
+                            except Exception:
+                                pass
+                        else:
+                            game.sound_effects.sound_volume = max(0.0, game.sound_effects.sound_volume - 0.1)
+                            try:
+                                for s in game.sound_effects.sound_effects.values():
+                                    s.set_volume(game.sound_effects.sound_volume)
+                            except Exception:
+                                pass
+                        try:
+                            game._save_settings()
+                        except Exception:
+                            pass
+                    elif event.key == pygame.K_RIGHT:
+                        if game.audio_selected == 0:
+                            game.music_volume = min(1.0, game.music_volume + 0.1)
+                            try:
+                                import pygame as _pg
+                                _pg.mixer.music.set_volume(game.music_volume)
+                            except Exception:
+                                pass
+                        else:
+                            game.sound_effects.sound_volume = min(1.0, game.sound_effects.sound_volume + 0.1)
+                            try:
+                                for s in game.sound_effects.sound_effects.values():
+                                    s.set_volume(game.sound_effects.sound_volume)
+                            except Exception:
+                                pass
+                        try:
+                            game._save_settings()
+                        except Exception:
+                            pass
+                    elif event.key == pygame.K_r:
+                        game.music_volume = 0.7
+                        game.sound_effects.sound_volume = 0.8
+                        try:
+                            import pygame as _pg
+                            _pg.mixer.music.set_volume(game.music_volume)
+                            for s in game.sound_effects.sound_effects.values():
+                                s.set_volume(game.sound_effects.sound_volume)
+                        except Exception:
+                            pass
+                        try:
+                            game._save_settings()
+                        except Exception:
+                            pass
+                    elif event.key == pygame.K_ESCAPE:
+                        if game.previous_state_before_options:
+                            game.state = game.previous_state_before_options
+                            game.previous_state_before_options = None
+                        else:
+                            game.state = GameState.MAIN_MENU
+                        return True
+                elif game.state == GameState.OPTIONS_VIDEO:
+                    if event.key == pygame.K_UP:
+                        game.video_selected = (game.video_selected - 1) % 2
+                    elif event.key == pygame.K_DOWN:
+                        game.video_selected = (game.video_selected + 1) % 2
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        if game.video_selected == 1:
+                            try:
+                                game.env_config["fullscreen"] = not game.env_config.get("fullscreen", False)
+                                from internal.engine.screen import Screen as _Screen
+                                _Screen.init(game)
+                            except Exception:
+                                pass
+                            try:
+                                game._save_settings()
+                            except Exception:
+                                pass
+                    elif event.key == pygame.K_LEFT:
+                        if game.video_selected == 0:
+                            try:
+                                idx = game.window_scales.index(game.env_config.get("window_scale", 1.0))
+                            except Exception:
+                                idx = 0
+                            idx = (idx - 1) % len(game.window_scales)
+                            game.env_config["window_scale"] = game.window_scales[idx]
+                            try:
+                                from internal.engine.screen import Screen as _Screen
+                                _Screen.init(game)
+                            except Exception:
+                                pass
+                    elif event.key == pygame.K_RIGHT:
+                        if game.video_selected == 0:
+                            try:
+                                idx = game.window_scales.index(game.env_config.get("window_scale", 1.0))
+                            except Exception:
+                                idx = 0
+                            idx = (idx + 1) % len(game.window_scales)
+                            game.env_config["window_scale"] = game.window_scales[idx]
+                            try:
+                                from internal.engine.screen import Screen as _Screen
+                                _Screen.init(game)
+                            except Exception:
+                                pass
+                    elif event.key == pygame.K_r:
+                        try:
+                            game.env_config["fullscreen"] = False
+                            game.env_config["window_scale"] = 1.0
+                            from internal.engine.screen import Screen as _Screen
+                            _Screen.init(game)
+                        except Exception:
+                            pass
+                        try:
+                            game._save_settings()
+                        except Exception:
+                            pass
+                    elif event.key == pygame.K_ESCAPE:
+                        if game.previous_state_before_options:
+                            game.state = game.previous_state_before_options
+                            game.previous_state_before_options = None
+                        else:
+                            game.state = GameState.MAIN_MENU
+                        return True
+                elif game.state == GameState.OPTIONS_CONTROLS:
+                    if game.controls_editing:
+                        if event.key == pygame.K_ESCAPE:
+                            game.controls_editing = False
+                            return True
+                        else:
+                            label, action = game.controls_actions[game.controls_selected]
+                            try:
+                                game.controls[action] = [event.key]
+                                game._save_settings()
+                            except Exception:
+                                pass
+                            game.controls_editing = False
+                    else:
+                        if event.key == pygame.K_UP:
+                            game.controls_selected = (
+                                (game.controls_selected - 1) % len(game.controls_actions)
+                            )
+                        elif event.key == pygame.K_DOWN:
+                            game.controls_selected = (
+                                (game.controls_selected + 1) % len(game.controls_actions)
+                            )
+                        elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                            game.controls_editing = True
+                        elif event.key == pygame.K_r:
+                            try:
+                                game.controls = {
+                                    "left": [pygame.K_LEFT, pygame.K_a],
+                                    "right": [pygame.K_RIGHT, pygame.K_d],
+                                    "jump": [pygame.K_UP, pygame.K_w],
+                                    "shoot": [pygame.K_SPACE],
+                                    "crouch": [pygame.K_DOWN, pygame.K_s],
+                                    "pause": [pygame.K_ESCAPE],
+                                }
+                                game.joystick_controls = {
+                                    "jump": 0,
+                                    "shoot": 1,
+                                    "pause": 7,
+                                }
+                                if getattr(game, "joystick_connected", False):
+                                    name = getattr(game, "joystick_name", "")
+                                    if name:
+                                        game.joystick_profiles[name] = dict(game.joystick_controls)
+                                game._save_settings()
+                            except Exception:
+                                pass
+                        elif event.key == pygame.K_ESCAPE:
+                            game.state = GameState.PAUSED if game.pause_selected is not None else GameState.MAIN_MENU
+                            return True
+                elif game.state == GameState.CONFIRM_NEW_GAME:
+                    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        # Confirmar: apagar autosave e ir para novo jogo
+                        try:
+                            game._clear_autosave()
+                        except Exception:
+                            pass
+                        game.current_level = 1
+                        game.score = 0
+                        game.platforms_jumped.clear()
+                        game.birds_dodged.clear()
+                        game.lives = game.max_lives
+                        game.player_name = ""
+                        game.state = GameState.SELECT_DIFFICULTY
+                    elif event.key == pygame.K_ESCAPE:
+                        game.state = GameState.MAIN_MENU
+                        return True
+                elif game.state == GameState.CONFIRM_EXIT_TO_MENU:
+                    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        # Confirmar: voltar ao menu principal
+                        game.state = GameState.MAIN_MENU
+                        # Não salva progresso parcial da fase atual
+                    elif event.key == pygame.K_ESCAPE:
+                        game.state = GameState.PAUSED
+                        return True
                 elif game.state == GameState.CREDITS:
                     if (
                         game.credits_type == "menu"
@@ -122,6 +379,7 @@ class Events:
                             game.previous_state_before_records = None
                         else:
                             game.state = GameState.MAIN_MENU
+                        return True
                 elif game.state == GameState.GAME_OVER:
                     if event.key == pygame.K_UP:
                         game.game_over_selected = (
@@ -212,6 +470,7 @@ class Events:
                     else:
                         game.state = GameState.GAME_OVER
                     Level.init_level(game)
+                    return True
                 elif event.key == pygame.K_ESCAPE:
                     if game.state == GameState.CREDITS:
                         if getattr(game, "credits_type", None) == "menu":
@@ -240,8 +499,22 @@ class Events:
                             game.state = GameState.MAIN_MENU
                     elif game.state == GameState.SELECT_DIFFICULTY:
                         game.state = GameState.MAIN_MENU
+                    elif game.state == GameState.TITLE_SCREEN:
+                        game.state = GameState.MAIN_MENU
+                        if not getattr(game, "music_started", False):
+                            try:
+                                game.music.play_menu_music(game)
+                                game.music_started = True
+                            except Exception:
+                                pass
+                    elif game.state == GameState.OPENING_VIDEO:
+                        return True
+                    # Não fechar durante OPENING_VIDEO; ESC não faz nada especial
                     else:
-                        return False
+                        # Em qualquer outro estado, ESC não encerra o jogo
+                        # apenas retorna ao menu principal
+                        game.state = GameState.MAIN_MENU
+                    return True
 
             elif event.type == pygame.JOYBUTTONDOWN:
                 # Mapear botões p/ cheat tokens se joystick presente
@@ -267,6 +540,126 @@ class Events:
                 elif game.state == GameState.MAIN_MENU:
                     if event.button == 0 or event.button in [6, 7, 8, 9]:
                         game.handle_menu_selection()
+                elif game.state == GameState.PLAYING and event.button == getattr(game, "joystick_controls", {}).get("pause", 7):
+                    # Botão Start/Options pausa
+                    game.state = GameState.PAUSED
+                    game.pause_selected = 0
+                elif game.state == GameState.PAUSED:
+                    if event.button == 0:
+                        sel = game.pause_menu_options[game.pause_selected]
+                        if sel == "Continuar":
+                            game.state = GameState.PLAYING
+                        elif sel == "Botões/Teclas":
+                            game.options_selected = 0
+                            game.state = GameState.OPTIONS_CONTROLS
+                        elif sel == "Áudio":
+                            game.audio_selected = 0
+                            game.state = GameState.OPTIONS_AUDIO
+                        elif sel == "Vídeo":
+                            game.state = GameState.OPTIONS_VIDEO
+                        elif sel == "Sair":
+                            game.confirm_dialog_type = "exit_to_menu"
+                            game.confirm_selected = 0
+                            game.state = GameState.CONFIRM_EXIT_TO_MENU
+                    elif event.button == 1:
+                        game.state = GameState.PLAYING
+                elif game.state == GameState.OPTIONS_MENU:
+                    if event.button == 0:
+                        if game.options_selected == 0:
+                            game.state = GameState.OPTIONS_CONTROLS
+                        elif game.options_selected == 1:
+                            game.audio_selected = 0
+                            game.state = GameState.OPTIONS_AUDIO
+                        elif game.options_selected == 2:
+                            game.state = GameState.OPTIONS_VIDEO
+                    elif event.button == 1:
+                        game.state = GameState.MAIN_MENU
+                elif game.state == GameState.OPTIONS_AUDIO:
+                    if event.button == 0:
+                        if game.audio_selected == 0:
+                            game.music_volume = min(1.0, game.music_volume + 0.1)
+                            try:
+                                import pygame as _pg
+                                _pg.mixer.music.set_volume(game.music_volume)
+                            except Exception:
+                                pass
+                        else:
+                            game.sound_effects.sound_volume = min(1.0, game.sound_effects.sound_volume + 0.1)
+                            try:
+                                for s in game.sound_effects.sound_effects.values():
+                                    s.set_volume(game.sound_effects.sound_volume)
+                            except Exception:
+                                pass
+                        try:
+                            game._save_settings()
+                        except Exception:
+                            pass
+                    elif event.button == 1:
+                        if game.audio_selected == 0:
+                            game.music_volume = max(0.0, game.music_volume - 0.1)
+                            try:
+                                import pygame as _pg
+                                _pg.mixer.music.set_volume(game.music_volume)
+                            except Exception:
+                                pass
+                        else:
+                            game.sound_effects.sound_volume = max(0.0, game.sound_effects.sound_volume - 0.1)
+                            try:
+                                for s in game.sound_effects.sound_effects.values():
+                                    s.set_volume(game.sound_effects.sound_volume)
+                            except Exception:
+                                pass
+                        try:
+                            game._save_settings()
+                        except Exception:
+                            pass
+                elif game.state == GameState.OPTIONS_VIDEO:
+                    if event.button == 0:
+                        if game.video_selected == 1:
+                            try:
+                                game.env_config["fullscreen"] = not game.env_config.get("fullscreen", False)
+                                from internal.engine.screen import Screen as _Screen
+                                _Screen.init(game)
+                            except Exception:
+                                pass
+                            try:
+                                game._save_settings()
+                            except Exception:
+                                pass
+                    elif event.button == 1:
+                        if game.previous_state_before_options:
+                            game.state = game.previous_state_before_options
+                            game.previous_state_before_options = None
+                        else:
+                            game.state = GameState.MAIN_MENU
+                elif game.state == GameState.OPTIONS_CONTROLS and game.controls_editing:
+                    label, action = game.controls_actions[game.controls_selected]
+                    try:
+                        game.joystick_controls[action] = int(event.button)
+                        game._save_settings()
+                    except Exception:
+                        pass
+                    game.controls_editing = False
+                elif game.state == GameState.CONFIRM_NEW_GAME:
+                    if event.button == 0:
+                        try:
+                            game._clear_autosave()
+                        except Exception:
+                            pass
+                        game.current_level = 1
+                        game.score = 0
+                        game.platforms_jumped.clear()
+                        game.birds_dodged.clear()
+                        game.lives = game.max_lives
+                        game.player_name = ""
+                        game.state = GameState.SELECT_DIFFICULTY
+                    elif event.button == 1:
+                        game.state = GameState.MAIN_MENU
+                elif game.state == GameState.CONFIRM_EXIT_TO_MENU:
+                    if event.button == 0:
+                        game.state = GameState.MAIN_MENU
+                    elif event.button == 1:
+                        game.state = GameState.PAUSED
                 elif game.state == GameState.SELECT_DIFFICULTY:
                     if event.button == 0 or event.button in [6, 7, 8, 9]:
                         if game.difficulty_selected == 0:

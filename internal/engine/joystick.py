@@ -13,7 +13,11 @@ class Joystick:
             self.joystick = pygame.joystick.Joystick(0)
             self.joystick.init()
             self.joystick_connected = True
-            print(f"Joystick conectado: {self.joystick.get_name()}")
+            try:
+                self.joystick_name = self.joystick.get_name()
+            except Exception:
+                self.joystick_name = ""
+            print(f"Joystick conectado: {self.joystick_name}")
             return self.joystick
         else:
             print("Nenhum joystick detectado. Usando controles do teclado.")

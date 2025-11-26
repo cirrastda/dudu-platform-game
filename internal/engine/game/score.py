@@ -1,6 +1,9 @@
 from internal.engine.difficulty import Difficulty
 
 
+import os
+
+
 class Score:
     def __init__(self, game):
         self.game = game
@@ -23,6 +26,8 @@ class Score:
             multiplier = self.game.get_score_multiplier()
         except Exception:
             multiplier = 1.0
+        if os.environ.get("DEBUG_SCORE"):
+            print(f"add_score base={base_points} mult={multiplier}")
         points = int(round(base_points * multiplier))
         # Garante pelo menos 1 ponto em incrementos positivos
         if base_points > 0 and points <= 0:

@@ -54,10 +54,10 @@ Pool = None
 Cheat = None
 Menu = None
 System = None
+_SUBMODULE_LOAD_ERRORS = {}
 try:
     import importlib.util
-
-    # Encaminhadores finos para manter compatibilidade dos testes e da API
+    import traceback
 
     def _load_submodule(file_name: str, module_name: str):
         spec = importlib.util.spec_from_file_location(
@@ -67,30 +67,64 @@ try:
         spec.loader.exec_module(mod)
         return mod
 
-    _life_mod = _load_submodule("life.py", "internal.engine._game_life")
-    _score_mod = _load_submodule("score.py", "internal.engine._game_score")
-    _hold_mod = _load_submodule("hold.py", "internal.engine._game_hold")
-    _events_mod = _load_submodule("events.py", "internal.engine._game_events")
-    _draw_mod = _load_submodule("draw.py", "internal.engine._game_draw")
-    _update_mod = _load_submodule("update.py", "internal.engine._game_update")
-    _difficulty_mod = _load_submodule(
-        "difficulty.py", "internal.engine._game_difficulty"
-    )
-    _pool_mod = _load_submodule("pool.py", "internal.engine._game_pool")
-    _cheat_mod = _load_submodule("cheat.py", "internal.engine._game_cheat")
-    _menu_mod = _load_submodule("menu.py", "internal.engine._game_menu")
-    _system_mod = _load_submodule("system.py", "internal.engine._game_system")
-    Life = getattr(_life_mod, "Life", None)
-    Score = getattr(_score_mod, "Score", None)
-    Hold = getattr(_hold_mod, "Hold", None)
-    Events = getattr(_events_mod, "Events", None)
-    Draw = getattr(_draw_mod, "Draw", None)
-    Update = getattr(_update_mod, "Update", None)
-    DifficultyOps = getattr(_difficulty_mod, "DifficultyOps", None)
-    Pool = getattr(_pool_mod, "Pool", None)
-    Cheat = getattr(_cheat_mod, "Cheat", None)
-    Menu = getattr(_menu_mod, "Menu", None)
-    System = getattr(_system_mod, "System", None)
+    try:
+        _life_mod = _load_submodule("life.py", "internal.engine._game_life")
+        Life = getattr(_life_mod, "Life", None)
+    except Exception:
+        Life = None
+    try:
+        _score_mod = _load_submodule("score.py", "internal.engine._game_score")
+        Score = getattr(_score_mod, "Score", None)
+    except Exception:
+        Score = None
+    try:
+        _hold_mod = _load_submodule("hold.py", "internal.engine._game_hold")
+        Hold = getattr(_hold_mod, "Hold", None)
+    except Exception:
+        Hold = None
+    try:
+        _events_mod = _load_submodule("events.py", "internal.engine._game_events")
+        Events = getattr(_events_mod, "Events", None)
+    except Exception:
+        Events = None
+    try:
+        _draw_mod = _load_submodule("draw.py", "internal.engine._game_draw")
+        Draw = getattr(_draw_mod, "Draw", None)
+    except Exception:
+        Draw = None
+    try:
+        _update_mod = _load_submodule("update.py", "internal.engine._game_update")
+        Update = getattr(_update_mod, "Update", None)
+    except Exception:
+        _SUBMODULE_LOAD_ERRORS["update"] = traceback.format_exc()
+        Update = None
+    try:
+        _difficulty_mod = _load_submodule(
+            "difficulty.py", "internal.engine._game_difficulty"
+        )
+        DifficultyOps = getattr(_difficulty_mod, "DifficultyOps", None)
+    except Exception:
+        DifficultyOps = None
+    try:
+        _pool_mod = _load_submodule("pool.py", "internal.engine._game_pool")
+        Pool = getattr(_pool_mod, "Pool", None)
+    except Exception:
+        Pool = None
+    try:
+        _cheat_mod = _load_submodule("cheat.py", "internal.engine._game_cheat")
+        Cheat = getattr(_cheat_mod, "Cheat", None)
+    except Exception:
+        Cheat = None
+    try:
+        _menu_mod = _load_submodule("menu.py", "internal.engine._game_menu")
+        Menu = getattr(_menu_mod, "Menu", None)
+    except Exception:
+        Menu = None
+    try:
+        _system_mod = _load_submodule("system.py", "internal.engine._game_system")
+        System = getattr(_system_mod, "System", None)
+    except Exception:
+        System = None
 except Exception:
     pass
 
@@ -283,15 +317,17 @@ class Game:
         self.get_score_multiplier = self._score.get_score_multiplier
         self.add_score = self._score.add_score
 
-        self._hold = Hold(self)
-        self._events = Events(self)
-        self._draw = Draw(self)
-        self._update = Update(self)
-        self._difficulty = DifficultyOps(self)
-        self._pool = Pool(self)
-        self._cheat = Cheat(self)
-        self._menu = Menu(self)
-        self._system = System(self)
+        self._hold = Hold(self) if Hold is not None else None
+        self._events = Events(self) if Events is not None else None
+        self._draw = Draw(self) if Draw is not None else None
+        self._update = Update(self) if Update is not None else None
+        self._difficulty = (
+            DifficultyOps(self) if DifficultyOps is not None else None
+        )
+        self._pool = Pool(self) if Pool is not None else None
+        self._cheat = Cheat(self) if Cheat is not None else None
+        self._menu = Menu(self) if Menu is not None else None
+        self._system = System(self) if System is not None else None
 
         # Sistema de pontuação
         self.score = 0
@@ -341,8 +377,12 @@ class Game:
         self.current_logo_index = 0
         self.logo_display_time = 120  # Tempo para cada logo (2 segundos)
         self.logos = []  # Lista de logos para splash
-        self.menu_selected = 0  # Opção selecionada no menu
-        self.menu_options = ["Iniciar", "Recordes", "Créditos", "Sair"]
+        # Autosave e opções de menu dinâmicas
+        self.autosave_path = os.path.join(os.getcwd(), "saves", "autosave.json")
+        self._ensure_saves_dir()
+        self._autosave_data = self._load_autosave()
+        self.menu_selected = 0
+        self._rebuild_main_menu_options()
         self.game_logo = None  # Logo principal do jogo
         self.credits_type = (
             None  # Inicializa tipo de créditos para evitar valores antigos
@@ -383,6 +423,67 @@ class Game:
         # Sistema de menu de game over
         self.game_over_selected = 0  # Opção selecionada no menu de game over
         self.game_over_options = ["Jogar novamente", "Recordes", "Sair"]
+
+        # Menu de pausa e opções
+        self.pause_selected = 0
+        self.pause_menu_options = [
+            "Continuar",
+            "Botões/Teclas",
+            "Áudio",
+            "Vídeo",
+            "Sair",
+        ]
+        self.options_selected = 0
+        self.video_selected = 0
+        self.previous_state_before_options = None
+        self.audio_selected = 0
+
+        # Mapeamento de controles (teclado) — configurável via menu
+        self.controls = {
+            "left": [pygame.K_LEFT, pygame.K_a],
+            "right": [pygame.K_RIGHT, pygame.K_d],
+            "jump": [pygame.K_UP, pygame.K_w],
+            "shoot": [pygame.K_SPACE],
+            "crouch": [pygame.K_DOWN, pygame.K_s],
+            "pause": [pygame.K_ESCAPE],
+        }
+        self.controls_actions = [
+            ("Mover Esquerda", "left"),
+            ("Mover Direita", "right"),
+            ("Pular", "jump"),
+            ("Atirar", "shoot"),
+            ("Agachar", "crouch"),
+            ("Pausar", "pause"),
+        ]
+        self.controls_selected = 0
+        self.controls_editing = False
+
+        # Escala da janela para resolução ajustável em modo janela
+        try:
+            ws = float(self.env_config.get("window_scale", 1.0))
+        except Exception:
+            ws = 1.0
+        self.window_scales = [1.0, 1.25, 1.5, 2.0]
+        if ws not in self.window_scales:
+            ws = 1.0
+        self.env_config["window_scale"] = ws
+
+        # Joystick: mapeamentos padrão
+        self.joystick_controls = {
+            "jump": 0,
+            "shoot": 1,
+            "pause": 7,
+        }
+        self.joystick_profiles = {}
+        self.joystick_name = getattr(self, "joystick_name", "")
+
+        # Carregar configurações persistentes
+        try:
+            self.settings_path = os.path.join(os.getcwd(), "saves", "settings.json")
+            self._ensure_saves_dir()
+            self._load_settings()
+        except Exception:
+            pass
 
         # Variável para rastrear de onde veio o SHOW_RANKING
         self.previous_state_before_ranking = None
@@ -794,7 +895,14 @@ class Game:
     def update(self):
         if not hasattr(self, "_update") or self._update is None:
             try:
-                self._update = Update(self)
+                if Update is None:
+                    try:
+                        _mod = _load_submodule("update.py", "internal.engine._game_update")
+                        globals()["Update"] = getattr(_mod, "Update", None)
+                    except Exception:
+                        globals()["Update"] = None
+                if Update is not None:
+                    self._update = Update(self)
             except Exception:
                 pass
         return self._update.update()
@@ -836,3 +944,151 @@ class Game:
             except Exception:
                 pass
         return self._system.shutdown()
+
+    # ===== Autosave helpers =====
+    def _ensure_saves_dir(self):
+        try:
+            saves_dir = os.path.dirname(getattr(self, "autosave_path", os.path.join(os.getcwd(), "saves", "autosave.json")))
+            os.makedirs(saves_dir, exist_ok=True)
+        except Exception:
+            pass
+
+    def _load_autosave(self):
+        try:
+            path = getattr(self, "autosave_path", os.path.join(os.getcwd(), "saves", "autosave.json"))
+            if os.path.exists(path):
+                import json as _json
+                with open(path, "r", encoding="utf-8") as f:
+                    data = _json.load(f)
+                return data if isinstance(data, dict) else None
+        except Exception:
+            pass
+        return None
+
+    def _save_autosave(self, level, score, lives_at_stage_start):
+        try:
+            import json as _json
+            data = {
+                "level": int(level),
+                "score": int(score),
+                "lives_at_stage_start": int(lives_at_stage_start),
+            }
+            with open(self.autosave_path, "w", encoding="utf-8") as f:
+                _json.dump(data, f, ensure_ascii=False, indent=2)
+            self._autosave_data = data
+            self._rebuild_main_menu_options()
+        except Exception:
+            pass
+
+    def _clear_autosave(self):
+        try:
+            if os.path.exists(self.autosave_path):
+                os.remove(self.autosave_path)
+            self._autosave_data = None
+            self._rebuild_main_menu_options()
+        except Exception:
+            pass
+
+    def _rebuild_main_menu_options(self):
+        try:
+            has_save = self._autosave_data is not None
+            opts = []
+            if has_save:
+                opts.append("Continuar")
+            opts.append("Novo Jogo")
+            opts.append("Configurações")
+            opts.append("Recordes")
+            opts.append("Créditos")
+            opts.append("Sair")
+            self.menu_options = opts
+            self.menu_selected = 0
+        except Exception:
+            self.menu_options = ["Novo Jogo", "Recordes", "Créditos", "Sair"]
+            self.menu_selected = 0
+
+    def _load_settings(self):
+        try:
+            import json as _json
+            if not hasattr(self, "settings_path"):
+                self.settings_path = os.path.join(os.getcwd(), "saves", "settings.json")
+            if os.path.exists(self.settings_path):
+                with open(self.settings_path, "r", encoding="utf-8") as f:
+                    data = _json.load(f)
+                kc = data.get("controls")
+                jc = data.get("joystick_controls")
+                jprof = data.get("joystick_profiles")
+                mv = data.get("music_volume")
+                sv = data.get("sound_volume")
+                fs = data.get("fullscreen")
+                ws = data.get("window_scale")
+                if isinstance(kc, dict):
+                    self.controls = {k: list(map(int, v)) for k, v in kc.items()}
+                if isinstance(jc, dict):
+                    self.joystick_controls = {k: int(v) for k, v in jc.items() if v is not None}
+                if isinstance(jprof, dict):
+                    try:
+                        self.joystick_profiles = {
+                            str(name): {k: int(val) for k, val in prof.items() if val is not None}
+                            for name, prof in jprof.items()
+                        }
+                    except Exception:
+                        pass
+                if isinstance(mv, (int, float)):
+                    self.music_volume = max(0.0, min(1.0, float(mv)))
+                if isinstance(sv, (int, float)):
+                    self.sound_effects.sound_volume = max(0.0, min(1.0, float(sv)))
+                    try:
+                        for s in self.sound_effects.sound_effects.values():
+                            s.set_volume(self.sound_effects.sound_volume)
+                    except Exception:
+                        pass
+                if isinstance(fs, bool):
+                    self.env_config["fullscreen"] = fs
+                if isinstance(ws, (int, float)):
+                    self.env_config["window_scale"] = float(ws)
+                try:
+                    if getattr(self, "joystick_connected", False):
+                        name = getattr(self, "joystick_name", "")
+                        prof = self.joystick_profiles.get(name)
+                        if isinstance(prof, dict):
+                            self.joystick_controls = {k: int(v) for k, v in prof.items() if v is not None}
+                except Exception:
+                    pass
+                try:
+                    from internal.engine.screen import Screen as _Screen
+                    _Screen.init(self)
+                except Exception:
+                    pass
+                try:
+                    import pygame as _pg
+                    _pg.mixer.music.set_volume(self.music_volume)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _save_settings(self):
+        try:
+            import json as _json
+            if not hasattr(self, "settings_path"):
+                self.settings_path = os.path.join(os.getcwd(), "saves", "settings.json")
+            try:
+                if getattr(self, "joystick_connected", False):
+                    name = getattr(self, "joystick_name", "")
+                    if name:
+                        self.joystick_profiles[name] = dict(self.joystick_controls)
+            except Exception:
+                pass
+            data = {
+                "controls": self.controls,
+                "joystick_controls": self.joystick_controls,
+                "joystick_profiles": self.joystick_profiles,
+                "music_volume": getattr(self, "music_volume", 0.7),
+                "sound_volume": getattr(self.sound_effects, "sound_volume", 0.8),
+                "fullscreen": bool(self.env_config.get("fullscreen", False)),
+                "window_scale": float(self.env_config.get("window_scale", 1.0)),
+            }
+            with open(self.settings_path, "w", encoding="utf-8") as f:
+                _json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass

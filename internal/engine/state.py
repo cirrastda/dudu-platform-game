@@ -17,3 +17,10 @@ class GameState(Enum):
     ENDING_VIDEO = 13  # Vídeo de ending após captura do boss
     FIM_SCREEN = 14  # Tela de "FIM" após o vídeo de ending
     SELECT_DIFFICULTY = 15  # Tela de seleção de dificuldade
+    PAUSED = 16  # Jogo pausado com menu de opções
+    OPTIONS_MENU = 17  # Menu de opções (Configurações)
+    OPTIONS_AUDIO = 18  # Submenu de áudio
+    OPTIONS_VIDEO = 19  # Submenu de vídeo
+    OPTIONS_CONTROLS = 20  # Submenu de botões/teclas
+    CONFIRM_NEW_GAME = 21  # Pop-up confirmação ao iniciar novo jogo com save
+    CONFIRM_EXIT_TO_MENU = 22  # Pop-up confirmação ao sair durante pausa

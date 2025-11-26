@@ -1,4 +1,5 @@
 import sys
+import os
 import pygame
 from internal.utils.constants import WIDTH, HEIGHT
 
@@ -41,7 +42,7 @@ class Screen(metaclass=_ScreenMeta):
             screen_manager = game.screen_manager
 
             # Detectar se deve usar fullscreen
-            use_fullscreen = (not game.is_development()) or (Screen.is_fullscreen(game))
+            use_fullscreen = Screen.is_fullscreen(game)
 
             if use_fullscreen:
                 # Obter informações da tela
@@ -110,10 +111,20 @@ class Screen(metaclass=_ScreenMeta):
                 # Isso mantém compatibilidade total com o código existente
                 game.screen = screen_manager.game_surface
             else:
-                # Modo janela - usar resolução original
+                # Modo janela com suporte a escala
                 flags = getattr(pg, "DOUBLEBUF", 0)
-                game.screen = pg.display.set_mode((WIDTH, HEIGHT), flags)
-                # Garantir que set_mode_calls exista e registrar chamada determinísticamente
+                try:
+                    ws = float(getattr(game, "env_config", {}).get("window_scale", 1.0))
+                except Exception:
+                    ws = 1.0
+                ws = max(0.5, min(3.0, ws))
+                real_size = (int(WIDTH * ws), int(HEIGHT * ws))
+                try:
+                    os.environ["SDL_VIDEO_CENTERED"] = "1"
+                except Exception:
+                    pass
+                real_screen = pg.display.set_mode(real_size, flags)
+                # Registrar chamada
                 try:
                     calls = getattr(pg.display, "set_mode_calls", None)
                     if not isinstance(calls, list):
@@ -123,13 +134,20 @@ class Screen(metaclass=_ScreenMeta):
                         except Exception:
                             calls = None
                     if isinstance(calls, list):
-                        calls.append(((WIDTH, HEIGHT), flags))
+                        calls.append((real_size, flags))
                 except Exception:
                     pass
-                screen_manager.real_screen = game.screen
-                screen_manager.game_surface = game.screen
-                screen_manager.scale_x = screen_manager.scale_y = 1.0
+                screen_manager.real_screen = real_screen
+                screen_manager.game_surface = pg.Surface((WIDTH, HEIGHT))
+                try:
+                    screen_manager.game_surface = screen_manager.game_surface.convert()
+                except Exception:
+                    pass
+                # Escala uniforme
+                screen_manager.scale_x = screen_manager.scale_y = ws
                 screen_manager.offset_x = screen_manager.offset_y = 0
+                # Desenho do jogo sempre na surface base
+                game.screen = screen_manager.game_surface
         except Exception:
             # Fallback seguro: inicializa modo janela básico para garantir que set_mode seja chamado
             if not hasattr(game, "screen_manager"):
@@ -167,9 +185,13 @@ class Screen(metaclass=_ScreenMeta):
             return
 
         screen_manager = game.screen_manager
+        if not hasattr(screen_manager, "real_screen") or not hasattr(screen_manager, "game_surface"):
+            pygame.display.flip()
+            return
 
-        # Se não está em fullscreen ou escala é 1:1, apenas flip
+        # Se escala é 1:1, apenas blitar a surface base direto na tela real
         if screen_manager.scale_x == 1.0 and screen_manager.scale_y == 1.0:
+            screen_manager.real_screen.blit(screen_manager.game_surface, (0, 0))
             pygame.display.flip()
             return
 

@@ -26,7 +26,7 @@ def resource_path(relative_path):
 # Função para carregar configurações do arquivo .env
 def load_env_config():
     """Carrega configurações do arquivo .env"""
-    config = {"environment": "production"}  # Valor padrão
+    config = {"environment": "production", "fullscreen": True, "window_scale": 1.25}
 
     try:
         env_path = resource_path(".env")

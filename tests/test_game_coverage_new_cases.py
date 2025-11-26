@@ -492,7 +492,8 @@ def test_keyboard_esc_in_playing_exits_game(monkeypatch):
     pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE))
     result = g.handle_events()
 
-    assert result is False
+    assert result is True
+    assert g.state == GameState.PAUSED
 
 
 def test_joystick_game_over_restart_invalid_initial_stage_dev(monkeypatch):
