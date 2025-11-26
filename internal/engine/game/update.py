@@ -1252,24 +1252,43 @@ class Update:
                                     if getattr(g, "shield_active", False):
                                         g.shield_active = False
                                         try:
-                                            if hasattr(alien, "die"):
-                                                alien.die()
+                                            explosion = g.get_pooled_explosion(laser.x, laser.y, exp_img)
+                                            g.explosions.append(explosion)
                                         except Exception:
                                             pass
-                                        sfx.play_sound_effect("bird-hit")
-                                        for laser in getattr(alien, "lasers", []):
-                                            g.orphan_lasers.append(laser)
-                                    else:
-                                        g.player.take_hit()
-                                        sfx.play_sound_effect("player-hit")
+                                        try:
+                                            if laser in alien.lasers:
+                                                alien.lasers.remove(laser)
+                                        except Exception:
+                                            pass
                                         try:
                                             if hasattr(alien, "die"):
                                                 alien.die()
                                         except Exception:
                                             pass
                                         sfx.play_sound_effect("bird-hit")
-                                        for laser in getattr(alien, "lasers", []):
-                                            g.orphan_lasers.append(laser)
+                                        for _lz in getattr(alien, "lasers", []):
+                                            g.orphan_lasers.append(_lz)
+                                    else:
+                                        g.player.take_hit()
+                                        sfx.play_sound_effect("player-hit")
+                                        try:
+                                            explosion = g.get_pooled_explosion(laser.x, laser.y, exp_img)
+                                            g.explosions.append(explosion)
+                                        except Exception:
+                                            pass
+                                        try:
+                                            alien.lasers.remove(laser)
+                                        except Exception:
+                                            pass
+                                        try:
+                                            if hasattr(alien, "die"):
+                                                alien.die()
+                                        except Exception:
+                                            pass
+                                        sfx.play_sound_effect("bird-hit")
+                                        for _lz in getattr(alien, "lasers", []):
+                                            g.orphan_lasers.append(_lz)
                                         g.lives -= 1
                                         if g.lives <= 0:
                                             if g.ranking_manager.is_high_score(g.score):
@@ -2144,8 +2163,10 @@ class Update:
             if 41 <= g.current_level <= 50:
                 active_orphan_lasers = []
                 for laser in g.orphan_lasers:
+                    _c = self._apply_tempo_speed(laser)
                     updater = getattr(laser, "update", None)
                     keep = True if updater is None else bool(updater(g.camera_x))
+                    self._restore_tempo_speed(laser, _c)
                     if keep:
                         active_orphan_lasers.append(laser)
                 g.orphan_lasers = active_orphan_lasers
