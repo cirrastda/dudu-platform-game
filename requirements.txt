@@ -6,6 +6,8 @@ numpy>=2.0.0
 proglog>=0.1.10
 tqdm>=4.66
 pyinstaller>=6.3.0
+decorator>=5.0.0
+requests>=2.31.0
 
 # Dependências de vídeo (evitam modo fallback na abertura)
 # (já incluídas acima)

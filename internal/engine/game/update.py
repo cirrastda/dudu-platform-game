@@ -1,5 +1,6 @@
 import pygame
 from internal.utils.constants import WIDTH, HEIGHT, FPS, CAMERA_OFFSET_X
+from internal.engine.difficulty import Difficulty
 from internal.engine.state import GameState
 from internal.engine.level.level import Level
 from internal.resources.explosion import Explosion
@@ -621,10 +622,44 @@ class Update:
                 ]
             # Spawn antecipado de morcegos e estrelas (níveis 17-20)
             if 17 <= g.current_level <= 20:
+                try:
+                    if getattr(g, "difficulty", Difficulty.NORMAL) == Difficulty.EASY:
+                        qty_factor = 0.7
+                    elif getattr(g, "difficulty", Difficulty.NORMAL) == Difficulty.HARD:
+                        qty_factor = 1.4
+                    else:
+                        qty_factor = 1.0
+                except Exception:
+                    qty_factor = 1.0
+                max_bats = int(getattr(g, "max_bats_visible", int(8 * qty_factor)))
+                max_stars = max(1, int(4 * qty_factor))
+                combined_max = max(1, int((4 + (g.current_level - 16)) * qty_factor))
+                vb = 0
+                vs = 0
+                try:
+                    vb = sum(
+                        1
+                        for b in getattr(g, "bats", [])
+                        if (b.x > g.camera_x - 50 and b.x < g.camera_x + WIDTH + 150)
+                    )
+                except Exception:
+                    vb = len(getattr(g, "bats", []))
+                try:
+                    vs = sum(
+                        1
+                        for s in getattr(g, "shooting_stars", [])
+                        if (s.x > g.camera_x - 50 and s.x < g.camera_x + WIDTH + 150)
+                    )
+                except Exception:
+                    vs = len(getattr(g, "shooting_stars", []))
                 g.bat_spawn_timer += 1
+                bs = 0
                 if g.bat_spawn_timer >= getattr(g, "bat_spawn_interval", 999999):
                     import random
-                    for i in range(getattr(g, "bats_per_spawn", 0)):
+                    comb_allow = max(0, combined_max - (vb + vs))
+                    allow = min(max(0, max_bats - vb), comb_allow)
+                    bs = min(getattr(g, "bats_per_spawn", 0), allow)
+                    for i in range(bs):
                         bat_y = random.randint(HEIGHT // 4, HEIGHT - 150)
                         bat_x = g.camera_x + WIDTH + 50 + (i * 100)
                         bat_images = (
@@ -641,7 +676,10 @@ class Update:
                 g.shooting_star_spawn_timer += 1
                 if g.shooting_star_spawn_timer >= getattr(g, "shooting_star_spawn_interval", 999999):
                     import random
-                    for i in range(getattr(g, "shooting_stars_per_spawn", 0)):
+                    comb_allow_s = max(0, combined_max - (vb + vs + bs))
+                    allow_s = min(max(0, max_stars - vs), comb_allow_s)
+                    to_spawn_s = min(getattr(g, "shooting_stars_per_spawn", 0), allow_s)
+                    for i in range(to_spawn_s):
                         star_y = random.randint(HEIGHT // 6, HEIGHT // 2)
                         star_x = g.camera_x + WIDTH + 50 + (i * 90)
                         star_img = getattr(g.image, "shooting_star_img", None)

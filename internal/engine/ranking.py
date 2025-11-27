@@ -1,24 +1,35 @@
 import os
+import sys
 import json
 
 
-def _get_local_records_dir():
-    """Retorna o diretório local `records` dentro do cwd.
+def _get_records_dir():
+    """Resolve diretório de ranking.
 
-    Compatível com os testes que esperam criação de `records/` no diretório atual.
+    - Em executável único (PyInstaller): usa diretório de dados do usuário
+      alinhado ao padrão de saves/preferences.
+    - Em desenvolvimento: mantém `records/` no cwd para compatibilidade de testes.
     """
     try:
+        if getattr(sys, "frozen", False):
+            # Windows: %APPDATA%/platform-game/saves
+            appdata = os.environ.get("APPDATA")
+            if appdata:
+                base = os.path.join(appdata, "platform-game", "saves")
+            else:
+                base = os.path.join(os.path.expanduser("~"), ".platform-game", "saves")
+            return os.path.join(base, "records")
+        # Desenvolvimento/testes
         return os.path.join(os.getcwd(), "records")
     except Exception:
-        # Fallback: ainda tentar no diretório do usuário
-        return os.path.join(os.path.expanduser("~"), "records")
+        return os.path.join(os.path.expanduser("~"), ".platform-game", "saves", "records")
 
 
 class RankingManager:
     def __init__(self):
-        # Usar diretório local `records` (cwd) para compatibilidade com testes
-        self.records_dir = _get_local_records_dir()
-        self.ranking_file = os.path.join(self.records_dir, "top10.log")
+        self.records_dir = _get_records_dir()
+        # Seguir padrão de preferences/autosave: JSON
+        self.ranking_file = os.path.join(self.records_dir, "top10.json")
         self.rankings = []
         self.ensure_records_dir()
         self.load_rankings()

@@ -443,7 +443,7 @@ class Game:
         self.logo_display_time = 120  # Tempo para cada logo (2 segundos)
         self.logos = []  # Lista de logos para splash
         # Autosave e opções de menu dinâmicas
-        self.autosave_path = os.path.join(os.getcwd(), "saves", "autosave.json")
+        self.autosave_path = self._get_saves_path("autosave.json")
         self._ensure_saves_dir()
         self._autosave_data = self._load_autosave()
         self.menu_selected = 0
@@ -546,7 +546,7 @@ class Game:
 
         # Carregar configurações persistentes
         try:
-            self.settings_path = os.path.join(os.getcwd(), "saves", "settings.json")
+            self.settings_path = self._get_saves_path("settings.json")
             self._ensure_saves_dir()
             self._load_settings()
         except Exception:
@@ -1058,16 +1058,36 @@ class Game:
         return self._system.shutdown()
 
     # ===== Autosave helpers =====
+    def _get_saves_path(self, filename):
+        try:
+            import sys as _sys
+            base_dir = None
+            if getattr(_sys, "frozen", False):
+                # Executável único: usar diretório de dados do usuário
+                try:
+                    appdata = os.environ.get("APPDATA")
+                    if appdata:
+                        base_dir = os.path.join(appdata, "platform-game", "saves")
+                    else:
+                        base_dir = os.path.join(os.path.expanduser("~"), ".platform-game", "saves")
+                except Exception:
+                    base_dir = os.path.join(os.path.expanduser("~"), ".platform-game", "saves")
+            else:
+                base_dir = os.path.join(os.getcwd(), "saves")
+            os.makedirs(base_dir, exist_ok=True)
+            return os.path.join(base_dir, filename)
+        except Exception:
+            return os.path.join(os.getcwd(), "saves", filename)
     def _ensure_saves_dir(self):
         try:
-            saves_dir = os.path.dirname(getattr(self, "autosave_path", os.path.join(os.getcwd(), "saves", "autosave.json")))
+            saves_dir = os.path.dirname(getattr(self, "autosave_path", self._get_saves_path("autosave.json")))
             os.makedirs(saves_dir, exist_ok=True)
         except Exception:
             pass
 
     def _load_autosave(self):
         try:
-            path = getattr(self, "autosave_path", os.path.join(os.getcwd(), "saves", "autosave.json"))
+            path = getattr(self, "autosave_path", self._get_saves_path("autosave.json"))
             if os.path.exists(path):
                 import json as _json
                 with open(path, "r", encoding="utf-8") as f:
@@ -1118,7 +1138,7 @@ class Game:
         try:
             import json as _json
             if not hasattr(self, "settings_path"):
-                self.settings_path = os.path.join(os.getcwd(), "saves", "settings.json")
+                self.settings_path = self._get_saves_path("settings.json")
             if os.path.exists(self.settings_path):
                 with open(self.settings_path, "r", encoding="utf-8") as f:
                     data = _json.load(f)
@@ -1188,7 +1208,7 @@ class Game:
         try:
             import json as _json
             if not hasattr(self, "settings_path"):
-                self.settings_path = os.path.join(os.getcwd(), "saves", "settings.json")
+                self.settings_path = self._get_saves_path("settings.json")
             try:
                 if getattr(self, "joystick_connected", False):
                     name = getattr(self, "joystick_name", "")

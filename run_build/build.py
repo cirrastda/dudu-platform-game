@@ -160,8 +160,10 @@ class GameBuilder:
 
         # Configurar argumentos do PyInstaller
         cmd = [
-            "pyinstaller",
-            "--onedir",  # Pasta (mais estável para diagnosticar)
+            sys.executable,
+            "-m",
+            "PyInstaller",
+            "--onefile",  # Executável único conforme requisito
             "--name",
             executable_name.replace(".exe", ""),  # Nome sem extensão
             "--distpath",
@@ -172,8 +174,7 @@ class GameBuilder:
             str(self.build_dir),
             "--runtime-hook",
             str(self.project_root / "run_build" / "runtime_hook_logging.py"),
-            "--debug",
-            "all",
+            # Debug pode ser removido para reduzir dependências em runtime
         ]
 
         # Configurações específicas por plataforma
