@@ -198,12 +198,49 @@ class Screen(metaclass=_ScreenMeta):
         # Limpar tela real com preto
         screen_manager.real_screen.fill((0, 0, 0))
 
+        # Preparar surface para apresentação com filtros visuais e acessibilidade
+        source_surface = screen_manager.game_surface
+        try:
+            if hasattr(game, "visual_mode") and getattr(game, "visual_mode", "normal") == "8bit":
+                try:
+                    pw = max(1, screen_manager.game_width // 2)
+                    ph = max(1, screen_manager.game_height // 2)
+                    small = pygame.transform.scale(source_surface, (pw, ph))
+                    source_surface = pygame.transform.scale(small, (screen_manager.game_width, screen_manager.game_height))
+                except Exception:
+                    pass
+                # Scanlines overlay
+                try:
+                    scan = pygame.Surface((screen_manager.game_width, screen_manager.game_height), pygame.SRCALPHA)
+                    for y in range(0, screen_manager.game_height, 2):
+                        pygame.draw.line(scan, (0, 0, 0, 40), (0, y), (screen_manager.game_width, y))
+                    source_surface.blit(scan, (0, 0))
+                except Exception:
+                    pass
+            if hasattr(game, "colorblind_mode") and getattr(game, "colorblind_mode", "none") != "none":
+                try:
+                    overlay = pygame.Surface((screen_manager.game_width, screen_manager.game_height))
+                    mode = getattr(game, "colorblind_mode", "none")
+                    if mode == "deuteranopia":
+                        overlay.fill((255, 180, 255))  # reduz verde
+                    elif mode == "protanopia":
+                        overlay.fill((180, 255, 255))  # reduz vermelho
+                    elif mode == "tritanopia":
+                        overlay.fill((255, 255, 180))  # reduz azul
+                    else:
+                        overlay.fill((255, 255, 255))
+                    source_surface.blit(overlay, (0, 0), special_flags=getattr(pygame, "BLEND_RGB_MULT", 0))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # Escalar e desenhar a surface do jogo na tela real
         scaled_width = int(screen_manager.game_width * screen_manager.scale_x)
         scaled_height = int(screen_manager.game_height * screen_manager.scale_y)
 
         scaled_surface = pygame.transform.scale(
-            screen_manager.game_surface, (scaled_width, scaled_height)
+            source_surface, (scaled_width, scaled_height)
         )
         try:
             scaled_surface = scaled_surface.convert()

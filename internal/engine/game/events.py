@@ -132,6 +132,10 @@ class Events:
                             game.video_selected = 0
                             game.previous_state_before_options = GameState.PAUSED
                             game.state = GameState.OPTIONS_VIDEO
+                        elif sel == "Acessibilidade":
+                            game.access_selected = 0
+                            game.previous_state_before_options = GameState.PAUSED
+                            game.state = GameState.OPTIONS_ACCESSIBILITY
                         elif sel == "Sair":
                             game.confirm_dialog_type = "exit_to_menu"
                             game.confirm_selected = 0
@@ -142,9 +146,9 @@ class Events:
                         return True
                 elif game.state == GameState.OPTIONS_MENU:
                     if event.key == pygame.K_UP:
-                        game.options_selected = (game.options_selected - 1) % 4
+                        game.options_selected = (game.options_selected - 1) % 5
                     elif event.key == pygame.K_DOWN:
-                        game.options_selected = (game.options_selected + 1) % 4
+                        game.options_selected = (game.options_selected + 1) % 5
                     elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         game.pause_selected = None
                         if game.options_selected == 0:
@@ -158,6 +162,10 @@ class Events:
                             game.previous_state_before_options = GameState.MAIN_MENU
                             game.state = GameState.OPTIONS_VIDEO
                         elif game.options_selected == 3:
+                            game.access_selected = 0
+                            game.previous_state_before_options = GameState.MAIN_MENU
+                            game.state = GameState.OPTIONS_ACCESSIBILITY
+                        elif game.options_selected == 4:
                             game.state = GameState.MAIN_MENU
                     elif event.key == pygame.K_ESCAPE:
                         game.state = GameState.MAIN_MENU
@@ -228,9 +236,9 @@ class Events:
                         return True
                 elif game.state == GameState.OPTIONS_VIDEO:
                     if event.key == pygame.K_UP:
-                        game.video_selected = (game.video_selected - 1) % 2
+                        game.video_selected = (game.video_selected - 1) % 3
                     elif event.key == pygame.K_DOWN:
-                        game.video_selected = (game.video_selected + 1) % 2
+                        game.video_selected = (game.video_selected + 1) % 3
                     elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         if game.video_selected == 1:
                             try:
@@ -240,6 +248,12 @@ class Events:
                             except Exception:
                                 pass
                             try:
+                                game._save_settings()
+                            except Exception:
+                                pass
+                        elif game.video_selected == 2:
+                            try:
+                                game.visual_mode = "normal" if getattr(game, "visual_mode", "normal") == "8bit" else "8bit"
                                 game._save_settings()
                             except Exception:
                                 pass
@@ -256,6 +270,12 @@ class Events:
                                 _Screen.init(game)
                             except Exception:
                                 pass
+                        elif game.video_selected == 2:
+                            try:
+                                game.visual_mode = "normal" if getattr(game, "visual_mode", "normal") == "8bit" else "8bit"
+                                game._save_settings()
+                            except Exception:
+                                pass
                     elif event.key == pygame.K_RIGHT:
                         if game.video_selected == 0:
                             try:
@@ -267,6 +287,12 @@ class Events:
                             try:
                                 from internal.engine.screen import Screen as _Screen
                                 _Screen.init(game)
+                            except Exception:
+                                pass
+                        elif game.video_selected == 2:
+                            try:
+                                game.visual_mode = "normal" if getattr(game, "visual_mode", "normal") == "8bit" else "8bit"
+                                game._save_settings()
                             except Exception:
                                 pass
                     elif event.key == pygame.K_r:
@@ -288,8 +314,55 @@ class Events:
                         else:
                             game.state = GameState.MAIN_MENU
                         return True
+                elif game.state == GameState.OPTIONS_ACCESSIBILITY:
+                    if event.key == pygame.K_UP:
+                        game.access_selected = (getattr(game, "access_selected", 0) - 1) % 2
+                    elif event.key == pygame.K_DOWN:
+                        game.access_selected = (getattr(game, "access_selected", 0) + 1) % 2
+                    elif event.key == pygame.K_LEFT:
+                        if getattr(game, "access_selected", 0) == 0:
+                            try:
+                                modes = ["none", "deuteranopia", "protanopia", "tritanopia"]
+                                idx = modes.index(getattr(game, "colorblind_mode", "none"))
+                            except Exception:
+                                idx = 0
+                            game.colorblind_mode = modes[(idx - 1) % len(modes)]
+                        else:
+                            game.vibration_enabled = not getattr(game, "vibration_enabled", False)
+                        try:
+                            game._save_settings()
+                        except Exception:
+                            pass
+                    elif event.key == pygame.K_RIGHT:
+                        if getattr(game, "access_selected", 0) == 0:
+                            try:
+                                modes = ["none", "deuteranopia", "protanopia", "tritanopia"]
+                                idx = modes.index(getattr(game, "colorblind_mode", "none"))
+                            except Exception:
+                                idx = 0
+                            game.colorblind_mode = modes[(idx + 1) % len(modes)]
+                        else:
+                            game.vibration_enabled = not getattr(game, "vibration_enabled", False)
+                        try:
+                            game._save_settings()
+                        except Exception:
+                            pass
+                    elif event.key == pygame.K_r:
+                        game.colorblind_mode = "none"
+                        game.vibration_enabled = False
+                        try:
+                            game._save_settings()
+                        except Exception:
+                            pass
+                    elif event.key == pygame.K_ESCAPE:
+                        if game.previous_state_before_options:
+                            game.state = game.previous_state_before_options
+                            game.previous_state_before_options = None
+                        else:
+                            game.state = GameState.MAIN_MENU
+                        return True
                 elif game.state == GameState.OPTIONS_CONTROLS:
-                    if game.controls_editing:
+                    if getattr(game, "controls_editing", False):
                         if event.key == pygame.K_ESCAPE:
                             game.controls_editing = False
                             return True
@@ -557,6 +630,9 @@ class Events:
                             game.state = GameState.OPTIONS_AUDIO
                         elif sel == "Vídeo":
                             game.state = GameState.OPTIONS_VIDEO
+                        elif sel == "Acessibilidade":
+                            game.access_selected = 0
+                            game.state = GameState.OPTIONS_ACCESSIBILITY
                         elif sel == "Sair":
                             game.confirm_dialog_type = "exit_to_menu"
                             game.confirm_selected = 0
@@ -572,6 +648,9 @@ class Events:
                             game.state = GameState.OPTIONS_AUDIO
                         elif game.options_selected == 2:
                             game.state = GameState.OPTIONS_VIDEO
+                        elif game.options_selected == 3:
+                            game.access_selected = 0
+                            game.state = GameState.OPTIONS_ACCESSIBILITY
                     elif event.button == 1:
                         game.state = GameState.MAIN_MENU
                 elif game.state == GameState.OPTIONS_AUDIO:
@@ -623,6 +702,12 @@ class Events:
                             except Exception:
                                 pass
                             try:
+                                game._save_settings()
+                            except Exception:
+                                pass
+                        elif game.video_selected == 2:
+                            try:
+                                game.visual_mode = "normal" if getattr(game, "visual_mode", "normal") == "8bit" else "8bit"
                                 game._save_settings()
                             except Exception:
                                 pass
@@ -818,7 +903,7 @@ class Events:
                     else:
                         game.state = GameState.GAME_OVER
 
-        if game.joystick_connected and getattr(game, "joystick", None):
+        if getattr(game, "joystick_connected", False) and getattr(game, "joystick", None):
             analog_vertical = 0
             analog_horizontal = 0
             if game.joystick.get_numaxes() >= 2:

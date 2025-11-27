@@ -253,6 +253,10 @@ class Game:
         self.music.start(self)
         self.sound_effects = SoundEffects()
         self.sound_effects.load_sound_effects()
+        try:
+            self.sound_effects.game = self
+        except Exception:
+            pass
 
         # Sistema de câmera
         self.camera_x = 0
@@ -316,6 +320,67 @@ class Game:
         self._score = Score(self)
         self.get_score_multiplier = self._score.get_score_multiplier
         self.add_score = self._score.add_score
+
+        # Opções de acessibilidade e visual
+        self.visual_mode = "normal"
+        self.colorblind_mode = "none"
+        self.vibration_enabled = False
+
+        # Controles e joysticks (valores seguros iniciais)
+        self.controls = {
+            "left": [pygame.K_LEFT, pygame.K_a],
+            "right": [pygame.K_RIGHT, pygame.K_d],
+            "jump": [pygame.K_UP, pygame.K_w],
+            "shoot": [pygame.K_SPACE],
+            "crouch": [pygame.K_DOWN, pygame.K_s],
+            "pause": [pygame.K_ESCAPE],
+        }
+        self.controls_actions = [
+            ("Mover Esquerda", "left"),
+            ("Mover Direita", "right"),
+            ("Pular", "jump"),
+            ("Atirar", "shoot"),
+            ("Agachar", "crouch"),
+            ("Pausar", "pause"),
+        ]
+        self.controls_selected = 0
+        self.controls_editing = False
+        self.joystick_controls = {
+            "jump": 0,
+            "shoot": 1,
+            "pause": 7,
+        }
+        self.joystick_profiles = {}
+        self.joystick_name = getattr(self, "joystick_name", "")
+        self.joystick_connected = getattr(self, "joystick_connected", False)
+        self.joystick = getattr(self, "joystick", None)
+        self.pause_selected = 0
+        self.pause_menu_options = [
+            "Continuar",
+            "Botões/Teclas",
+            "Áudio",
+            "Vídeo",
+            "Acessibilidade",
+            "Sair",
+        ]
+        self.options_selected = 0
+        self.video_selected = 0
+        self.previous_state_before_options = None
+        self.audio_selected = 0
+        self.access_selected = 0
+
+        def _try_rumble(duration_ms=200, low=0.5, high=0.5):
+            try:
+                if getattr(self, "vibration_enabled", False) and getattr(self, "joystick_connected", False):
+                    js = getattr(self, "joystick", None)
+                    if js and hasattr(js, "rumble"):
+                        try:
+                            js.rumble(float(low), float(high), int(duration_ms))
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+        self._try_rumble = _try_rumble
 
         self._hold = Hold(self) if Hold is not None else None
         self._events = Events(self) if Events is not None else None
@@ -431,12 +496,14 @@ class Game:
             "Botões/Teclas",
             "Áudio",
             "Vídeo",
+            "Acessibilidade",
             "Sair",
         ]
         self.options_selected = 0
         self.video_selected = 0
         self.previous_state_before_options = None
         self.audio_selected = 0
+        self.access_selected = 0
 
         # Mapeamento de controles (teclado) — configurável via menu
         self.controls = {
@@ -1035,21 +1102,17 @@ class Game:
             pass
 
     def _rebuild_main_menu_options(self):
-        try:
-            has_save = self._autosave_data is not None
-            opts = []
-            if has_save:
-                opts.append("Continuar")
-            opts.append("Novo Jogo")
-            opts.append("Configurações")
-            opts.append("Recordes")
-            opts.append("Créditos")
-            opts.append("Sair")
-            self.menu_options = opts
-            self.menu_selected = 0
-        except Exception:
-            self.menu_options = ["Novo Jogo", "Recordes", "Créditos", "Sair"]
-            self.menu_selected = 0
+        has_save = getattr(self, "_autosave_data", None) is not None
+        opts = []
+        if has_save:
+            opts.append("Continuar")
+        opts.append("Novo Jogo")
+        opts.append("Configurações")
+        opts.append("Recordes")
+        opts.append("Créditos")
+        opts.append("Sair")
+        self.menu_options = opts
+        self.menu_selected = 0
 
     def _load_settings(self):
         try:
@@ -1066,6 +1129,9 @@ class Game:
                 sv = data.get("sound_volume")
                 fs = data.get("fullscreen")
                 ws = data.get("window_scale")
+                vm = data.get("visual_mode")
+                cb = data.get("colorblind_mode")
+                vib = data.get("vibration_enabled")
                 if isinstance(kc, dict):
                     self.controls = {k: list(map(int, v)) for k, v in kc.items()}
                 if isinstance(jc, dict):
@@ -1091,6 +1157,12 @@ class Game:
                     self.env_config["fullscreen"] = fs
                 if isinstance(ws, (int, float)):
                     self.env_config["window_scale"] = float(ws)
+                if isinstance(vm, str) and vm in ("normal", "8bit"):
+                    self.visual_mode = vm
+                if isinstance(cb, str) and cb in ("none", "deuteranopia", "protanopia", "tritanopia"):
+                    self.colorblind_mode = cb
+                if isinstance(vib, bool):
+                    self.vibration_enabled = vib
                 try:
                     if getattr(self, "joystick_connected", False):
                         name = getattr(self, "joystick_name", "")
@@ -1132,6 +1204,9 @@ class Game:
                 "sound_volume": getattr(self.sound_effects, "sound_volume", 0.8),
                 "fullscreen": bool(self.env_config.get("fullscreen", False)),
                 "window_scale": float(self.env_config.get("window_scale", 1.0)),
+                "visual_mode": str(getattr(self, "visual_mode", "normal")),
+                "colorblind_mode": str(getattr(self, "colorblind_mode", "none")),
+                "vibration_enabled": bool(getattr(self, "vibration_enabled", False)),
             }
             with open(self.settings_path, "w", encoding="utf-8") as f:
                 _json.dump(data, f, ensure_ascii=False, indent=2)

@@ -24,3 +24,4 @@ class GameState(Enum):
     OPTIONS_CONTROLS = 20  # Submenu de botões/teclas
     CONFIRM_NEW_GAME = 21  # Pop-up confirmação ao iniciar novo jogo com save
     CONFIRM_EXIT_TO_MENU = 22  # Pop-up confirmação ao sair durante pausa
+    OPTIONS_ACCESSIBILITY = 23

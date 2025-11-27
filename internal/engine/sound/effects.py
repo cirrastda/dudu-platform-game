@@ -195,3 +195,20 @@ class SoundEffects:
                 print(f"Erro ao tocar efeito sonoro {sound_name}: {e}")
         else:
             print(f"Efeito sonoro '{sound_name}' não encontrado")
+        # Feedback opcional por vibração do joystick
+        try:
+            g = getattr(self, "game", None)
+            if g and getattr(g, "vibration_enabled", False) and getattr(g, "joystick_connected", False):
+                cfg = {
+                    "player-hit": (0.7, 0.7, 300),
+                    "explosion": (0.6, 0.6, 250),
+                    "shot": (0.3, 0.3, 100),
+                    "jump": (0.2, 0.2, 80),
+                }.get(sound_name)
+                if cfg:
+                    try:
+                        g._try_rumble(int(cfg[2]), float(cfg[0]), float(cfg[1]))
+                    except Exception:
+                        pass
+        except Exception:
+            pass

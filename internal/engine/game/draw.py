@@ -1336,7 +1336,7 @@ class Draw:
             self.draw_ocean_background(game.screen)
             title = game.menu_big_font.render("Configurações", True, YELLOW)
             game.screen.blit(title, title.get_rect(center=(WIDTH // 2, 160)))
-            options = ["Botões/Teclas", "Áudio", "Vídeo", "Voltar"]
+            options = ["Botões/Teclas", "Áudio", "Vídeo", "Acessibilidade", "Voltar"]
             start_y = 260
             for i, option in enumerate(options):
                 color = YELLOW if i == game.options_selected else WHITE
@@ -1400,6 +1400,7 @@ class Draw:
                 ws = 1.0
             res_color = YELLOW if getattr(game, "video_selected", 0) == 0 else WHITE
             disp_color = YELLOW if getattr(game, "video_selected", 0) == 1 else WHITE
+            mode_color = YELLOW if getattr(game, "video_selected", 0) == 2 else WHITE
             res = game.menu_font.render(
                 f"Resolução: {int(WIDTH*ws)} x {int(HEIGHT*ws)}",
                 True,
@@ -1407,15 +1408,49 @@ class Draw:
             )
             mode = "Fullscreen" if Screen.is_fullscreen(game) else "Janela"
             disp = game.menu_font.render(f"Exibição: {mode}", True, disp_color)
+            vmode_txt = "8 bits" if getattr(game, "visual_mode", "normal") == "8bit" else "Normal"
+            vis = game.menu_font.render(f"Modo Visual: {vmode_txt}", True, mode_color)
             res_rect = res.get_rect(center=(WIDTH // 2, 270))
             disp_rect = disp.get_rect(center=(WIDTH // 2, 330))
+            vis_rect = vis.get_rect(center=(WIDTH // 2, 390))
             if getattr(game, "video_selected", 0) == 0:
                 pygame.draw.rect(game.screen, DARK_BLUE, res_rect.inflate(20, 10))
-            else:
+            elif getattr(game, "video_selected", 0) == 1:
                 pygame.draw.rect(game.screen, DARK_BLUE, disp_rect.inflate(20, 10))
+            else:
+                pygame.draw.rect(game.screen, DARK_BLUE, vis_rect.inflate(20, 10))
             game.screen.blit(res, res_rect)
             game.screen.blit(disp, disp_rect)
+            game.screen.blit(vis, vis_rect)
             inst = game.menu_small_font.render("↑↓ escolhe  Enter/A alterna  ← → ajusta  ESC/B volta", True, LIGHT_GRAY)
+            game.screen.blit(inst, inst.get_rect(center=(WIDTH // 2, HEIGHT - 50)))
+
+        elif game.state == GameState.OPTIONS_ACCESSIBILITY:
+            self.draw_ocean_background(game.screen)
+            title = game.menu_big_font.render("Acessibilidade", True, YELLOW)
+            game.screen.blit(title, title.get_rect(center=(WIDTH // 2, 160)))
+            # Opções
+            cb_modes = {
+                "none": "Nenhum",
+                "deuteranopia": "Deuteranopia",
+                "protanopia": "Protanopia",
+                "tritanopia": "Tritanopia",
+            }
+            sel = getattr(game, "access_selected", 0)
+            label_cb = game.menu_font.render(
+                f"Modo daltônico: {cb_modes.get(getattr(game, 'colorblind_mode', 'none'), 'Nenhum')}",
+                True,
+                YELLOW if sel == 0 else WHITE,
+            )
+            vib_txt = "Ativado" if getattr(game, "vibration_enabled", False) else "Desativado"
+            label_vib = game.menu_font.render(
+                f"Vibração: {vib_txt}",
+                True,
+                YELLOW if sel == 1 else WHITE,
+            )
+            game.screen.blit(label_cb, label_cb.get_rect(center=(WIDTH // 2, 280)))
+            game.screen.blit(label_vib, label_vib.get_rect(center=(WIDTH // 2, 340)))
+            inst = game.menu_small_font.render("↑↓ escolhe  ← → ajusta  R: Resetar  ESC/B volta", True, LIGHT_GRAY)
             game.screen.blit(inst, inst.get_rect(center=(WIDTH // 2, HEIGHT - 50)))
 
         elif game.state == GameState.OPTIONS_CONTROLS:
