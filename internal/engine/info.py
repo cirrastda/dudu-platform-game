@@ -1,5 +1,5 @@
 from internal.engine.difficulty import Difficulty
-from internal.utils.constants import WIDTH, HEIGHT
+from internal.utils.constants import WIDTH, HEIGHT, FPS
 import pygame
 
 
@@ -141,16 +141,27 @@ class Info:
 
         # Inferior Direito: Ícones dos power-ups ativos (direita para esquerda)
         powerup_icons = []
+        powerup_counters = []
         if getattr(game, "invincibility_active", False):
             img = getattr(game, "powerup_invincibility_img", None)
             if isinstance(img, pygame.Surface):
                 powerup_icons.append(img)
+                try:
+                    remaining = int(getattr(game.player, "invulnerability_timer", 0))
+                except Exception:
+                    remaining = 0
+                powerup_counters.append(remaining)
         # Double jump habilitado no player
         try:
             if getattr(getattr(game, "player", None), "double_jump_enabled", False):
                 img = getattr(game, "powerup_double_jump_img", None)
                 if isinstance(img, pygame.Surface):
                     powerup_icons.append(img)
+                    try:
+                        remaining = int(getattr(game.player, "double_jump_frames_left", 0))
+                    except Exception:
+                        remaining = 0
+                    powerup_counters.append(remaining)
         except Exception:
             pass
         # Escudo ativo
@@ -158,23 +169,46 @@ class Info:
             img = getattr(game, "powerup_shield_img", None)
             if isinstance(img, pygame.Surface):
                 powerup_icons.append(img)
+                powerup_counters.append(0)
         # Tempo (lentidão) ativo
         if getattr(game, "tempo_active", False):
             img = getattr(game, "powerup_tempo_img", None)
             if isinstance(img, pygame.Surface):
                 powerup_icons.append(img)
+                try:
+                    remaining = int(getattr(game, "tempo_frames_left", 0))
+                except Exception:
+                    remaining = 0
+                powerup_counters.append(remaining)
         # SuperTiro ativo
         if getattr(game, "super_shot_active", False):
             img = getattr(game, "powerup_super_shot_img", None)
             if isinstance(img, pygame.Surface):
                 powerup_icons.append(img)
+                try:
+                    remaining = int(getattr(game, "super_shot_frames_left", 0))
+                except Exception:
+                    remaining = 0
+                powerup_counters.append(remaining)
 
         if powerup_icons:
             # Escalar ícones para tamanho do HUD
             y = HEIGHT - margin - hud_icon_size
             x = WIDTH - margin
             # Renderizar da direita para a esquerda
-            for img in reversed(powerup_icons):
+            try:
+                counter_font = pygame.font.SysFont("Segoe UI", max(14, int(hud_icon_size * 0.45)), bold=True)
+            except Exception:
+                try:
+                    counter_font = pygame.font.SysFont("Arial", max(14, int(hud_icon_size * 0.45)), bold=True)
+                except Exception:
+                    counter_font = pygame.font.Font(None, max(14, int(hud_icon_size * 0.45)))
+                    try:
+                        if hasattr(counter_font, "set_bold"):
+                            counter_font.set_bold(True)
+                    except Exception:
+                        pass
+            for idx, img in enumerate(reversed(powerup_icons)):
                 try:
                     scaled = pygame.transform.smoothscale(
                         img, (hud_icon_size, hud_icon_size)
@@ -186,4 +220,28 @@ class Info:
                 w = scaled.get_width()
                 x -= w
                 screen.blit(scaled, (x, y))
+                rem = 0
+                try:
+                    rem = int(list(reversed(powerup_counters))[idx])
+                except Exception:
+                    rem = 0
+                if rem > 0:
+                    try:
+                        secs = max(0, (rem + FPS - 1) // FPS)
+                    except Exception:
+                        secs = rem
+                    text_surf = counter_font.render(str(secs), True, (255, 255, 255))
+                    bg_w = max(16, int(text_surf.get_width() + 8))
+                    bg_h = max(14, int(text_surf.get_height()))
+                    bg_x = x + w - bg_w
+                    bg_y = y - int(bg_h * 0.25)
+                    try:
+                        overlay = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
+                        overlay.fill((0, 0, 0, 130))
+                        screen.blit(overlay, (bg_x, bg_y))
+                    except Exception:
+                        pygame.draw.rect(screen, (0, 0, 0), (bg_x, bg_y, bg_w, bg_h))
+                    tx = bg_x + (bg_w - text_surf.get_width()) // 2
+                    ty = bg_y + (bg_h - text_surf.get_height()) // 2
+                    screen.blit(text_surf, (tx, ty))
                 x -= spacing

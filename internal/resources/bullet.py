@@ -12,6 +12,7 @@ class Bullet:
         self.direction = direction  # 1 para direita, -1 para esquerda
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
         self.image = image
+        self.is_super = False
 
     def update(self):
         """Atualizar posição do tiro"""
@@ -26,5 +27,18 @@ class Bullet:
         if self.image:
             screen.blit(self.image, (self.x, self.y))
         else:
-            # Fallback: desenhar retângulo amarelo
             pygame.draw.rect(screen, YELLOW, self.rect)
+        if getattr(self, "is_super", False):
+            try:
+                glow_w = max(10, int(self.width * 1.2))
+                glow_h = max(8, int(self.height * 1.5))
+                overlay = pygame.Surface((glow_w, glow_h), pygame.SRCALPHA)
+                cx = glow_w // 2
+                cy = glow_h // 2
+                pygame.draw.circle(overlay, (0, 255, 255, 110), (cx, cy), max(3, int(glow_h * 0.3)))
+                pygame.draw.circle(overlay, (135, 206, 235, 90), (cx, cy), max(5, int(glow_h * 0.45)))
+                ox = - (glow_w - self.width) // 2
+                oy = - (glow_h - self.height) // 2
+                screen.blit(overlay, (int(self.x + ox), int(self.y + oy)))
+            except Exception:
+                pass

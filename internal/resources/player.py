@@ -284,9 +284,9 @@ class Player:
 
             offsets = []
             if burst >= 3:
-                offsets = [-8, 0, 8]
+                offsets = [-12, 0, 12]
             elif burst == 2:
-                offsets = [-4, 4]
+                offsets = [-8, 8]
             else:
                 offsets = [0]
 
@@ -307,6 +307,10 @@ class Player:
                     # Definir velocidade explicitamente em vez de multiplicar
                     base = 8
                     bullet.speed = int(round(base * speed_factor)) if speed_factor > 1.0 else base
+                except Exception:
+                    pass
+                try:
+                    bullet.is_super = bool(speed_factor > 1.0)
                 except Exception:
                     pass
                 self.bullets.append(bullet)

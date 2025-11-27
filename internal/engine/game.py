@@ -805,6 +805,11 @@ class Game:
                 if raw_super in ("on", "1", "true", "yes"):
                     self.super_shot_active = True
                     self.super_shot_frames_left = int(70 * FPS)
+                    try:
+                        if hasattr(self, "player") and self.player:
+                            self.player.max_shoot_cooldown = 8
+                    except Exception:
+                        pass
         except Exception:
             pass
 

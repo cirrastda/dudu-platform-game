@@ -69,6 +69,10 @@ class Update:
                     if getattr(g, "super_shot_active", False):
                         g.super_shot_active = False
                         g.super_shot_frames_left = 0
+                        try:
+                            g.player.max_shoot_cooldown = 15
+                        except Exception:
+                            pass
                 except Exception:
                     pass
                 # Restaurar volume da música se foi reduzido
@@ -125,6 +129,10 @@ class Update:
                     if getattr(g, "super_shot_active", False):
                         g.super_shot_active = False
                         g.super_shot_frames_left = 0
+                        try:
+                            g.player.max_shoot_cooldown = 15
+                        except Exception:
+                            pass
                 except Exception:
                     pass
                 return
@@ -160,6 +168,10 @@ class Update:
                 if g.hold_type == "level_end" or g.super_shot_frames_left <= 0:
                     g.super_shot_active = False
                     g.super_shot_frames_left = 0
+                    try:
+                        g.player.max_shoot_cooldown = 15
+                    except Exception:
+                        pass
         except Exception:
             pass
 
@@ -347,21 +359,23 @@ class Update:
                         g.return_bullet_to_pool(bullet)
                         continue
                 # (removido) fail-safe duplicado para colisões de tiros em morcegos
-                    if 31 <= g.current_level <= 40:
-                        for airplane in getattr(g, "airplanes", [])[:]:
-                            if bullet.rect.colliderect(getattr(airplane, "rect", bullet.rect)):
-                                hit_local = True
-                                g.add_score(50)
-                                try:
-                                    sfx.play_sound_effect("bird-hit")
-                                except Exception:
-                                    pass
-                                try:
-                                    if airplane in g.airplanes:
-                                        g.airplanes.remove(airplane)
-                                except Exception:
-                                    pass
-                                break
+                if 31 <= g.current_level <= 40:
+                    for airplane in getattr(g, "airplanes", [])[:]:
+                        if bullet.rect.colliderect(getattr(airplane, "rect", bullet.rect)):
+                            hit_local = True
+                            try:
+                                explosion = g.get_pooled_explosion(airplane.x, airplane.y, exp_img)
+                                g.explosions.append(explosion)
+                                sfx.play_sound_effect("explosion")
+                            except Exception:
+                                pass
+                            g.add_score(50)
+                            try:
+                                if airplane in g.airplanes:
+                                    g.airplanes.remove(airplane)
+                            except Exception:
+                                pass
+                            break
                     if hit_local:
                         if bullet in g.player.bullets:
                             g.player.bullets.remove(bullet)
@@ -1110,11 +1124,13 @@ class Update:
                     for airplane in getattr(g, "airplanes", [])[:]:
                         if bullet.rect.colliderect(getattr(airplane, "rect", bullet.rect)):
                             hit = True
-                            g.add_score(50)
                             try:
-                                sfx.play_sound_effect("bird-hit")
+                                explosion = g.get_pooled_explosion(airplane.x, airplane.y, exp_img)
+                                g.explosions.append(explosion)
+                                sfx.play_sound_effect("explosion")
                             except Exception:
                                 pass
+                            g.add_score(50)
                             try:
                                 if airplane in g.airplanes:
                                     g.airplanes.remove(airplane)
@@ -1368,6 +1384,10 @@ class Update:
                         elif kind == "supertiro":
                             g.super_shot_active = True
                             g.super_shot_frames_left = 70 * FPS
+                            try:
+                                g.player.max_shoot_cooldown = 8
+                            except Exception:
+                                pass
                         if hasattr(g, "sound_effects"):
                             try:
                                 g.sound_effects.play_sound_effect("collect")
