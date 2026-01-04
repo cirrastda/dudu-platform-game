@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Script para criar executável do jogo de plataforma
-Suporte para Windows, Linux e MacOS
+Script simples para criar um executável único do jogo.
+Funciona em Windows, Linux e MacOS.
 """
 
 import os
@@ -11,42 +11,29 @@ import platform
 import shutil
 from pathlib import Path
 
-# Importar informações de versão
+# Importar informações de versão (precisa estar no sys.path da raiz)
+import sys
+_root_path = Path(__file__).parent.parent
+if str(_root_path) not in sys.path:
+    sys.path.insert(0, str(_root_path))
+
 try:
-    from version import (
-        VERSION_FULL,
-        GAME_NAME,
-        GAME_TITLE,
-        BUILD_PLATFORMS,
-        get_version_info,
-    )
+    from version import VERSION_FULL, GAME_NAME, GAME_TITLE
 except ImportError:
-    print("⚠️  Arquivo version.py não encontrado. Usando valores padrão.")
+    print("[AVISO] version.py nao encontrado. Usando valores padrao.")
     VERSION_FULL = "0.0.1-alpha.1"
-    GAME_NAME = "Jogo de Plataforma"
-    GAME_TITLE = "🎮 Jogo de Plataforma - Vista do Mar"
-    BUILD_PLATFORMS = ["windows", "linux", "macos"]
+    GAME_NAME = "JumpAndHit"
+    GAME_TITLE = "Jump and Hit"
 
 
 class GameBuilder:
     def __init__(self):
-        self.current_platform = self.detect_platform()
+        self.current_platform = self._detect_platform()
         self.project_root = Path.cwd()
         self.dist_dir = self.project_root / "dist"
         self.build_dir = self.project_root / "build"
 
-    def _handle_remove_readonly(self, func, path, exc_info):
-        """Callback para remover arquivos somente leitura ou contornar PermissionError."""
-        import stat
-        try:
-            # Tentar alterar permissões e remover novamente
-            os.chmod(path, stat.S_IWRITE)
-            func(path)
-        except Exception:
-            # Como último recurso, apenas ignore o erro
-            pass
-
-    def detect_platform(self):
+    def _detect_platform(self):
         """Detecta a plataforma atual"""
         system = platform.system().lower()
         if system == "windows":
@@ -58,173 +45,154 @@ class GameBuilder:
         else:
             return "unknown"
 
-    def clean_build_dirs(self):
+    def _clean_build_dirs(self):
         """Limpa diretórios de build anteriores"""
-        print("Limpando diretorios de build...")
+        import stat
+        
+        def _handle_remove_readonly(func, path, exc_info):
+            """Callback para remover arquivos somente leitura."""
+            try:
+                os.chmod(path, stat.S_IWRITE)
+                func(path)
+            except Exception:
+                pass
+
+        print("[CLEAN] Limpando diretorios de build...")
         for dir_path in [self.dist_dir, self.build_dir]:
             if dir_path.exists():
                 try:
-                    shutil.rmtree(dir_path, onerror=self._handle_remove_readonly)
-                    print(f"   Removido: {dir_path}")
+                    shutil.rmtree(dir_path, onerror=_handle_remove_readonly)
+                    print(f"   OK: {dir_path}")
                 except Exception as e:
-                    print(f"   Aviso: nao foi possivel remover {dir_path}: {e}")
+                    print(f"   AVISO: Nao foi possivel limpar {dir_path}: {e}")
 
-    def check_dependencies(self):
+    def _check_dependencies(self):
         """Verifica se as dependências estão instaladas"""
-        print("Verificando dependencias...")
+        print("[CHECK] Verificando dependencias...")
 
-        # Verificar PyInstaller
-        try:
-            import PyInstaller
+        required = {
+            "PyInstaller": "PyInstaller",
+            "pygame": "pygame",
+            "moviepy": "moviepy",
+            "imageio_ffmpeg": "imageio_ffmpeg",
+        }
 
-            print(f"   PyInstaller {PyInstaller.__version__} encontrado")
-        except ImportError:
-            print("   PyInstaller nao encontrado")
-            return False
-
-        # Verificar Pygame
-        try:
-            import pygame
-
-            print(f"   Pygame {pygame.version.ver} encontrado")
-        except ImportError:
-            print("   Pygame nao encontrado")
-            return False
-
-        # Verificar MoviePy
-        try:
-            import moviepy
-            print(f"   MoviePy {getattr(moviepy, '__version__', 'desconhecida')} encontrado")
-        except ImportError:
-            print("   MoviePy nao encontrado")
-            return False
-
-        # Verificar imageio-ffmpeg
-        try:
-            import imageio_ffmpeg
-            print(f"   imageio-ffmpeg {getattr(imageio_ffmpeg, '__version__', 'desconhecida')} encontrado")
-        except ImportError:
-            print("   imageio-ffmpeg nao encontrado")
-            return False
+        all_found = True
+        for name, module in required.items():
+            try:
+                mod = __import__(module)
+                version = getattr(mod, "__version__", "instalado")
+                print(f"   OK: {name} ({version})")
+            except ImportError:
+                print(f"   ERRO: {name} NAO ENCONTRADO")
+                all_found = False
 
         # Verificar arquivo principal
-        if not (self.project_root / "main.py").exists():
-            print("   main.py nao encontrado")
-            return False
+        if not (self.project_root / "bootstrap.py").exists():
+            print("   ERRO: bootstrap.py nao encontrado")
+            all_found = False
+        else:
+            print("   OK: bootstrap.py encontrado")
 
-        print("   Todas as dependencias verificadas")
-        return True
+        if all_found:
+            print("   OK: Todas as dependencias OK")
+        return all_found
 
-    def install_dependencies(self):
+    def _install_dependencies(self):
         """Instala dependências do requirements.txt"""
-        print("Instalando dependencias...")
+        print("[INSTALL] Instalando dependencias...")
         try:
             subprocess.run(
                 [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
                 check=True,
             )
-            print("   Dependencias instaladas com sucesso!")
+            print("   OK: Dependencias instaladas com sucesso!")
             return True
         except subprocess.CalledProcessError as e:
-            print(f"   Erro ao instalar dependencias: {e}")
+            print(f"   ERRO: Erro ao instalar dependencias: {e}")
             return False
         except FileNotFoundError:
-            print("   requirements.txt nao encontrado")
+            print("   ERRO: requirements.txt nao encontrado")
             return False
 
-    def get_executable_name(self, platform_target=None):
+    def _get_executable_name(self):
         """Gera nome do executável baseado na plataforma"""
-        target = platform_target or self.current_platform
-        base_name = GAME_NAME.replace(" ", "").replace("-", "")
+        base = GAME_NAME.replace(" ", "")
+        if self.current_platform == "windows":
+            return f"{base}-{VERSION_FULL}-win64.exe"
+        elif self.current_platform == "macos":
+            return f"{base}-{VERSION_FULL}-macos"
+        else:  # linux
+            return f"{base}-{VERSION_FULL}-linux64"
 
-        if target == "windows":
-            return f"{base_name}-{VERSION_FULL}-win64.exe"
-        elif target == "macos":
-            return f"{base_name}-{VERSION_FULL}-macos"
-        elif target == "linux":
-            return f"{base_name}-{VERSION_FULL}-linux64"
-        else:
-            return f"{base_name}-{VERSION_FULL}"
+    def build(self):
+        """Cria o executável único do jogo"""
+        exe_name = self._get_executable_name()
+        print(f"\n{'='*60}")
+        print(f"[BUILD] {GAME_TITLE}")
+        print(f"   Versao: {VERSION_FULL}")
+        print(f"   Plataforma: {self.current_platform.upper()}")
+        print(f"   Executavel: {exe_name}")
+        print(f"{'='*60}\n")
 
-    def build_for_platform(self, target_platform=None):
-        """Constrói executável para plataforma específica"""
-        target = target_platform or self.current_platform
-        executable_name = self.get_executable_name(target)
+        # 1. Limpar builds anteriores
+        self._clean_build_dirs()
+        print()
 
-        print(f"Construindo para {target.upper()}...")
-        print(f"   Executável: {executable_name}")
+        # 2. Verificar dependências
+        if not self._check_dependencies():
+            print("\n[ERRO] Dependencias nao atendidas! Instalando...\n")
+            if not self._install_dependencies():
+                print("\n[ERRO] Falha ao instalar dependencias!")
+                return False
+            if not self._check_dependencies():
+                print("\n[ERRO] Dependencias ainda nao foram resolvidas!")
+                return False
+        print()
 
-        # Criar diretório de saída específico da plataforma
-        platform_dist_dir = Path("dist") / target
-        platform_dist_dir.mkdir(parents=True, exist_ok=True)
+        # 3. Criar diretório de saída
+        self.dist_dir.mkdir(parents=True, exist_ok=True)
 
-        # Configurar argumentos do PyInstaller
+        # 4. Configurar comando PyInstaller
         cmd = [
             sys.executable,
-            "-m",
-            "PyInstaller",
-            "--onefile",  # Executável único conforme requisito
-            "--name",
-            executable_name.replace(".exe", ""),  # Nome sem extensão
-            "--distpath",
-            str(platform_dist_dir),
-            "--workpath",
-            str(self.build_dir),
-            "--specpath",
-            str(self.build_dir),
-            "--runtime-hook",
-            str(self.project_root / "run_build" / "runtime_hook_logging.py"),
-            # Debug pode ser removido para reduzir dependências em runtime
+            "-m", "PyInstaller",
+            "--onefile",  # Executável ÚNICO
+            "--name", exe_name.replace(".exe", ""),
+            "--distpath", str(self.dist_dir),
+            "--workpath", str(self.build_dir),
+            "--specpath", str(self.build_dir),
+            "--console",  # Manter console para debug/logs
         ]
 
-        # Configurações específicas por plataforma
-        if target == "windows":
-            # Usar apenas console para garantir logs visíveis
-            cmd.extend(["--console"])  # Manter console para debug
-        elif target == "macos":
-            cmd.extend(["--windowed"])
-        elif target == "linux":
-            cmd.extend(["--console"])
+        # Adicionar hook de runtime para logging
+        if (self.project_root / "run_build" / "runtime_hook_logging.py").exists():
+            cmd.extend(["--runtime-hook", str(self.project_root / "run_build" / "runtime_hook_logging.py")])
 
-        # Adicionar ícone do executável
-        # Preferência: novo ícone em imagens/icones/, depois ícones na raiz
+        # Buscar ícone
         icon_candidates = [
             "imagens/icones/icon_desktop_new.ico",
             "imagens/icones/icon_desktop_new.png",
+            "imagens/icones/icon_minimal.png",
             "icon.ico",
-            "icon.png",
-            "icon.icns",
         ]
-        chosen_icon = None
         for icon_file in icon_candidates:
-            if (self.project_root / icon_file).exists():
-                chosen_icon = icon_file
+            icon_path = self.project_root / icon_file
+            if icon_path.exists():
+                print(f"[ICON] Icone encontrado: {icon_file}")
+                cmd.extend(["--icon", str(icon_path)])
                 break
-        if chosen_icon:
-            # Aviso de formato em Windows: PyInstaller exige .ico para ícone do .exe
-            if target == "windows" and chosen_icon.lower().endswith(".png"):
-                print("⚠️  Ícone PNG detectado para Windows. Recomenda-se usar .ico para o executável.")
-                print("    Dica: converta o PNG para ICO (32x32/64x64) e salve como imagens/icones/icon_desktop_new.ico")
-            # Use caminho absoluto para evitar resolução relativa ao workpath do PyInstaller
-            icon_abs = str(self.project_root / chosen_icon)
-            print(f"   Ícone selecionado: {icon_abs}")
-            cmd.extend(["--icon", icon_abs])
 
-        # Incluir recursos necessários (usando caminhos absolutos)
+        # Adicionar recursos (imagens, sons, vídeos)
         resource_dirs = ["imagens", "musicas", "sounds", "videos"]
-        for resource_dir in resource_dirs:
-            resource_path = self.project_root / resource_dir
-            if resource_path.exists():
-                cmd.extend(["--add-data", f"{resource_path}{os.pathsep}{resource_dir}"])
+        for res_dir in resource_dirs:
+            res_path = self.project_root / res_dir
+            if res_path.exists():
+                cmd.append(f"--add-data={res_path}{os.pathsep}{res_dir}")
 
-        # Incluir .env se existir (para configurar ambiente em runtime)
-        env_file = self.project_root / ".env"
-        if env_file.exists():
-            cmd.extend(["--add-data", f"{env_file}{os.pathsep}."])
-
-        # Garantir coleta de dados/submódulos para vídeo (ffmpeg + moviepy + imageio + numpy + pygame)
-        # Coleta todo conteúdo do pacote imageio_ffmpeg (inclui binários ffmpeg por plataforma)
+        # Coletar todos os submódulos e dependências necessárias
         cmd.extend([
+            # Coletar tudo dos pacotes críticos
             "--collect-all", "imageio_ffmpeg",
             "--collect-all", "moviepy",
             "--collect-submodules", "moviepy",
@@ -234,13 +202,16 @@ class GameBuilder:
             "--collect-submodules", "proglog",
             "--collect-submodules", "tqdm",
             "--collect-submodules", "decorator",
-            # Incluir metadados dos pacotes (importlib.metadata)
+            "--collect-submodules", "internal",
+            
+            # Copias de metadados
             "--copy-metadata", "imageio",
             "--copy-metadata", "moviepy",
             "--copy-metadata", "numpy",
             "--copy-metadata", "proglog",
             "--copy-metadata", "tqdm",
-            # Hidden imports comuns
+            
+            # Hidden imports
             "--hidden-import", "moviepy",
             "--hidden-import", "moviepy.editor",
             "--hidden-import", "numpy",
@@ -251,194 +222,107 @@ class GameBuilder:
             "--hidden-import", "proglog",
             "--hidden-import", "tqdm",
             "--hidden-import", "decorator",
+            "--hidden-import", "internal.engine.ranking",
+            "--hidden-import", "internal.engine.game.life",
+            "--hidden-import", "internal.engine.game.score",
+            "--hidden-import", "internal.engine.game.events",
+            "--hidden-import", "internal.engine.game.draw",
+            "--hidden-import", "internal.engine.game.update",
+            "--hidden-import", "internal.engine.game.difficulty",
+            "--hidden-import", "internal.engine.game.pool",
+            "--hidden-import", "internal.engine.game.cheat",
+            "--hidden-import", "internal.engine.game.menu",
+            "--hidden-import", "internal.engine.game.system",
+            "--hidden-import", "internal.engine.level.level",
+            "--hidden-import", "internal.utils.functions",
         ])
 
-        # Adicionar binário do ffmpeg diretamente se disponível localmente
+        # Tentar incluir ffmpeg diretamente se disponível
         try:
             import imageio_ffmpeg
-            ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-            if os.path.exists(ffmpeg_path):
-                # Colocar sob o pacote imageio_ffmpeg para facilitar descoberta em runtime
-                cmd.extend(["--add-binary", f"{ffmpeg_path}{os.pathsep}imageio_ffmpeg"])
-                print(f"   ffmpeg detectado e incluído: {ffmpeg_path}")
-            else:
-                print(f"   Aviso: ffmpeg não encontrado em {ffmpeg_path}; confiando em --collect-all imageio_ffmpeg")
-        except Exception as e:
-            print(f"   Aviso: não foi possível resolver ffmpeg via imageio_ffmpeg ({e}). PyInstaller coletará dados do pacote.")
+            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+            if os.path.exists(ffmpeg_exe):
+                print(f"[BUILD] ffmpeg incluido: {ffmpeg_exe}")
+                cmd.append(f"--add-binary={ffmpeg_exe}{os.pathsep}imageio_ffmpeg")
+        except Exception:
+            pass
 
-        # Arquivo principal (usar bootstrap para melhor logging de arranque)
+        # Arquivo de entrada (bootstrap)
         cmd.append("bootstrap.py")
 
+        # 5. Executar PyInstaller
+        print(f"[BUILD] Compilando executavel...")
         try:
-            print(f"   Executando: {' '.join(cmd)}")
             subprocess.run(cmd, check=True, cwd=self.project_root)
+        except subprocess.CalledProcessError as e:
+            print(f"\n[ERRO] Erro ao compilar: {e}")
+            return False
 
-            # Verificar se o executável foi criado no diretório da plataforma
-            base_name = executable_name.replace(".exe", "")
-            windows_ext = ".exe" if target == "windows" else ""
-            expected_onefile = platform_dist_dir / f"{base_name}{windows_ext}"
-            expected_onedir = platform_dist_dir / base_name / f"{base_name}{windows_ext}"
-
-            exe_found = None
-            is_onedir = False
-            if expected_onefile.exists():
-                exe_found = expected_onefile
-                is_onedir = False
-            elif expected_onedir.exists():
-                exe_found = expected_onedir
-                is_onedir = True
-
-            if exe_found:
-                # Em onedir não mover o executável (depende de DLLs do diretório)
-                if is_onedir:
-                    exe_to_report = exe_found
-                else:
-                    final_exe = self.dist_dir / executable_name
-                    if exe_found != final_exe:
-                        try:
-                            if final_exe.exists():
-                                final_exe.unlink()
-                            exe_found.rename(final_exe)
-                            exe_to_report = final_exe
-                        except Exception as e:
-                            print(f"   Aviso: nao foi possivel mover executavel: {e}")
-                            exe_to_report = exe_found
-                    else:
-                        exe_to_report = final_exe
-
-                print(f"   Executavel criado: {exe_to_report}")
-                try:
-                    print(f"   Tamanho: {exe_to_report.stat().st_size / (1024*1024):.1f} MB")
-                except Exception:
-                    pass
-                return True
+        # 6. Verificar se o executável foi criado
+        exe_path = self.dist_dir / exe_name if self.current_platform == "windows" else self.dist_dir / exe_name.replace(".exe", "")
+        
+        # PyInstaller as vezes coloca em um subdiretorio com o mesmo nome
+        if not exe_path.exists():
+            alt_path = self.dist_dir / exe_name.replace(".exe", "") / exe_name
+            if alt_path.exists():
+                exe_path = alt_path
             else:
-                print("   Executavel nao encontrado nas seguintes localizacoes:")
-                print(f"     - {expected_onefile}")
-                print(f"     - {expected_onedir}")
+                print(f"\n[ERRO] Executavel nao encontrado em {exe_path}")
+                print(f"Conteudo de dist:")
+                for item in self.dist_dir.rglob("*"):
+                    print(f"  {item}")
                 return False
 
-        except subprocess.CalledProcessError as e:
-            print(f"   Erro ao criar executavel: {e}")
-            return False
-        except FileNotFoundError:
-            print("   PyInstaller nao encontrado. Instale com: pip install pyinstaller")
-            return False
-
-    def create_release_package(self):
-        """Cria pacote de release com documentação"""
-        print("Criando pacote de release...")
-
-        release_dir = self.dist_dir / f"release-{VERSION_FULL}"
-        release_dir.mkdir(exist_ok=True)
-
-        # Copiar executáveis
-        for exe_file in self.dist_dir.glob("*"):
-            if exe_file.is_file() and exe_file.name != release_dir.name:
-                shutil.copy2(exe_file, release_dir)
-
-        # Copiar documentação
-        docs = ["README.md", "CHANGELOG.md", "LICENSE"]
-        for doc in docs:
-            doc_path = self.project_root / doc
-            if doc_path.exists():
-                shutil.copy2(doc_path, release_dir)
-
-        # Criar arquivo de informações da versão
-        version_info = release_dir / "VERSION.txt"
-        with open(version_info, "w", encoding="utf-8") as f:
-            f.write(f"{GAME_TITLE}\n")
-            f.write(f"Versão: {VERSION_FULL}\n")
-            f.write(f"Plataforma de build: {self.current_platform}\n")
-            f.write(
-                f"Data de build: {subprocess.check_output(['date'], shell=True, text=True).strip()}\n"
-            )
-
-        print(f"   Pacote criado em: {release_dir}")
-        return release_dir
-
-    def build_all(self):
-        """Constrói para todas as plataformas suportadas"""
-        print(f"Iniciando build do {GAME_TITLE}")
-        print(f"   Versão: {VERSION_FULL}")
-        print(f"   Plataforma atual: {self.current_platform}")
+        # 7. Exibir resultado
+        size_mb = exe_path.stat().st_size / (1024 * 1024)
+        print(f"\n{'='*60}")
+        print(f"[OK] SUCESSO! Executavel criado:")
+        print(f"   {exe_path}")
+        print(f"   Tamanho: {size_mb:.1f} MB")
+        print(f"{'='*60}\n")
+        
+        print("[OK] Para executar o jogo:")
+        if self.current_platform == "windows":
+            print(f"   .\\dist\\{exe_name}")
+        else:
+            print(f"   ./dist/{exe_name.replace('.exe', '')}")
         print()
 
-        if not self.check_dependencies():
-            print("\nDependencias nao atendidas. Instalando automaticamente...")
-            if not self.install_dependencies():
-                print("   Falha ao instalar dependencias.")
-                return False
-            # Revalidar após instalação
-            if not self.check_dependencies():
-                print("   Dependencias ainda não atendidas após instalação.")
-                return False
-
-        self.clean_build_dirs()
-
-        # Build para plataforma atual
-        success = self.build_for_platform()
-
-        if success:
-            self.create_release_package()
-            print(f"\nBuild concluído com sucesso!")
-            print(f"Arquivos em: {self.dist_dir}")
-            print("\nPara executar o jogo:")
-
-            if self.current_platform == "windows":
-                print(f"   {self.dist_dir}\\{self.get_executable_name()}")
-            else:
-                print(f"   ./{self.dist_dir}/{self.get_executable_name()}")
-
-            return True
-        else:
-            print("\nBuild falhou!")
-            return False
-
+        return True
 
 def main():
-    """Função principal"""
+    """Funcao principal - build simples e direto"""
     builder = GameBuilder()
 
+    # Processar argumentos
     if len(sys.argv) > 1:
-        if sys.argv[1] == "--install-deps":
-            builder.install_dependencies()
-        elif sys.argv[1] == "--clean":
-            builder.clean_build_dirs()
-        elif sys.argv[1] == "--check":
-            builder.check_dependencies()
-        elif sys.argv[1] == "--mobile":
-            print("\n=== BUILD MÓVEL ===")
-            print("Iniciando build móvel...")
-            try:
-                import subprocess
+        arg = sys.argv[1].lower()
+        if arg in ["--help", "-h"]:
+            print(f"""{GAME_TITLE} - Build System
+            
+Uso: python run_build/build.py [opcao]
 
-                subprocess.run([sys.executable, "build_mobile.py"], check=True)
-            except subprocess.CalledProcessError as e:
-                print(f"Erro ao executar build móvel: {e}")
-            except FileNotFoundError:
-                print("Arquivo build_mobile.py não encontrado!")
-        elif sys.argv[1] == "--help":
-            print(
-                f"""{GAME_TITLE} - Build System
-
-Uso: python build.py [opção]
-
-Opções:
-  --install-deps    Instala dependências do requirements.txt
-  --clean          Limpa diretórios de build
-  --check          Verifica dependências
-  --mobile         Executa build para Android/iOS (requer build_mobile.py)
-  --help           Mostra esta ajuda
-  
-Sem argumentos: Executa build completo para desktop
-"""
-            )
+Opcoes:
+  (nenhuma)     Cria executavel unico (padrao)
+  --install     Instala dependencias
+  --check       Verifica dependencias
+  --clean       Limpa diretorios de build
+  --help        Mostra esta ajuda
+""")
+        elif arg in ["--install", "-i"]:
+            builder._install_dependencies()
+        elif arg in ["--check", "-c"]:
+            builder._check_dependencies()
+        elif arg in ["--clean", "-cl"]:
+            builder._clean_build_dirs()
         else:
-            print(f"Opção desconhecida: {sys.argv[1]}")
-            print("Use --help para ver opções disponíveis")
+            print(f"[ERRO] Opcao desconhecida: {sys.argv[1]}")
+            print("Use --help para ver as opcoes disponiveis")
+            sys.exit(1)
     else:
-        builder.build_all()
+        # Build padrao
+        success = builder.build()
+        sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

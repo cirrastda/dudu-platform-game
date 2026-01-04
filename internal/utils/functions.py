@@ -29,15 +29,17 @@ def load_env_config():
     config = {"environment": "production", "fullscreen": True, "window_scale": 1.25}
 
     try:
-        env_path = resource_path(".env")
-        with open(env_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, value = line.split("=", 1)
-                    config[key.strip()] = value.strip()
+        # Em executável congelado (onefile/onedir), ignorar .env para não depender de arquivo externo
+        # e garantir modo production por padrão.
+        if not getattr(sys, "frozen", False):
+            env_path = resource_path(".env")
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, value = line.split("=", 1)
+                        config[key.strip()] = value.strip()
     except FileNotFoundError:
-        # Se o arquivo .env não existir, usar valores padrão
         pass
     except Exception as e:
         print(f"Erro ao carregar .env: {e}")

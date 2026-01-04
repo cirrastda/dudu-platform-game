@@ -79,6 +79,7 @@ def main():
     import pygame
     pygame.init()
     try:
+        # Importar Game diretamente do módulo game.py (não do package game/)
         from internal.engine.game import Game
         print("[BOOT] Criando Game...")
         game = Game()

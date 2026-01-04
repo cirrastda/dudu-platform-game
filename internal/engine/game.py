@@ -39,94 +39,17 @@ from internal.engine.level.level import Level
 from internal.engine.sound.music import Music
 from internal.engine.sound.mixer import Mixer
 from internal.engine.sound.effects import SoundEffects
-
-
-# Carregar submódulos auxiliares de internal/engine/game
-_GAME_SUBMODULE_DIR = os.path.join(os.path.dirname(__file__), "game")
-Life = None
-Score = None
-Hold = None
-Events = None
-Draw = None
-Update = None
-DifficultyOps = None
-Pool = None
-Cheat = None
-Menu = None
-System = None
-_SUBMODULE_LOAD_ERRORS = {}
-try:
-    import importlib.util
-    import traceback
-
-    def _load_submodule(file_name: str, module_name: str):
-        spec = importlib.util.spec_from_file_location(
-            module_name, os.path.join(_GAME_SUBMODULE_DIR, file_name)
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return mod
-
-    try:
-        _life_mod = _load_submodule("life.py", "internal.engine._game_life")
-        Life = getattr(_life_mod, "Life", None)
-    except Exception:
-        Life = None
-    try:
-        _score_mod = _load_submodule("score.py", "internal.engine._game_score")
-        Score = getattr(_score_mod, "Score", None)
-    except Exception:
-        Score = None
-    try:
-        _hold_mod = _load_submodule("hold.py", "internal.engine._game_hold")
-        Hold = getattr(_hold_mod, "Hold", None)
-    except Exception:
-        Hold = None
-    try:
-        _events_mod = _load_submodule("events.py", "internal.engine._game_events")
-        Events = getattr(_events_mod, "Events", None)
-    except Exception:
-        Events = None
-    try:
-        _draw_mod = _load_submodule("draw.py", "internal.engine._game_draw")
-        Draw = getattr(_draw_mod, "Draw", None)
-    except Exception:
-        Draw = None
-    try:
-        _update_mod = _load_submodule("update.py", "internal.engine._game_update")
-        Update = getattr(_update_mod, "Update", None)
-    except Exception:
-        _SUBMODULE_LOAD_ERRORS["update"] = traceback.format_exc()
-        Update = None
-    try:
-        _difficulty_mod = _load_submodule(
-            "difficulty.py", "internal.engine._game_difficulty"
-        )
-        DifficultyOps = getattr(_difficulty_mod, "DifficultyOps", None)
-    except Exception:
-        DifficultyOps = None
-    try:
-        _pool_mod = _load_submodule("pool.py", "internal.engine._game_pool")
-        Pool = getattr(_pool_mod, "Pool", None)
-    except Exception:
-        Pool = None
-    try:
-        _cheat_mod = _load_submodule("cheat.py", "internal.engine._game_cheat")
-        Cheat = getattr(_cheat_mod, "Cheat", None)
-    except Exception:
-        Cheat = None
-    try:
-        _menu_mod = _load_submodule("menu.py", "internal.engine._game_menu")
-        Menu = getattr(_menu_mod, "Menu", None)
-    except Exception:
-        Menu = None
-    try:
-        _system_mod = _load_submodule("system.py", "internal.engine._game_system")
-        System = getattr(_system_mod, "System", None)
-    except Exception:
-        System = None
-except Exception:
-    pass
+from internal.engine.game_modules.life import Life
+from internal.engine.game_modules.score import Score
+from internal.engine.game_modules.hold import Hold
+from internal.engine.game_modules.events import Events
+from internal.engine.game_modules.draw import Draw
+from internal.engine.game_modules.update import Update
+from internal.engine.game_modules.difficulty import DifficultyOps
+from internal.engine.game_modules.pool import Pool
+from internal.engine.game_modules.cheat import Cheat
+from internal.engine.game_modules.menu import Menu
+from internal.engine.game_modules.system import System
 
 # Carregar configurações
 ENV_CONFIG = load_env_config()
@@ -310,16 +233,72 @@ class Game:
             pass
 
         # Ligar subsistemas extraídos e encaminhar métodos públicos
-        self._life = Life(self)
-        self.get_initial_lives = self._life.get_initial_lives
-        self.get_extra_life_milestones_and_increment = (
-            self._life.get_extra_life_milestones_and_increment
-        )
-        self.check_extra_life = self._life.check_extra_life
+        try:
+            self._life = Life(self) if Life is not None else None
+            if self._life is not None:
+                self.get_initial_lives = self._life.get_initial_lives
+                self.get_extra_life_milestones_and_increment = (
+                    self._life.get_extra_life_milestones_and_increment
+                )
+                self.check_extra_life = self._life.check_extra_life
+            else:
+                def _fallback_initial_lives():
+                    return DEFAULT_INITIAL_LIVES
+                def _fallback_milestones_and_inc():
+                    return ([1000, 3000, 6000], 3000)
+                def _fallback_check_extra_life():
+                    return False
+                self.get_initial_lives = _fallback_initial_lives
+                self.get_extra_life_milestones_and_increment = _fallback_milestones_and_inc
+                self.check_extra_life = _fallback_check_extra_life
+        except Exception:
+            def _fallback_initial_lives():
+                return DEFAULT_INITIAL_LIVES
+            def _fallback_milestones_and_inc():
+                return ([1000, 3000, 6000], 3000)
+            def _fallback_check_extra_life():
+                return False
+            self.get_initial_lives = _fallback_initial_lives
+            self.get_extra_life_milestones_and_increment = _fallback_milestones_and_inc
+            self.check_extra_life = _fallback_check_extra_life
 
-        self._score = Score(self)
-        self.get_score_multiplier = self._score.get_score_multiplier
-        self.add_score = self._score.add_score
+        try:
+            self._score = Score(self) if Score is not None else None
+            if self._score is not None:
+                self.get_score_multiplier = self._score.get_score_multiplier
+                self.add_score = self._score.add_score
+            else:
+                def _fallback_multiplier():
+                    try:
+                        if self.difficulty == Difficulty.EASY:
+                            return 0.4
+                        elif self.difficulty == Difficulty.HARD:
+                            return 3.0
+                        else:
+                            return 1.0
+                    except Exception:
+                        return 1.0
+                def _fallback_add_score(points):
+                    try:
+                        mult = _fallback_multiplier()
+                        pts = int(round(points * mult))
+                        if pts <= 0:
+                            pts = 1
+                        self.score += pts
+                        return pts
+                    except Exception:
+                        self.score += int(points)
+                        return int(points)
+                self.get_score_multiplier = _fallback_multiplier
+                self.add_score = _fallback_add_score
+        except Exception:
+            def _fallback_multiplier():
+                return 1.0
+            def _fallback_add_score(points):
+                self.score += int(points)
+                return int(points)
+            self.get_score_multiplier = _fallback_multiplier
+            self.add_score = _fallback_add_score
 
         # Opções de acessibilidade e visual
         self.visual_mode = "normal"
@@ -944,8 +923,91 @@ class Game:
             try:
                 self._difficulty = DifficultyOps(self)
             except Exception:
-                pass
-        return self._difficulty.update_bird_difficulty()
+                self._difficulty = None
+        if self._difficulty is not None:
+            return self._difficulty.update_bird_difficulty()
+        diff = getattr(self, "difficulty", Difficulty.NORMAL)
+        if diff == Difficulty.EASY:
+            qty_factor = 0.7
+            interval_factor = 1.5
+            drop_interval_factor = 1.1
+        elif diff == Difficulty.HARD:
+            qty_factor = 1.4
+            interval_factor = 0.7
+            drop_interval_factor = 0.8
+        else:
+            qty_factor = 1.0
+            interval_factor = 1.0
+            drop_interval_factor = 1.0
+        if self.current_level <= 20:
+            base_qty = Level.get_birds_per_spawn(self.current_level)
+            base_interval = Level.get_bird_spawn_interval(self.current_level)
+            self.birds_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
+            self.bird_spawn_interval = max(60, int(base_interval * interval_factor))
+            if 7 <= self.current_level <= 10:
+                if diff == Difficulty.EASY:
+                    self.raindrops_per_spawn = 3
+                elif diff == Difficulty.HARD:
+                    self.raindrops_per_spawn = 6
+                else:
+                    self.raindrops_per_spawn = 4
+                self.raindrop_spawn_interval = max(60, int(base_interval * drop_interval_factor))
+            if self.current_level >= 17:
+                bat_base_qty = Level.get_birds_per_spawn(self.current_level)
+                bat_base_interval = Level.get_bird_spawn_interval(self.current_level)
+                self.bats_per_spawn = max(1, min(3, int(round(bat_base_qty * qty_factor))))
+                self.bat_spawn_interval = max(60, int(bat_base_interval * interval_factor))
+                self.max_bats_visible = 8 * qty_factor
+                star_base_qty = 1
+                star_base_interval = max(90, int(bat_base_interval * 1.2))
+                self.shooting_stars_per_spawn = max(1, min(2, int(round(star_base_qty * qty_factor))))
+                self.shooting_star_spawn_interval = max(80, int(star_base_interval * interval_factor))
+        elif self.current_level <= 30:
+            base_qty = Level.get_birds_per_spawn(self.current_level)
+            base_interval = Level.get_bird_spawn_interval(self.current_level)
+            self.bats_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
+            self.bat_spawn_interval = max(60, int(base_interval * interval_factor))
+            self.shooting_stars_per_spawn = 0
+            self.shooting_star_spawn_interval = 999999
+            self.max_bats_visible = 8 * qty_factor
+            if 27 <= self.current_level <= 30:
+                if diff == Difficulty.EASY:
+                    self.lavadrops_per_spawn = 2
+                elif diff == Difficulty.HARD:
+                    self.lavadrops_per_spawn = 4
+                else:
+                    self.lavadrops_per_spawn = 3
+                self.lavadrop_spawn_interval = max(60, int(base_interval * drop_interval_factor))
+                if diff == Difficulty.EASY:
+                    self.bats_per_spawn = 1
+        elif self.current_level <= 40:
+            base_qty = 1
+            base_interval = 150
+            self.airplanes_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
+            self.airplane_spawn_interval = max(60, int(base_interval * interval_factor))
+            if 37 <= self.current_level <= 40:
+                base_spacing = 180
+                if diff == Difficulty.EASY:
+                    self.generator_spacing = int(base_spacing * 1.3)
+                elif diff == Difficulty.HARD:
+                    self.generator_spacing = int(base_spacing * 0.7)
+                else:
+                    self.generator_spacing = base_spacing
+        elif self.current_level <= 50:
+            base_qty = 1
+            base_interval = 150
+            self.flying_disks_per_spawn = max(1, min(3, int(round(base_qty * qty_factor))))
+            self.flying_disk_spawn_interval = max(60, int(base_interval * interval_factor))
+            star_base_qty = 1
+            star_base_interval = 120
+            self.meteors_per_spawn = max(1, min(2, int(round(star_base_qty * qty_factor))))
+            self.meteor_spawn_interval = max(80, int(star_base_interval * interval_factor))
+        else:
+            base_qty = 1
+            base_interval = 240
+            self.fires_per_spawn = max(1, min(4, int(round(base_qty * qty_factor))))
+            self.fire_spawn_interval = max(60, int(base_interval * interval_factor))
+        return True
 
     def get_pooled_bullet(self, x, y, direction=1, image=None):
         if not hasattr(self, "_pool") or self._pool is None:
@@ -992,31 +1054,33 @@ class Game:
         if not hasattr(self, "_events") or self._events is None:
             try:
                 self._events = Events(self)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[ERRO] Falha ao criar Events: {e}")
+                raise
+        if self._events is None:
+            raise RuntimeError("Events nao foi inicializado corretamente")
         return self._events.handle_events()
 
     def draw(self):
         if not hasattr(self, "_draw") or self._draw is None:
             try:
                 self._draw = Draw(self)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[ERRO] Falha ao criar Draw: {e}")
+                raise
+        if self._draw is None:
+            raise RuntimeError("Draw nao foi inicializado corretamente")
         return self._draw.draw()
 
     def update(self):
         if not hasattr(self, "_update") or self._update is None:
             try:
-                if Update is None:
-                    try:
-                        _mod = _load_submodule("update.py", "internal.engine._game_update")
-                        globals()["Update"] = getattr(_mod, "Update", None)
-                    except Exception:
-                        globals()["Update"] = None
-                if Update is not None:
-                    self._update = Update(self)
-            except Exception:
-                pass
+                self._update = Update(self)
+            except Exception as e:
+                print(f"[ERRO] Falha ao criar Update: {e}")
+                raise
+        if self._update is None:
+            raise RuntimeError("Update nao foi inicializado corretamente")
         return self._update.update()
 
     def handle_menu_selection(self):
@@ -1038,24 +1102,63 @@ class Game:
             try:
                 self._system = System(self)
             except Exception:
-                pass
-        return self._system.is_development()
+                self._system = None
+        if self._system is not None:
+            return self._system.is_development()
+        return self.env_config.get("environment") == "development"
 
     def run(self):
         if not hasattr(self, "_system") or self._system is None:
             try:
                 self._system = System(self)
             except Exception:
+                self._system = None
+        if self._system is not None:
+            return self._system.run()
+        running = True
+        while running:
+            running = self.handle_events()
+            self.update()
+            self.draw()
+            try:
+                self.clock.tick(FPS)
+            except Exception:
                 pass
-        return self._system.run()
+        try:
+            self.shutdown()
+        except Exception:
+            pass
+        return True
 
     def shutdown(self):
         if not hasattr(self, "_system") or self._system is None:
             try:
                 self._system = System(self)
             except Exception:
-                pass
-        return self._system.shutdown()
+                self._system = None
+        if self._system is not None:
+            return self._system.shutdown()
+        try:
+            import pygame as _pg
+            _pg.mixer.music.stop()
+        except Exception:
+            pass
+        try:
+            if hasattr(self, "video_player") and self.video_player:
+                self.video_player.cleanup()
+        except Exception:
+            pass
+        try:
+            from internal.resources.cache import ResourceCache
+            ResourceCache().clear_cache()
+        except Exception:
+            pass
+        try:
+            import pygame as _pg
+            _pg.quit()
+        except Exception:
+            pass
+        return True
 
     # ===== Autosave helpers =====
     def _get_saves_path(self, filename):

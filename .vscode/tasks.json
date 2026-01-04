@@ -1,260 +1,268 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "setup-linux-environment",
-            "type": "shell",
-            "command": "wsl",
-            "args": [
-                "--",
-                "bash",
-                "-c",
-                "cd '${workspaceFolder}' && if [ ! -d 'venv' ]; then python3 -m venv venv; fi && source venv/bin/activate && pip install -r requirements.txt && export DISPLAY=:0 && python3 main.py"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Configura ambiente Linux via WSL2 e executa o jogo"
-        },
-        {
-            "label": "build-android-debug",
-            "type": "shell",
-            "command": "python",
-            "args": [
-                "build_mobile.py",
-                "android",
-                "debug"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Compila versão debug para Android"
-        },
-        {
-            "label": "build-android-release",
-            "type": "shell",
-            "command": "python",
-            "args": [
-                "build_mobile.py",
-                "android",
-                "release"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Compila versão release para Android"
-        },
-        {
-            "label": "install-dependencies",
-            "type": "shell",
-            "command": "pip",
-            "args": [
-                "install",
-                "-r",
-                "requirements.txt"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Instala dependências do projeto"
-        },
-        {
-            "label": "install-mobile-dependencies",
-            "type": "shell",
-            "command": "pip",
-            "args": [
-                "install",
-                "-r",
-                "requirements-mobile.txt"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Instala dependências para desenvolvimento mobile"
-        },
-        {
-            "label": "setup-wsl2",
-            "type": "shell",
-            "command": "powershell",
-            "args": [
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "setup_wsl2.ps1"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Configura ambiente WSL2 para desenvolvimento Linux"
-        },
-        {
-            "label": "check-system",
-            "type": "shell",
-            "command": "powershell",
-            "args": [
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "check_system.ps1"
-            ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Verifica configuração do sistema"
-        },
-        {
-            "label": "debug-android-adb",
-            "type": "shell",
-            "command": "python",
-            "args": [
-                "run_build/debug_android_adb.py"
-            ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "new",
-                "showReuseMessage": false,
-                "clear": true
-            },
-            "problemMatcher": [],
-            "detail": "Debug do aplicativo Android via ADB"
-        },
-        {
-            "label": "build-and-debug-android",
-            "type": "shell",
-            "command": "python",
-            "args": [
-                "run_build/build_and_debug_android.py"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Build completo e debug do Android"
-        },
-        {
-            "label": "check-android-devices",
-            "type": "shell",
-            "command": "adb",
-            "args": [
-                "devices",
-                "-l"
-            ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Lista dispositivos Android conectados"
-        },
-        {
-            "label": "tests-headless",
-            "type": "shell",
-            "command": "python",
-            "args": [
-                "run_tests.py"
-            ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "never",
-                "focus": false,
-                "panel": "dedicated",
-                "showReuseMessage": true,
-                "clear": true
-            },
-            "options": {
-                "env": {
-                    "SDL_VIDEODRIVER": "dummy",
-                    "PLATFORM_GAME_ENV": "development",
-                    "PLATFORM_GAME_FULLSCREEN": "0"
-                }
-            },
-            "problemMatcher": [],
-            "detail": "Executa testes em modo headless sem abrir/janelas reais"
-        },
-        {
-            "label": "tests-headless-background",
-            "type": "shell",
-            "command": "powershell",
-            "args": [
-                "-NoProfile",
-                "-Command",
-                "Start-Job -ScriptBlock { $env:SDL_VIDEODRIVER='dummy'; $env:PLATFORM_GAME_ENV='development'; $env:PLATFORM_GAME_FULLSCREEN='0'; python run_tests.py } | Out-Null"
-            ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "never",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Dispara testes em segundo plano via PowerShell Job"
-        }
-    ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "setup-linux-environment",
+			"type": "shell",
+			"command": "wsl",
+			"args": [
+				"--",
+				"bash",
+				"-c",
+				"cd '${workspaceFolder}' && if [ ! -d 'venv' ]; then python3 -m venv venv; fi && source venv/bin/activate && pip install -r requirements.txt && export DISPLAY=:0 && python3 main.py"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": [],
+			"detail": "Configura ambiente Linux via WSL2 e executa o jogo"
+		},
+		{
+			"label": "build-android-debug",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"build_mobile.py",
+				"android",
+				"debug"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": [],
+			"detail": "Compila versão debug para Android"
+		},
+		{
+			"label": "build-android-release",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"build_mobile.py",
+				"android",
+				"release"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": [],
+			"detail": "Compila versão release para Android"
+		},
+		{
+			"label": "install-dependencies",
+			"type": "shell",
+			"command": "pip",
+			"args": [
+				"install",
+				"-r",
+				"requirements.txt"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": [],
+			"detail": "Instala dependências do projeto"
+		},
+		{
+			"label": "install-mobile-dependencies",
+			"type": "shell",
+			"command": "pip",
+			"args": [
+				"install",
+				"-r",
+				"requirements-mobile.txt"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": [],
+			"detail": "Instala dependências para desenvolvimento mobile"
+		},
+		{
+			"label": "setup-wsl2",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"setup_wsl2.ps1"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": [],
+			"detail": "Configura ambiente WSL2 para desenvolvimento Linux"
+		},
+		{
+			"label": "check-system",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"check_system.ps1"
+			],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": [],
+			"detail": "Verifica configuração do sistema"
+		},
+		{
+			"label": "debug-android-adb",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"run_build/debug_android_adb.py"
+			],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "new",
+				"showReuseMessage": false,
+				"clear": true
+			},
+			"problemMatcher": [],
+			"detail": "Debug do aplicativo Android via ADB"
+		},
+		{
+			"label": "build-and-debug-android",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"run_build/build_and_debug_android.py"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": [],
+			"detail": "Build completo e debug do Android"
+		},
+		{
+			"label": "check-android-devices",
+			"type": "shell",
+			"command": "adb",
+			"args": [
+				"devices",
+				"-l"
+			],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": [],
+			"detail": "Lista dispositivos Android conectados"
+		},
+		{
+			"label": "tests-headless",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"run_tests.py"
+			],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "never",
+				"focus": false,
+				"panel": "dedicated",
+				"showReuseMessage": true,
+				"clear": true
+			},
+			"options": {
+				"env": {
+					"SDL_VIDEODRIVER": "dummy",
+					"PLATFORM_GAME_ENV": "development",
+					"PLATFORM_GAME_FULLSCREEN": "0"
+				}
+			},
+			"problemMatcher": [],
+			"detail": "Executa testes em modo headless sem abrir/janelas reais"
+		},
+		{
+			"label": "tests-headless-background",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Start-Job -ScriptBlock { $env:SDL_VIDEODRIVER='dummy'; $env:PLATFORM_GAME_ENV='development'; $env:PLATFORM_GAME_FULLSCREEN='0'; python run_tests.py } | Out-Null"
+			],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "never",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": [],
+			"detail": "Dispara testes em segundo plano via PowerShell Job"
+		},
+		{
+			"label": "build-test",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"build_simple.py"
+			]
+		}
+	]
 }

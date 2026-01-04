@@ -12,6 +12,8 @@ records/
 # Distribution / packaging
 .Python
 build/
+build_temp/
+build-temp/
 bin/
 .buildozer/
 dist/
