@@ -946,11 +946,11 @@ class Game:
             self.bird_spawn_interval = max(60, int(base_interval * interval_factor))
             if 7 <= self.current_level <= 10:
                 if diff == Difficulty.EASY:
-                    self.raindrops_per_spawn = 3
+                    self.raindrops_per_spawn = 1
                 elif diff == Difficulty.HARD:
-                    self.raindrops_per_spawn = 6
-                else:
                     self.raindrops_per_spawn = 4
+                else:
+                    self.raindrops_per_spawn = 2
                 self.raindrop_spawn_interval = max(60, int(base_interval * drop_interval_factor))
             if self.current_level >= 17:
                 bat_base_qty = Level.get_birds_per_spawn(self.current_level)
@@ -972,11 +972,11 @@ class Game:
             self.max_bats_visible = 8 * qty_factor
             if 27 <= self.current_level <= 30:
                 if diff == Difficulty.EASY:
-                    self.lavadrops_per_spawn = 2
+                    self.lavadrops_per_spawn = 1
                 elif diff == Difficulty.HARD:
-                    self.lavadrops_per_spawn = 4
-                else:
                     self.lavadrops_per_spawn = 3
+                else:
+                    self.lavadrops_per_spawn = 2
                 self.lavadrop_spawn_interval = max(60, int(base_interval * drop_interval_factor))
                 if diff == Difficulty.EASY:
                     self.bats_per_spawn = 1
