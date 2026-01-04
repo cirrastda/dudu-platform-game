@@ -50,11 +50,11 @@ class DifficultyOps:
             if 7 <= g.current_level <= 10:
                 # Quantidade baseada na dificuldade: EASY=1, NORMAL=2, HARD=3
                 if diff == Difficulty.EASY:
-                    g.raindrops_per_spawn = 3
+                    g.raindrops_per_spawn = 2
                 elif diff == Difficulty.HARD:
-                    g.raindrops_per_spawn = 9
+                    g.raindrops_per_spawn = 5
                 else:
-                    g.raindrops_per_spawn = 6
+                    g.raindrops_per_spawn = 3
                 # Intervalo acompanha o dos pássaros com fator de dificuldade
                 g.raindrop_spawn_interval = max(
                     60, int(base_interval * drop_interval_factor)
@@ -113,11 +113,11 @@ class DifficultyOps:
             # quantidade ajustada por dificuldade
             if 27 <= g.current_level <= 30:
                 if diff == Difficulty.EASY:
-                    g.lavadrops_per_spawn = 2
+                    g.lavadrops_per_spawn = 1
                 elif diff == Difficulty.HARD:
-                    g.lavadrops_per_spawn = 4
-                else:
                     g.lavadrops_per_spawn = 3
+                else:
+                    g.lavadrops_per_spawn = 2
                 g.lavadrop_spawn_interval = max(
                     60,
                     int(base_interval * drop_interval_factor),

@@ -404,24 +404,9 @@ class Update:
                         continue
 
             # Fail-safe: atualizar projéteis órfãos
-            if 31 <= g.current_level <= 40:
-                new_orphans = []
-                for m in g.orphan_missiles:
-                    _c = self._apply_tempo_speed(m)
-                    ok = m.update(g.camera_x)
-                    self._restore_tempo_speed(m, _c)
-                    if ok:
-                        new_orphans.append(m)
-                g.orphan_missiles = new_orphans
-            if 41 <= g.current_level <= 50:
-                new_lasers = []
-                for laser in g.orphan_lasers:
-                    _c = self._apply_tempo_speed(laser)
-                    ok = laser.update(g.camera_x)
-                    self._restore_tempo_speed(laser, _c)
-                    if ok:
-                        new_lasers.append(laser)
-                g.orphan_lasers = new_lasers
+            # REMOVIDO: Atualização duplicada que causava bug de velocidade
+            # Os orphan_missiles e orphan_lasers já são atualizados mais adiante no código
+            # (linhas ~2210-2230), e a dupla atualização causava problemas com o efeito tempo
 
             # Sequência de captura do boss (nível 51) antecipada
             if (
@@ -1289,6 +1274,9 @@ class Update:
             if 41 <= g.current_level <= 50 and not g.player.is_being_abducted:
                 for alien in getattr(g, "aliens", [])[:]:
                     for laser in getattr(alien, "lasers", [])[:]:
+                        # Ignorar lasers com colisão desabilitada (lasers de aliens mortos)
+                        if not getattr(laser, "collision_enabled", True):
+                            continue
                         if g.player.rect.colliderect(getattr(laser, "rect", g.player.rect)):
                             if g.player.is_invulnerable:
                                 try:
