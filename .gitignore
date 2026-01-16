@@ -9,6 +9,11 @@ records/
 # Plan files (internal documentation)
 plan/
 
+# MODs (keep folder structure but ignore mod files)
+mods/*
+!mods/.gitkeep
+!mods/README.md
+
 # C extensions
 *.so
 

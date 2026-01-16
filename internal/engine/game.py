@@ -51,6 +51,7 @@ from internal.engine.game_modules.pool import Pool
 from internal.engine.game_modules.cheat import Cheat
 from internal.engine.game_modules.menu import Menu
 from internal.engine.game_modules.system import System
+from internal.engine.mod_loader import ModLoader
 
 # Carregar configurações
 ENV_CONFIG = load_env_config()
@@ -109,6 +110,7 @@ class Game:
             self._pool = Pool(self)
             self._cheat = Cheat(self)
             self._menu = Menu(self)
+            self._mod_loader = ModLoader(self)
         except Exception:
             pass
         Screen.init(self)
@@ -950,6 +952,17 @@ class Game:
             except Exception:
                 pass
         return self._cheat.process_powerups_cheat_token(token)
+
+    def load_mods(self):
+        """Carrega MODs da pasta mods/"""
+        if not hasattr(self, "_mod_loader") or self._mod_loader is None:
+            try:
+                self._mod_loader = ModLoader(self)
+            except Exception:
+                pass
+        if self._mod_loader is not None:
+            self._mod_loader.load_mods()
+
 
     def update_bird_difficulty(self):
         if not hasattr(self, "_difficulty") or self._difficulty is None:

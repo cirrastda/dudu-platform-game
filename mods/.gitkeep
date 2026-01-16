@@ -1,0 +1,2 @@
+# Este arquivo mantém a pasta mods/ versionada no git
+# Mas os MODs dentro da pasta são ignorados (veja .gitignore)

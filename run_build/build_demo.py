@@ -169,6 +169,12 @@ class DemoBuilder:
             if res_path.exists():
                 cmd.append(f"--add-data={res_path}{os.pathsep}{res_dir}")
 
+        # Excluir pasta mods/ do executável
+        # MODs são carregados dinamicamente da pasta ao lado do .exe
+        if (self.project_root / "mods").exists():
+            cmd.extend(["--exclude-module", "mods"])
+
+
         # Coletar todos os submódulos e dependências necessárias
         cmd.extend([
             # Coletar tudo dos pacotes críticos

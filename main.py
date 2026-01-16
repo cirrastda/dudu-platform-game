@@ -86,5 +86,8 @@ from internal.engine.game import Game
 if __name__ == "__main__":
     print("[BOOT] Criando Game...")
     game = Game()
+    print("[BOOT] Carregando MODs...")
+    game.load_mods()
     print("[BOOT] Iniciando loop do jogo...")
     game.run()
+
