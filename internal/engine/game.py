@@ -424,6 +424,22 @@ class Game:
         self.cheat_message_x = WIDTH - 10
         self.cheat_message_y = 60
 
+        # Novo cheat code: Todos os Power-Ups
+        # Sequência: ↑ ↑ ↓ [PULO] ↑ ↑ ↓ ↑ ↑ [ATAQUE]
+        self._cheat_powerups_buffer = []
+        self._cheat_powerups_sequence = [
+            "UP",
+            "UP",
+            "DOWN",
+            "JUMP",
+            "UP",
+            "UP",
+            "DOWN",
+            "UP",
+            "UP",
+            "SHOOT",
+        ]
+
         # Sistema de splash screen e menu
         self.splash_timer = 0
         self.splash_duration = 360  # 6 segundos (60 FPS * 6)
@@ -926,6 +942,14 @@ class Game:
             except Exception:
                 pass
         return self._cheat.map_key_to_cheat_token(key, unicode_val)
+
+    def _process_powerups_cheat_token(self, token):
+        if not hasattr(self, "_cheat") or self._cheat is None:
+            try:
+                self._cheat = Cheat(self)
+            except Exception:
+                pass
+        return self._cheat.process_powerups_cheat_token(token)
 
     def update_bird_difficulty(self):
         if not hasattr(self, "_difficulty") or self._difficulty is None:

@@ -23,9 +23,10 @@ class Events:
                     uni = event.unicode if hasattr(event, "unicode") else ""
                 except Exception:
                     uni = ""
-                game._process_cheat_token(
-                    game._map_key_to_cheat_token(event.key, uni)
-                )
+                # Processar ambos os cheats
+                token = game._map_key_to_cheat_token(event.key, uni)
+                game._process_cheat_token(token)  # Cheat de 99 vidas
+                game._process_powerups_cheat_token(token)  # Cheat de power-ups
                 if game.state == GameState.SPLASH:
                     if env.get("environment", "production") == "development":
                         game.state = GameState.TITLE_SCREEN
@@ -619,10 +620,15 @@ class Events:
                 # Mapear botões p/ cheat tokens se joystick presente
                 if getattr(game, "joystick_connected", False):
                     # Usar botões configurados para jump e shoot
+                    token = None
                     if event.button == getattr(game, "joystick_controls", {}).get("jump", 0):
-                        game._process_cheat_token("JUMP")
+                        token = "JUMP"
                     elif event.button == getattr(game, "joystick_controls", {}).get("shoot", 1):
-                        game._process_cheat_token("SHOOT")
+                        token = "SHOOT"
+                    # Processar ambos os cheats
+                    if token:
+                        game._process_cheat_token(token)  # Cheat de 99 vidas
+                        game._process_powerups_cheat_token(token)  # Cheat de power-ups
                 if game.state == GameState.SPLASH:
                     if env.get("environment", "production") == "development":
                         game.state = GameState.TITLE_SCREEN
@@ -985,6 +991,7 @@ class Events:
             )
             if analog_up or dpad_up:
                 game._process_cheat_token("UP")
+                game._process_powerups_cheat_token("UP")  # Processar cheat de power-ups
                 if game.state == GameState.MAIN_MENU:
                     game.menu_selected = (game.menu_selected - 1) % len(
                         game.menu_options
@@ -1017,6 +1024,7 @@ class Events:
                     )
             elif analog_down or dpad_down:
                 game._process_cheat_token("DOWN")
+                game._process_powerups_cheat_token("DOWN")  # Processar cheat de power-ups
                 if game.state == GameState.MAIN_MENU:
                     game.menu_selected = (game.menu_selected + 1) % len(
                         game.menu_options
@@ -1065,6 +1073,7 @@ class Events:
             )
             if analog_left or dpad_left:
                 game._process_cheat_token("LEFT")
+                game._process_powerups_cheat_token("LEFT")  # Processar cheat de power-ups
                 if game.state == GameState.OPTIONS_AUDIO:
                     if game.audio_selected == 0:
                         game.music_volume = max(0.0, game.music_volume - 0.1)
@@ -1117,6 +1126,7 @@ class Events:
                             pass
             if analog_right or dpad_right:
                 game._process_cheat_token("RIGHT")
+                game._process_powerups_cheat_token("RIGHT")  # Processar cheat de power-ups
                 if game.state == GameState.OPTIONS_AUDIO:
                     if game.audio_selected == 0:
                         game.music_volume = min(1.0, game.music_volume + 0.1)

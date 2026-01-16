@@ -50,3 +50,43 @@ class Cheat:
             return "SHOOT"  # A = SHOOT
         
         return None
+
+    def process_powerups_cheat_token(self, token):
+        """Processa cheat de todos os power-ups"""
+        g = self.g
+        if not token:
+            return
+        
+        g._cheat_powerups_buffer.append(token)
+        if len(g._cheat_powerups_buffer) > len(g._cheat_powerups_sequence):
+            g._cheat_powerups_buffer = g._cheat_powerups_buffer[-len(g._cheat_powerups_sequence):]
+        
+        if g._cheat_powerups_buffer == g._cheat_powerups_sequence:
+            # Ativar todos os power-ups
+            # 1. Invencibilidade (20 segundos = 1200 frames)
+            g.player.is_invulnerable = True
+            g.player.invulnerability_timer = 1200
+            g.invincibility_active = True
+            
+            # 2. Pulo Duplo (70 segundos = 4200 frames)
+            g.player.double_jump_enabled = True
+            g.player.double_jump_timer = 4200
+            
+            # 3. Escudo
+            g.shield_active = True
+            
+            # 4. Tempo/Lentidão (70 segundos = 4200 frames)
+            g.tempo_active = True
+            g.tempo_timer = 4200
+            g.tempo_factor = 0.5
+            
+            # 5. Super Tiro (70 segundos = 4200 frames)
+            g.super_shot_active = True
+            g.super_shot_timer = 4200
+            
+            # Feedback visual: mensagem no canto superior direito
+            g.cheat_message = "TODOS OS POWER-UPS ATIVADO!"
+            g.cheat_message_timer = 180  # 3 segundos a 60 FPS
+            
+            # Penalidade: deduzir 2000 pontos (mínimo 0)
+            g.score = max(0, g.score - 2000)
