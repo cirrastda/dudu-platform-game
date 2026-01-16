@@ -116,6 +116,8 @@ class Events:
                     game.pause_selected = 0
                     return True
                 elif game.state == GameState.PAUSED:
+                    # Cheat já está sendo processado no início do KEYDOWN handler (linha 26)
+                    # Não processar novamente aqui para evitar duplicação
                     if event.key == pygame.K_UP:
                         game.pause_selected = (game.pause_selected - 1) % len(game.pause_menu_options)
                     elif event.key == pygame.K_DOWN:
@@ -616,10 +618,11 @@ class Events:
             elif event.type == pygame.JOYBUTTONDOWN:
                 # Mapear botões p/ cheat tokens se joystick presente
                 if getattr(game, "joystick_connected", False):
-                    if event.button == 1:
-                        game._process_cheat_token("B")
-                    elif event.button == 0:
-                        game._process_cheat_token("A")
+                    # Usar botões configurados para jump e shoot
+                    if event.button == getattr(game, "joystick_controls", {}).get("jump", 0):
+                        game._process_cheat_token("JUMP")
+                    elif event.button == getattr(game, "joystick_controls", {}).get("shoot", 1):
+                        game._process_cheat_token("SHOOT")
                 if game.state == GameState.SPLASH:
                     if env.get("environment", "production") == "development":
                         game.state = GameState.TITLE_SCREEN
@@ -645,6 +648,13 @@ class Events:
                         game.state = GameState.PAUSED
                         game.pause_selected = 0
                 elif game.state == GameState.PAUSED:
+                    # Processar cheat code com botões de joystick durante pause
+                    # Mapear botões para tokens JUMP e SHOOT
+                    if event.button == getattr(game, "joystick_controls", {}).get("jump", 0):
+                        game._process_cheat_token("JUMP")
+                    elif event.button == getattr(game, "joystick_controls", {}).get("shoot", 1):
+                        game._process_cheat_token("SHOOT")
+                    
                     if event.button == 0:
                         sel = game.pause_menu_options[game.pause_selected]
                         if sel == "Continuar":

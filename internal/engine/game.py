@@ -401,6 +401,8 @@ class Game:
         self.ending_video_player = VideoPlayer()
 
         # Código secreto: Konami Code para conceder 99 vidas iniciais
+        # Adaptado para usar [PULO] e [ATAQUE] ao invés de B e A
+        # Garante compatibilidade total com joystick/gamepad
         self.cheat_99_lives_enabled = False
         self._cheat_buffer = []
         self._cheat_sequence = [
@@ -412,9 +414,15 @@ class Game:
             "RIGHT",
             "LEFT",
             "RIGHT",
-            "B",
-            "A",
+            "JUMP",  # [PULO] - Botão de pulo (Espaço/B/Botão 0)
+            "SHOOT",  # [ATAQUE] - Botão de ataque (Ctrl/X/A/Botão 1)
         ]
+
+        # Sistema de mensagens de cheat
+        self.cheat_message = ""
+        self.cheat_message_timer = 0
+        self.cheat_message_x = WIDTH - 10
+        self.cheat_message_y = 60
 
         # Sistema de splash screen e menu
         self.splash_timer = 0

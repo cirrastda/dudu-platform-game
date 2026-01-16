@@ -735,6 +735,33 @@ class Draw:
 
             # Desenhar UI (sem offset da câmera) com fonte branca
             Info.display(game, game.screen, game.font, WHITE)
+            
+            # Desenhar mensagens de cheat (após o HUD)
+            if game.cheat_message and game.cheat_message_timer > 0:
+                # Calcular alpha baseado no timer (fade out nos últimos frames)
+                alpha = 255
+                if game.cheat_message_timer < 60:  # Fade nos últimos 60 frames
+                    alpha = int((game.cheat_message_timer / 60) * 255)
+                
+                # Renderizar texto
+                cheat_text = game.menu_font.render(game.cheat_message, True, YELLOW)
+                cheat_text.set_alpha(alpha)
+                
+                # Posicionar no canto superior direito
+                text_rect = cheat_text.get_rect(
+                    topright=(game.cheat_message_x, game.cheat_message_y)
+                )
+                
+                # Fundo semi-transparente
+                padding = 10
+                bg_rect = text_rect.inflate(padding * 2, padding)
+                bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
+                bg_surface.set_alpha(int(alpha * 0.7))  # 70% da opacidade do texto
+                bg_surface.fill(DARK_BLUE)
+                game.screen.blit(bg_surface, bg_rect.topleft)
+                
+                # Texto
+                game.screen.blit(cheat_text, text_rect)
 
         elif game.state == GameState.GAME_OVER:
             # Usar fundo do cenário, explicitamente na surface do jogo

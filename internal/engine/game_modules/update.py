@@ -48,6 +48,10 @@ class Update:
         g = self.game
         sfx = g.sound_effects
         exp_img = g.image.explosion_image
+        
+        # Decrementar timer de mensagem de cheat
+        if g.cheat_message_timer > 0:
+            g.cheat_message_timer -= 1
         high_score = g.ranking_manager.is_high_score
 
         # Se estamos em hold, gerenciar contagem.
