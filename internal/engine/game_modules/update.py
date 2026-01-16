@@ -1364,7 +1364,7 @@ class Update:
             if target_camera_x > g.camera_x:
                 g.camera_x = target_camera_x
 
-            if g.current_level <= 20 and g.player.just_landed and hasattr(g.player, "landed_platform_id"):
+            if g.player.just_landed and hasattr(g.player, "landed_platform_id"):
                 if g.player.landed_platform_id not in g.platforms_jumped:
                     g.platforms_jumped.add(g.player.landed_platform_id)
                     g.add_score(10)
