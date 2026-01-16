@@ -72,6 +72,34 @@ JumpandHit-0.0.3-alpha.1-win64.exe
 
 Pronto! Sem instalação, sem Python, sem dependências.
 
+### Passo 4: (Opcional) Sistema de MODs
+
+O jogo suporta MODs que podem modificar o comportamento:
+
+#### Para Usuários Finais:
+1. Crie uma pasta `mods` ao lado do executável
+2. Coloque arquivos `.py` nessa pasta
+3. Execute o jogo normalmente
+4. Os MODs serão carregados automaticamente
+
+#### Exemplo de Estrutura:
+```
+JumpandHit-0.0.3-alpha.1-win64.exe
+mods/
+  god_mode.py
+  extra_lives.py
+```
+
+#### Segurança:
+- MODs têm acesso total ao jogo
+- Use apenas MODs de fontes confiáveis
+- MODs problemáticos são ignorados (não quebram o jogo)
+
+#### Documentação:
+- Veja `mods/README.md` no repositório para criar MODs
+- Exemplos disponíveis na pasta `mods/` do projeto
+
+
 ---
 
 ## Troubleshooting
