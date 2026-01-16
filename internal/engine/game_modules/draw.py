@@ -1718,6 +1718,66 @@ class Draw:
             inst = game.menu_small_font.render(instr, True, LIGHT_GRAY)
             game.screen.blit(inst, inst.get_rect(center=(WIDTH // 2, box.bottom - 30)))
 
+        elif game.state == GameState.DEMO_END_MESSAGE:
+            self.draw_ocean_background(game.screen)
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            game.screen.blit(overlay, (0, 0))
+            
+            box_w = 850
+            box_h = 320
+            box = pygame.Rect(0, 0, box_w, box_h)
+            box.center = (WIDTH // 2, HEIGHT // 2)
+            
+            try:
+                # Sombra mais suave
+                shadow = pygame.Surface((box_w + 24, box_h + 24), pygame.SRCALPHA)
+                shadow.fill((0, 0, 0, 0))
+                pygame.draw.rect(shadow, (0, 0, 0, 120), shadow.get_rect(), border_radius=18)
+                game.screen.blit(shadow, (box.left - 12, box.top - 12))
+                
+                # Fundo da caixa
+                pygame.draw.rect(game.screen, DARK_BLUE, box, border_radius=16)
+                
+                # Borda externa dourada
+                pygame.draw.rect(game.screen, GOLD, box.inflate(6, 6), 3, border_radius=18)
+                
+                # Cabeçalho
+                header = pygame.Rect(box.left, box.top, box.width, 50)
+                pygame.draw.rect(game.screen, BLUE, header, border_radius=16)
+                pygame.draw.rect(game.screen, (0, 0, 0, 0), pygame.Rect(box.left, header.bottom - 16, box.width, 16))
+                pygame.draw.rect(game.screen, BLUE, pygame.Rect(box.left, header.bottom - 16, box.width, 16))
+                pygame.draw.line(game.screen, GOLD, (box.left + 16, header.bottom - 3), (box.right - 16, header.bottom - 3), 3)
+            except Exception:
+                pygame.draw.rect(game.screen, DARK_BLUE, box)
+                pygame.draw.rect(game.screen, BLUE, box, 3)
+            
+            # Título no cabeçalho
+            title = game.menu_font.render("Versão Demo", True, YELLOW)
+            title_rect = title.get_rect(center=(WIDTH // 2, box.top + 25))
+            game.screen.blit(title, title_rect)
+            
+            # Mensagens (texto em múltiplas linhas)
+            from internal.utils.edition import GameEdition
+            demo_message = GameEdition.get_demo_message()
+            lines = demo_message.split('\n')
+            y_offset = box.centery - 30
+            for line in lines:
+                if line.strip():
+                    text = game.menu_small_font.render(line.strip(), True, WHITE)
+                    game.screen.blit(text, text.get_rect(center=(WIDTH // 2, y_offset)))
+                y_offset += 30
+            
+            # Instruções
+            button_names = self.get_button_names(game, button_a=0, button_b=1)
+            if button_names:
+                btn_a, _ = button_names
+                instr = f"[{btn_a}] Voltar ao Menu"
+            else:
+                instr = "Enter: Voltar ao Menu"
+            inst = game.menu_small_font.render(instr, True, LIGHT_GRAY)
+            game.screen.blit(inst, inst.get_rect(center=(WIDTH // 2, box.bottom - 30)))
+
         # Overlay de esmaecimento durante hold (fade progressivo)
         if getattr(game, "hold_active", False):
             try:

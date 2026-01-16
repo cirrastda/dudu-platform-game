@@ -1,23 +1,47 @@
-# Script de Build - Jump and Hit
+# Scripts de Build - Jump and Hit
 
-## Uso Rápido
+## Builders Disponíveis
+
+### 1. Build Versão Completa - `build.py`
+Cria executável da versão completa do jogo (51 fases).
 
 ```bash
 # Build completo do jogo em um executável único
-python build.py
+python run_build\build.py
 
 # Verificar dependências
-python build.py --check
+python run_build\build.py --check
 
 # Instalar dependências
-python build.py --install
+python run_build\build.py --install
 
 # Limpar builds anteriores
-python build.py --clean
+python run_build\build.py --clean
 
 # Ajuda
-python build.py --help
+python run_build\build.py --help
 ```
+
+**Saída**: `dist\JumpandHit-0.0.3-alpha.1-win64.exe` (~295 MB)
+
+### 2. Build Versão Demo - `build_demo.py` ⭐ NOVO
+Cria executável da versão de demonstração (10 fases).
+
+```bash
+# Build da versão Demo
+python run_build\build_demo.py
+```
+
+**Saída**: `dist\JumpandHit-0.0.3-alpha.1-Demo-win64.exe` (~295 MB)
+
+**Características da Demo**:
+- ✅ Apenas 10 primeiras fases
+- ✅ Pop-up ao completar fase 10 com mensagem de compra
+- ✅ Retorna ao menu automaticamente
+- ✅ Ideal para distribuição gratuita
+- 📖 Veja [DEMO_GUIDE.md](../DEMO_GUIDE.md) para mais detalhes
+
+---
 
 ## O que é criado?
 

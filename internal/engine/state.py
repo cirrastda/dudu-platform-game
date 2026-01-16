@@ -25,3 +25,4 @@ class GameState(Enum):
     CONFIRM_NEW_GAME = 21  # Pop-up confirmação ao iniciar novo jogo com save
     CONFIRM_EXIT_TO_MENU = 22  # Pop-up confirmação ao sair durante pausa
     OPTIONS_ACCESSIBILITY = 23
+    DEMO_END_MESSAGE = 24  # Mensagem de fim da versão Demo

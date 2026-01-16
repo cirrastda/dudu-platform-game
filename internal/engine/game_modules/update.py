@@ -89,7 +89,12 @@ class Update:
                     # Agora avançamos de fase somente após o hold terminar
                     try:
                         if getattr(g, "_next_level_after_hold", False):
-                            if g.current_level < g.max_levels:
+                            # Verificar se é o fim da versão Demo
+                            from internal.utils.edition import GameEdition
+                            if GameEdition.should_show_demo_end_message(g.current_level):
+                                # Mostrar mensagem de fim da demo
+                                g.state = GameState.DEMO_END_MESSAGE
+                            elif g.current_level < g.max_levels:
                                 g.current_level += 1
                                 Level.init_level(g)
                                 # Tocar música do novo nível

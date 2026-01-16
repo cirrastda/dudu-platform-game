@@ -2,6 +2,31 @@
 
 ## Para Distribuir o Jogo
 
+### Versão Completa vs. Versão Demo
+
+O jogo possui duas versões:
+
+#### **Versão Completa** (51 fases)
+```bash
+cd c:\projetos\dudu-platform-game
+python run_build\build.py
+```
+Gera: `dist\JumpandHit-0.0.3-alpha.1-win64.exe` (~295 MB)
+
+#### **Versão Demo** (10 fases)
+```bash
+cd c:\projetos\dudu-platform-game
+python run_build\build_demo.py
+```
+Gera: `dist\JumpandHit-0.0.3-alpha.1-Demo-win64.exe` (~295 MB)
+
+**Diferenças da Versão Demo:**
+- ✅ Apenas 10 primeiras fases jogáveis
+- ✅ Ao completar fase 10, exibe mensagem de compra
+- ✅ Retorna automaticamente ao menu principal
+- ✅ Todas as funcionalidades disponíveis nas 10 fases
+- 📖 Veja [DEMO_GUIDE.md](DEMO_GUIDE.md) para mais detalhes
+
 ### Passo 1: Criar o Executável
 
 Na máquina de desenvolvimento:

@@ -440,6 +440,21 @@ class Events:
                     elif event.key == pygame.K_ESCAPE:
                         game.state = GameState.PAUSED
                         return True
+                elif game.state == GameState.DEMO_END_MESSAGE:
+                    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        # Voltar ao menu principal
+                        game.state = GameState.MAIN_MENU
+                        # Resetar jogo
+                        game.current_level = 1
+                        game.score = 0
+                        game.lives = game.max_lives
+                        game.platforms_jumped.clear()
+                        game.birds_dodged.clear()
+                        try:
+                            game._clear_autosave()
+                        except Exception:
+                            pass
+                        return True
                 elif game.state == GameState.CREDITS:
                     if (
                         game.credits_type == "menu"
@@ -741,6 +756,20 @@ class Events:
                         game.state = GameState.SELECT_DIFFICULTY
                     elif event.button == 1:
                         game.state = GameState.MAIN_MENU
+                elif game.state == GameState.DEMO_END_MESSAGE:
+                    if event.button == 0:
+                        # Voltar ao menu principal
+                        game.state = GameState.MAIN_MENU
+                        # Resetar jogo
+                        game.current_level = 1
+                        game.score = 0
+                        game.lives = game.max_lives
+                        game.platforms_jumped.clear()
+                        game.birds_dodged.clear()
+                        try:
+                            game._clear_autosave()
+                        except Exception:
+                            pass
                 elif game.state == GameState.CONFIRM_EXIT_TO_MENU:
                     if event.button == 0:
                         game.state = GameState.MAIN_MENU

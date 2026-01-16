@@ -26,6 +26,7 @@ from internal.utils.constants import (
     CYAN,
     DEFAULT_INITIAL_LIVES,
 )
+from internal.utils.edition import GameEdition
 from internal.resources.image import Image
 from internal.engine.joystick import Joystick
 from internal.engine.video import VideoPlayer
@@ -133,7 +134,7 @@ class Game:
         self.state = GameState.SPLASH
         # Rastrear vidas extras coletadas por nível para não reaparecerem
         self.collected_extra_life_levels = set()
-        self.max_levels = 51
+        self.max_levels = GameEdition.get_max_levels()
         # Configurar nível inicial baseado no ambiente
         if (
             ENV_CONFIG.get("environment") == "development"
