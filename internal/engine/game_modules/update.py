@@ -2570,7 +2570,7 @@ class Update:
                                             g.state = GameState.ENTER_NAME
                                         else:
                                             g.state = GameState.GAME_OVER
-                                    g.start_game_over_hold()
+                                        g.start_game_over_hold()
                         break
                 # Lava drops collision (27-30)
                 if 27 <= g.current_level <= 30:

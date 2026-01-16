@@ -3,6 +3,10 @@ from internal.engine.state import GameState
 from internal.engine.difficulty import Difficulty
 from internal.engine.level.level import Level
 
+# Botões comuns de pause/start em diferentes controles
+# Xbox START=7, PS4 OPTIONS=9, Switch +=9, outros=6,8
+PAUSE_BUTTONS = [6, 7, 8, 9]
+
 
 class Events:
     def __init__(self, game):
@@ -633,10 +637,13 @@ class Events:
                 elif game.state == GameState.MAIN_MENU:
                     if event.button == 0 or event.button in [6, 7, 8, 9]:
                         game.handle_menu_selection()
-                elif game.state == GameState.PLAYING and event.button == getattr(game, "joystick_controls", {}).get("pause", 7):
-                    # Botão Start/Options pausa
-                    game.state = GameState.PAUSED
-                    game.pause_selected = 0
+                elif game.state == GameState.PLAYING:
+                    # Verificar se é botão de pause (suporta múltiplos controles)
+                    configured_pause = getattr(game, "joystick_controls", {}).get("pause", 7)
+                    if event.button == configured_pause or event.button in PAUSE_BUTTONS:
+                        # Botão Start/Options pausa
+                        game.state = GameState.PAUSED
+                        game.pause_selected = 0
                 elif game.state == GameState.PAUSED:
                     if event.button == 0:
                         sel = game.pause_menu_options[game.pause_selected]
